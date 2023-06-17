@@ -300,14 +300,14 @@ export default async function Data() {
   return (
     <div>
       <div>
-        <div className={"flex flex-row items-center justify-between"}>
+        <div className={"flex flex-col sm:flex-row sm:items-center sm:justify-between"}>
           <h1>Job Listings ({_data.results.length})</h1>
 
           <h3>Source duunitori.fi/api/v1/jobentries?ohjelmointi+ja+ohjelmistokehitys+(ala)</h3>
           <h3>Date {new Date().toLocaleDateString("fi-FI")}</h3>
         </div>
 
-        <div className={"flex flex-row gap-8 pt-4 justify-between"}>
+        <div className={"flex flex-col sm:flex-row gap-8 pt-4 sm:justify-between"}>
           <div>
             <h2>Languages</h2>
             <ul>
@@ -402,8 +402,8 @@ export default async function Data() {
         <div></div>
       </div>
       <div>
-        <div className={"flex flex-row gap-8 pt-8 justify-between"}>
-          <div className={"max-w-[20%]"}>
+        <div className={"flex flex-col sm:flex-row gap-8 pt-8 justify-between"}>
+          <div className={"sm:max-w-[20%]"}>
             <h2>Top 30 Companies</h2>
             <ul>
               {sortedCompaniesArray.map((company) => {
@@ -430,7 +430,7 @@ export default async function Data() {
         </div>
       </div>
       <hr className={"my-8 border-gray-400"} />
-      <footer className={"flex flex-row justify-between items-center"}>
+      <footer className={"flex flex-col sm:flex-row justify-between items-center"}>
         <div className={"text-gray-400 max-w-xl"}>
           <h3>How does this work?</h3>
           <p className={"py-2"}>
