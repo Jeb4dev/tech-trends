@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Skills } from "./skill";
 
 interface Results {
   heading: string;
@@ -45,13 +46,13 @@ export default async function Data() {
     ["JavaScript", "JS", "javascriptillä", "javascriptiä"],
     ["TypeScript", "TS", "typescriptillä", "typescriptiä"],
     ["Python", "Py"],
-    "Java",
+    ["Java", "Javaa", "Javalla", "Javasta"],
     "C#",
     "PHP",
     "Ruby",
     "C++",
     ["C", "Clang", "C-lang", "C-kieli"],
-    ["Golang", "Go-lang"],
+    ["Golang", "Go-lang", "Golangia", "Go ohjelmistokehittäjä", "Golangiin"],
     "Rust",
     "Scala",
     "Kotlin",
@@ -69,7 +70,18 @@ export default async function Data() {
     "Bash",
     "Shell",
     "PowerShell",
-    "Assembly",
+    ["Assembly", "ASM"],
+    "MATLAB",
+    ["Visual Basic", "VBA"],
+    "COBOL",
+    "Fortran",
+    "Lisp",
+    "Pascal",
+    "Delphi",
+    "LabVIEW",
+    "Ada",
+    "PL/SQL",
+    "Prolog",
   ];
   const frameworks = [
     ["Node", "Node.js", "NodeJS"],
@@ -82,6 +94,7 @@ export default async function Data() {
     ["Gatsby", "Gatsby.js", "GatsbyJS"],
     ["Ember", "Ember.js", "EmberJS"],
     ["Express", "ExpressJS", "Express.js"],
+    ["Jupyter Notebook", "JupyterNotebook", "Jupyter"],
     "Gatsby",
     "Django",
     "Rails",
@@ -96,9 +109,24 @@ export default async function Data() {
     ["React Native", "ReactNative", "React-Native"],
     ["Ionic", "Ionic.js", "IonicJS"],
     ["REST", "RESTful"],
+    ["GraphQL", "Graph QL", "Graph-QL"],
+    ["WordPress", "Word Press", "Word-Press"],
+    ["Shopify", "Shopify.js", "ShopifyJS"],
+    ["WooCommerce", "Woo Commerce", "Woo-Commerce"],
+    ["Bootstrap", "Bootstrap.js", "BootstrapJS"],
+    ["Tailwind", "Tailwind.js", "TailwindJS"],
+    ["Unreal Engine", "UnrealEngine", "Unreal-Engine"],
+    ["Unity", "Unity.js", "UnityJS"],
+    ["TensorFlow", "Tensor Flow", "Tensor-Flow"],
+    ["PyTorch", "Py Torch", "Py-Torch"],
+    ["Keras", "Keras.js", "KerasJS"],
+    ["Pandas", "Pandas.js", "PandasJS"],
+    ["NumPy", "NumPy.js", "NumPyJS"],
   ];
   const databases = [
-    "SQL",
+    ["Relational databases", "SQL", "mySQL", "PostgreSQL", "SQLite"],
+    ["NoSQL databases", "noSQL", "no-SQL", "MongoDB", "DynamoDB", "Redis", "Cassandra", "Neo4j"],
+    ["Vector databases", "vectorDB", "vector-database", "vektori tietokannat", "vektori tietokanta"],
     "MySQL",
     "PostgreSQL",
     "SQLite",
@@ -113,12 +141,15 @@ export default async function Data() {
     "IBM Db2",
     "SAP HANA",
     "Teradata",
-    "noSQL",
+    "Neo4j",
+    "ArangoDB",
+    "Couchbase",
+    "CouchDB",
   ];
   const cloud = [
-    "AWS",
-    "Azure",
-    "Google Cloud",
+    ["AWS", "Amazon Web Services", "S3 Bucket", "EC2"],
+    ["Azure", "Microsoft Cloud"],
+    ["Google Cloud", "GCP"],
     "Digital Ocean",
     "Heroku",
     "Netlify",
@@ -131,6 +162,10 @@ export default async function Data() {
     "Alibaba Cloud",
     "Oracle Cloud",
     "VMware Cloud",
+    "Red Hat Cloud",
+    "Salesforce Cloud",
+    "SAP Cloud",
+    ["Cloud", "Pilvi", "pilvipalveluiden", "pilvipalvelu"],
   ];
   const devops = [
     "Git",
@@ -163,12 +198,12 @@ export default async function Data() {
   const softSkills = [
     ["Communication", "Viestintä", "kommunikointi", "kommunikaaatio"],
     ["Teamwork", "Tiimityöskentely", "Collaboration", "Yhteistyö", "tiimityö", "team player"],
-    ["Problem Solving", "Problem-solving", "Ongelmanratkaisu", "critical thinking"],
+    ["Problem Solving", "Problem-solving", "Ongelmanratkaisu", "critical thinking", "problem solver"],
     ["Innovation", "Creativity", "Creative", "Luovuus", "Innova", "luova"],
     ["Time management", "Ajanhallinta", "prioritize", "priorisoi"],
     ["Adaptability", "Mukautuvuus", "sopeutuvuus", "sopeutumis"],
     ["Flexibility", "Joustavuus"],
-    ["Leadership", "Johtajuus", "johtaminen", "johtaa", "tiimin vetäjä"],
+    ["Leadership", "Johtajuus", "johtaminen", "johtaa", "tiimin vetäjä", "Team leading", "team leader"],
     ["People skills", "ihmisläheinen"],
     ["Work ethic", "Työmoraali"],
     ["Dedication", "Sitoutuminen"],
@@ -181,104 +216,116 @@ export default async function Data() {
     ["Accountability", "Vastuullisuus", "vastuullinen"],
     ["Self-directed", "itsenäinen", "itseohjautuva"],
     ["Curiosity", "utelias"],
-    ["Pressure Tolerance", "paineensietokyky", "paineensieto", "under pressure"],
-    ["Feedback", "palautetta", "palaute"],
+    ["Pressure Tolerance", "paineensietokyky", "paineensieto", "under pressure", "paineen alla"],
+    ["Feedback", "palautetta", "palaute", "palautteen"],
+  ];
+  const positions = [
+    ["Full Stack", "Full-Stack", "Fullstack"],
+    ["Front End", "Front-End", "Frontend", "frontti"],
+    ["Back End", "Back-End", "Backend", "bäkkäri"],
+    [
+      "Software Engineer",
+      "Software Developer",
+      "SW Developer",
+      "Ohjelmistokehittäjä",
+      "Ohjelmoija",
+      "Koodari",
+      "Koodaaja",
+      "Kehittäjä",
+      "Developer",
+    ],
+    ["Software Architect", "Software Architecture", "Arkkitehti"],
+    ["Web Developer", "Web Development", "web-kehitys", "web-kehittäjä"],
+    ["Mobile Developer", "Mobile Development", "mobiilikehitys", "mobiilikehittäjä"],
+    ["DevOps Engineer", "DevOps Developer", "CI-/DevOps"],
+    ["Data Engineer", "Data Engineering"],
+    ["Data Scientist", "Data Science", "Data Engineer"],
+    ["Machine Learning Engineer", "Machine Learning"],
+    ["Cloud Engineer", "Cloud Engineering"],
+    ["Embedded", "Sulautetut"],
+    ["Cyber Security", "Security Engineering", "Security Engineer", "Tietoturva"],
+    ["QA Engineer", "QA Engineering", "Test Engineer", "Test Engineering", "Testauksen"],
+    ["UX Designer", "UX Design", "Käytettävyys", "Saavutettavuus"],
+    ["UI Designer", "UI Design", "Käyttöliittymäsuunnittelija", "Käyttöliittymäsuunnittelu"],
+    ["Designer", "Suunittelija"],
+    ["System Administrator", "System Administration", "Järjestelmänvalvoja", "järjestelmävastaava"],
+    ["System Specialist", "System Specialist", "Järjestelmäasiantuntija"],
+    ["Product Manager", "Product Management", "Product Owner"],
+    ["Project Manager", "Project Management"],
+    ["Business Analyst", "Business Analysis"],
+    ["Scrum Master"],
+    ["AI Engineer", "Machine Learning Engineer", "AI Programmer"],
+    ["Blockchain Engineer", "Blockchain Developer", "Lohjoketju"],
+    ["Game Developer", "Game Development", "Pelikehittäjä", "Pelikehitys"],
+    ["Game Designer", "Game Design", "Pelisuunnittelija", "Pelisuunnittelu"],
+  ];
+  const seniorities = [
+    ["Intern / Trainee", "Intern", "Trainee", "Harjoittelija", "harjoittelu", "digistar"],
+    ["Junior", "Juniori", "entry", "junnu"],
+    ["Mid", "Mid-level", "Mid level", "Midlevel", "Mid Level", "Mid-Level", "Mid Level", "Midlevel"],
+    ["Senior", "Seniori", "senior", "sennu"],
+    [
+      "Lead",
+      "Lead Developer",
+      "Lead Engineer",
+      "Lead Programmer",
+      "Lead Designer",
+      "Lead Architect",
+      "Tiimin vetäjä",
+      "Johtava kehittäjä",
+      "Johtava suunnittelija",
+      "Johtava arkkitehti",
+      "Johtava ohjelmoija",
+      "Johtava insinööri",
+      "Johtava koodari",
+      "Principal",
+    ],
+    ["Head", "Head of", "Head Engineer", "Head Developer", "Head Architect", "päällikkö"],
   ];
 
-  const escapeRegExpLang = (string: string) => {
+  const escapeRegExp = (string: string) => {
     return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   };
 
-  const _languages = languages
-    .map((language) => {
-      const languages = Array.isArray(language) ? language : [language];
-      const escapedLanguages = languages.map(escapeRegExpLang);
-      const regexString = escapedLanguages.join("|");
-      const regex = new RegExp(`(?:\\s|^|\\()(${regexString})(?=[\\s\\-.,:;!?/)]|\\/|$)`, "gi");
+  function matchAll(keywords: (string | string[])[], complicated: boolean = false, slice: number = 30) {
+    const _keywords = keywords
+      .map((keyword) => {
+        const keywords = Array.isArray(keyword) ? keyword : [keyword];
+        const escapedKeywords = keywords.map(escapeRegExp);
+        const regexString = escapedKeywords.join("|");
 
-      return {
-        language: languages[0],
-        count: _data.results.reduce((a, b) => {
-          regex.lastIndex = 0;
-          return a + (regex.test(b.descr) ? 1 : 0);
-        }, 0),
-      };
-    })
-    .sort((a, b) => b.count - a.count);
+        const regex = complicated
+          ? new RegExp(`(?:\\s|^|\\()(${regexString})(?=[\\s\\-.,:;!?/)]|\\/|$)`, "gi")
+          : new RegExp(`\\b(?:${regexString})`, "gi");
 
-  const _frameworks = frameworks
-    .map((framework): { count: number; framework: string } => {
-      const frameworks = Array.isArray(framework) ? framework : [framework];
-      const escapedLanguages = frameworks.map(escapeRegExpLang);
-      const regexString = escapedLanguages.join("|");
-      const regex = new RegExp(`(?:\\s|^|\\()(${regexString})(?=[\\s\\-.,:;!?/)]|\\/|$)`, "gi");
+        return {
+          label: keywords[0],
+          count: _data.results.reduce((a, b) => {
+            regex.lastIndex = 0;
+            return a + (regex.test(b.descr) ? 1 : 0);
+          }, 0),
+        };
+      })
+      .sort((a, b) => b.count - a.count)
+      .slice(0, slice)
+      .filter((keyword) => keyword.count > 0);
+    return _keywords;
+  }
 
-      return {
-        framework: frameworks[0],
-        count: _data.results.reduce((a, b) => {
-          regex.lastIndex = 0;
-          return a + (regex.test(b.descr) ? 1 : 0);
-        }, 0),
-      };
-    })
-    .sort((a, b) => b.count - a.count);
-
-  const _databases = databases
-    .map((database) => {
-      return {
-        database: database,
-        count: _data.results.reduce((a, b) => a + (b.descr.toLowerCase()?.includes(database.toLowerCase()) ? 1 : 0), 0),
-      };
-    })
-    .sort((a, b) => b.count - a.count);
-
-  const _cloud = cloud
-    .map((cloud) => {
-      return {
-        cloud: cloud,
-        count: _data.results.reduce((a, b) => a + (b.descr.toLowerCase()?.includes(cloud.toLowerCase()) ? 1 : 0), 0),
-      };
-    })
-    .sort((a, b) => b.count - a.count);
-
-  const escapeRegExpDevOps = (string: string) => {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  };
-
-  const _devops = devops
-    .map((devops) => {
-      const escapedDevops = escapeRegExpDevOps(devops);
-      const regex = new RegExp(`\\b${escapedDevops}\\b`, "gi");
-      return {
-        devops: devops,
-        count: _data.results.reduce((a, b) => a + (b.descr?.match(regex)?.length || 0), 0),
-      };
-    })
-    .sort((a, b) => b.count - a.count);
-
-  const escapeRegExpSoftSkills = (string: string) => {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  };
-
-  const _softSkills = softSkills
-    .map((skill) => {
-      const skills = Array.isArray(skill) ? skill : [skill];
-      const escapedSkills = skills.map(escapeRegExpSoftSkills);
-      const regexString = escapedSkills.join("|");
-      const regex = new RegExp(`\\b(?:${regexString})`, "gi");
-      return {
-        skill: skills[0],
-        count: _data.results.reduce((a, b) => a + (regex.test(b.descr) ? 1 : 0), 0),
-      };
-    })
-    .sort((a, b) => b.count - a.count);
+  const _languages = matchAll(languages, true);
+  const _frameworks = matchAll(frameworks, true);
+  const _databases = matchAll(databases, true);
+  const _cloud = matchAll(cloud, true);
+  const _devops = matchAll(devops, true);
+  const _softSkills = matchAll(softSkills, false);
+  const _positions = matchAll(positions, false);
+  const _seniority = matchAll(seniorities, true);
 
   // get location_name and count
   const locationCounts = _data.results.reduce((acc: { [key: string]: number }, result) => {
     acc[result.municipality_name] = (acc[result.municipality_name] || 0) + 1;
     return acc;
   }, {});
-
   // sort locationCounts by count
   const sortedLocationsArray = Object.entries(locationCounts)
     .sort((a, b) => b[1] - a[1])
@@ -290,7 +337,6 @@ export default async function Data() {
     acc[result.company_name] = (acc[result.company_name] || 0) + 1;
     return acc;
   }, {});
-
   // sort companyCounts by count, slice 0, 30
   const sortedCompaniesArray = Object.entries(companyCounts)
     .sort((a, b) => b[1] - a[1])
@@ -298,12 +344,12 @@ export default async function Data() {
     .slice(0, 30);
 
   return (
-    <div>
+    <div className={"px-8 sm:px-0"}>
       <div>
-        <div className={"flex flex-col sm:flex-row sm:items-center sm:justify-between"}>
+        <div className={"flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between"}>
           <h1>Job Listings ({_data.results.length})</h1>
 
-          <h3>Source duunitori.fi/api/v1/jobentries?ohjelmointi+ja+ohjelmistokehitys+(ala)</h3>
+          <h3 className={"text-sm sm:text-2xl line-clamp-4"}>Source duunitori.fi/api/v1/jobentries?search=ohjelmointi+ja+ohjelmistokehitys+(ala)</h3>
           <h3>Date {new Date().toLocaleDateString("fi-FI")}</h3>
         </div>
 
@@ -312,11 +358,12 @@ export default async function Data() {
             <h2>Languages</h2>
             <ul>
               {/*only show languages that have at least one job listing*/}
+
               {_languages.map((language) => {
                 if (language.count > 0) {
                   return (
-                    <li key={language.language}>
-                      {language.language} ({language.count})
+                    <li key={language.label}>
+                      {language.label} ({language.count})
                     </li>
                   );
                 }
@@ -327,11 +374,11 @@ export default async function Data() {
           <div>
             <h2>Frameworks</h2>
             <ul>
-              {_frameworks.map((framework) => {
-                if (framework.count > 0) {
+              {_frameworks.map((frameworks) => {
+                if (frameworks.count > 0) {
                   return (
-                    <li key={framework.framework}>
-                      {framework.framework} ({framework.count})
+                    <li key={frameworks.label}>
+                      {frameworks.label} ({frameworks.count})
                     </li>
                   );
                 }
@@ -345,8 +392,8 @@ export default async function Data() {
               {_databases.map((database) => {
                 if (database.count > 0) {
                   return (
-                    <li key={database.database}>
-                      {database.database} ({database.count})
+                    <li key={database.label}>
+                      {database.label} ({database.count})
                     </li>
                   );
                 }
@@ -360,8 +407,8 @@ export default async function Data() {
               {_cloud.map((cloud) => {
                 if (cloud.count > 0) {
                   return (
-                    <li key={cloud.cloud}>
-                      {cloud.cloud} ({cloud.count})
+                    <li key={cloud.label}>
+                      {cloud.label} ({cloud.count})
                     </li>
                   );
                 }
@@ -375,8 +422,8 @@ export default async function Data() {
               {_devops.map((devops) => {
                 if (devops.count > 0) {
                   return (
-                    <li key={devops.devops}>
-                      {devops.devops} ({devops.count})
+                    <li key={devops.label}>
+                      {devops.label} ({devops.count})
                     </li>
                   );
                 }
@@ -390,8 +437,8 @@ export default async function Data() {
               {_softSkills.map((skill) => {
                 if (skill.count > 0) {
                   return (
-                    <li key={skill.skill}>
-                      {skill.skill} ({skill.count})
+                    <li key={skill.label}>
+                      {skill.label} ({skill.count})
                     </li>
                   );
                 }
@@ -427,6 +474,30 @@ export default async function Data() {
               })}
             </ul>
           </div>
+          <div>
+            <h2>Job Types</h2>
+            <ul>
+              {_positions.map((position) => {
+                return (
+                  <li key={position.label}>
+                    {position.label} ({position.count})
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+          <div>
+            <h2>Job Levels</h2>
+            <ul>
+              {_seniority.map((seniority) => {
+                return (
+                  <li key={seniority.label}>
+                    {seniority.label} ({seniority.count})
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         </div>
       </div>
       <hr className={"my-8 border-gray-400"} />
@@ -443,9 +514,7 @@ export default async function Data() {
         </div>
         <div className={"text-gray-400 max-w-lg"}>
           <h3 className={"py-2"}>Disclamer</h3>
-          <p>
-            The data is not 100% accurate. The app is not affiliated with duunitori.fi.
-          </p>
+          <p>The data is not 100% accurate. The app is not affiliated with duunitori.fi.</p>
         </div>
       </footer>
     </div>
