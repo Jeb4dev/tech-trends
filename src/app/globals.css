@@ -23,7 +23,7 @@ h5 {
 }
 
 body {
-  @apply text-white;
+  @apply text-gray-200;
 }
 
 a {

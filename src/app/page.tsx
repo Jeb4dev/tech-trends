@@ -21,8 +21,8 @@ interface ResponseData {
 }
 
 export default async function Data() {
-  const data = await fetch(
-    "https://duunitori.fi/api/v1/jobentries?format=json&search=ohjelmointi+ja+ohjelmistokehitys+%28ala%29"
+  let data = await fetch(
+    "https://duunitori.fi/api/v1/jobentries?format=json&search=Tieto-+ja+tietoliikennetekniikka%28ala%29"
   );
 
   let _data: ResponseData = await data.json();
@@ -97,7 +97,7 @@ export default async function Data() {
     ["Jupyter Notebook", "JupyterNotebook", "Jupyter"],
     "Gatsby",
     "Django",
-    "Rails",
+    ["Ruby on Rails", "Rails"],
     "Flask",
     "Spring",
     "Laravel",
@@ -177,6 +177,7 @@ export default async function Data() {
     "Travis CI",
     "GitLab CI/CD",
     "Ansible",
+    "Vagrant",
     "Chef",
     "Puppet",
     "Docker",
@@ -194,6 +195,32 @@ export default async function Data() {
     "Kanban",
     "CI/CD",
     "DevOps",
+    "Pipeline",
+    "Taiga",
+    "Jira",
+    "Confluence",
+    "Slack",
+    "Trello",
+    "Azure DevOps",
+  ];
+  const dataScience = [
+    ["Machine Learning", "Koneoppiminen", "Koneoppimisen"],
+    ["Deep Learning", "Syväoppiminen", "Syväoppimisen"],
+    ["Reinforcement learning", "Vahvistuoppiminen", "Vahvistuoppimisen"],
+    "Big Data",
+    ["Data Analysis", "Data Analyst", "Data Analytics", "Data-analyysi", "Data-analyytikko", "Data-analytiikka"],
+    ["Data Visualization", "Data Visualisation", "Data Visualisointi", "Data Visualisointi"],
+    ["Data Engineering", "Data Engineer", "Data Engineering", "Data Engineer"],
+    ["Natural Language Processing", "NLP", "Luonnollisen kielen käsittely", "Luonnollisen kielen käsittely"],
+    ["Computer Vision", "konenäkö"],
+    ["Statistics", "Statistical Analysis", "Tilastotiede", "Tilastollinen analyysi"],
+    ["Business Intelligence", "Bussiness äly"],
+    ["Data Warehousing", "Data Warehouse", "Data Warehousing", "Data Warehouse", "Datan varastointi"],
+    ["Data pipelines", "Data pipeline"],
+    ["Data Modeling", "Data Modelling", "Data Modeler", "Datan mallintaminen", "Datan mallintaja"],
+    ["Data Mining", "Data Miner", "Datan kaivaminen", "Datan kaivaja"],
+    ["Data Management", "Datan hallinta"],
+    ["Artificial Intelligence", "Tekoäly", "Tekoälyt", "tekoäly", "tekoälyt"],
   ];
   const softSkills = [
     ["Communication", "Viestintä", "kommunikointi", "kommunikaaatio"],
@@ -223,9 +250,10 @@ export default async function Data() {
     ["Full Stack", "Full-Stack", "Fullstack"],
     ["Front End", "Front-End", "Frontend", "frontti"],
     ["Back End", "Back-End", "Backend", "bäkkäri"],
+    ["Consultant", "Consulting", "Konsultti", "Konsultointi"],
     [
-      "Software Engineer",
       "Software Developer",
+      "Software Engineer",
       "SW Developer",
       "Ohjelmistokehittäjä",
       "Ohjelmoija",
@@ -243,7 +271,7 @@ export default async function Data() {
     ["Machine Learning Engineer", "Machine Learning"],
     ["Cloud Engineer", "Cloud Engineering"],
     ["Embedded", "Sulautetut"],
-    ["Cyber Security", "Security Engineering", "Security Engineer", "Tietoturva"],
+    ["Cyber Security", "Security Engineering", "Security Engineer", "Tietoturva", "Tietoturvakonsultti"],
     ["QA Engineer", "QA Engineering", "Test Engineer", "Test Engineering", "Testauksen"],
     ["UX Designer", "UX Design", "Käytettävyys", "Saavutettavuus"],
     ["UI Designer", "UI Design", "Käyttöliittymäsuunnittelija", "Käyttöliittymäsuunnittelu"],
@@ -254,10 +282,11 @@ export default async function Data() {
     ["Project Manager", "Project Management"],
     ["Business Analyst", "Business Analysis"],
     ["Scrum Master"],
-    ["AI Engineer", "Machine Learning Engineer", "AI Programmer"],
+    ["AI Engineer", "Machine Learning Engineer", "AI Programmer", "Tekoäly", "AI Developer"],
     ["Blockchain Engineer", "Blockchain Developer", "Lohjoketju"],
     ["Game Developer", "Game Development", "Pelikehittäjä", "Pelikehitys"],
     ["Game Designer", "Game Design", "Pelisuunnittelija", "Pelisuunnittelu"],
+    ["Test Automation", "Testausautomaatio"],
   ];
   const seniorities = [
     ["Intern / Trainee", "Intern", "Trainee", "Harjoittelija", "harjoittelu", "digistar"],
@@ -320,6 +349,7 @@ export default async function Data() {
   const _softSkills = matchAll(softSkills, false);
   const _positions = matchAll(positions, false);
   const _seniority = matchAll(seniorities, true);
+  const _dataScience = matchAll(dataScience, true);
 
   // get location_name and count
   const locationCounts = _data.results.reduce((acc: { [key: string]: number }, result) => {
@@ -349,7 +379,9 @@ export default async function Data() {
         <div className={"flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between"}>
           <h1>Job Listings ({_data.results.length})</h1>
 
-          <h3 className={"text-sm sm:text-2xl line-clamp-4"}>Source duunitori.fi/api/v1/jobentries?search=ohjelmointi+ja+ohjelmistokehitys+(ala)</h3>
+          <h3 className={"text-sm sm:text-2xl line-clamp-4"}>
+            Source duunitori.fi/api/v1/jobentries?search=Tieto- ja tietoliikennetekniikka (ala)
+          </h3>
           <h3>Date {new Date().toLocaleDateString("fi-FI")}</h3>
         </div>
 
@@ -450,13 +482,13 @@ export default async function Data() {
       </div>
       <div>
         <div className={"flex flex-col sm:flex-row gap-8 pt-8 justify-between"}>
-          <div className={"sm:max-w-[20%]"}>
+          <div className={"sm:max-w-[25%]"}>
             <h2>Top 30 Companies</h2>
             <ul>
               {sortedCompaniesArray.map((company) => {
                 return (
                   <li key={company.name} className={"flex flex-row"}>
-                    ({company.count})&nbsp;<span className={"max-w-[80%] line-clamp-1"}>{company.name}</span>
+                    ({company.count})&nbsp;<span className={"max-w-full line-clamp-1"}>{company.name}</span>
                   </li>
                 );
               })}
@@ -475,7 +507,7 @@ export default async function Data() {
             </ul>
           </div>
           <div>
-            <h2>Job Types</h2>
+            <h2>Role</h2>
             <ul>
               {_positions.map((position) => {
                 return (
@@ -487,12 +519,24 @@ export default async function Data() {
             </ul>
           </div>
           <div>
-            <h2>Job Levels</h2>
+            <h2>Seniority</h2>
             <ul>
               {_seniority.map((seniority) => {
                 return (
                   <li key={seniority.label}>
                     {seniority.label} ({seniority.count})
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+          <div>
+            <h2>Data Science</h2>
+            <ul>
+              {_dataScience.map((dataScience) => {
+                return (
+                  <li key={dataScience.label}>
+                    {dataScience.label} ({dataScience.count})
                   </li>
                 );
               })}
