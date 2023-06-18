@@ -359,7 +359,7 @@ export default async function Data() {
   // sort locationCounts by count
   const sortedLocationsArray = Object.entries(locationCounts)
     .sort((a, b) => b[1] - a[1])
-    .map(([location, count]) => ({ location, count }))
+    .map(([label, count]) => ({ label, count }))
     .slice(0, 30);
 
   // get company_name and count
@@ -370,7 +370,7 @@ export default async function Data() {
   // sort companyCounts by count, slice 0, 30
   const sortedCompaniesArray = Object.entries(companyCounts)
     .sort((a, b) => b[1] - a[1])
-    .map(([name, count]) => ({ name, count }))
+    .map(([label, count]) => ({ label, count }))
     .slice(0, 30);
 
   return (
@@ -388,94 +388,32 @@ export default async function Data() {
         <div className={"flex flex-col sm:flex-row gap-8 pt-4 sm:justify-between"}>
           <div>
             <h2>Languages</h2>
-            <ul>
-              {/*only show languages that have at least one job listing*/}
-
-              {_languages.map((language) => {
-                if (language.count > 0) {
-                  return (
-                    <li key={language.label}>
-                      {language.label} ({language.count})
-                    </li>
-                  );
-                }
-              })}
-            </ul>
+            <Skills skills={_languages} data={_data} />
           </div>
 
           <div>
             <h2>Frameworks</h2>
-            <ul>
-              {_frameworks.map((frameworks) => {
-                if (frameworks.count > 0) {
-                  return (
-                    <li key={frameworks.label}>
-                      {frameworks.label} ({frameworks.count})
-                    </li>
-                  );
-                }
-              })}
-            </ul>
+            <Skills skills={_frameworks} data={_data} />
           </div>
 
           <div>
             <h2>Databases</h2>
-            <ul>
-              {_databases.map((database) => {
-                if (database.count > 0) {
-                  return (
-                    <li key={database.label}>
-                      {database.label} ({database.count})
-                    </li>
-                  );
-                }
-              })}
-            </ul>
+            <Skills skills={_databases} data={_data} />
           </div>
 
           <div>
             <h2>Cloud</h2>
-            <ul>
-              {_cloud.map((cloud) => {
-                if (cloud.count > 0) {
-                  return (
-                    <li key={cloud.label}>
-                      {cloud.label} ({cloud.count})
-                    </li>
-                  );
-                }
-              })}
-            </ul>
+            <Skills skills={_cloud} data={_data} />
           </div>
 
           <div>
             <h2>DevOps</h2>
-            <ul>
-              {_devops.map((devops) => {
-                if (devops.count > 0) {
-                  return (
-                    <li key={devops.label}>
-                      {devops.label} ({devops.count})
-                    </li>
-                  );
-                }
-              })}
-            </ul>
+            <Skills skills={_devops} data={_data} />
           </div>
 
           <div>
             <h2>Soft Skills</h2>
-            <ul>
-              {_softSkills.map((skill) => {
-                if (skill.count > 0) {
-                  return (
-                    <li key={skill.label}>
-                      {skill.label} ({skill.count})
-                    </li>
-                  );
-                }
-              })}
-            </ul>
+            <Skills skills={_softSkills} data={_data} />
           </div>
         </div>
         <div></div>
@@ -487,8 +425,8 @@ export default async function Data() {
             <ul>
               {sortedCompaniesArray.map((company) => {
                 return (
-                  <li key={company.name} className={"flex flex-row"}>
-                    ({company.count})&nbsp;<span className={"max-w-full line-clamp-1"}>{company.name}</span>
+                  <li key={company.label} className={"flex flex-row"}>
+                    ({company.count})&nbsp;<span className={"max-w-full line-clamp-1"}>{company.label}</span>
                   </li>
                 );
               })}
@@ -496,51 +434,19 @@ export default async function Data() {
           </div>
           <div>
             <h2>Primary Location</h2>
-            <ul>
-              {sortedLocationsArray.map((location) => {
-                return (
-                  <li key={location.location}>
-                    {location.location} ({location.count})
-                  </li>
-                );
-              })}
-            </ul>
+            <Skills skills={sortedLocationsArray} data={_data} />
           </div>
           <div>
             <h2>Role</h2>
-            <ul>
-              {_positions.map((position) => {
-                return (
-                  <li key={position.label}>
-                    {position.label} ({position.count})
-                  </li>
-                );
-              })}
-            </ul>
+            <Skills skills={_positions} data={_data} />
           </div>
           <div>
             <h2>Seniority</h2>
-            <ul>
-              {_seniority.map((seniority) => {
-                return (
-                  <li key={seniority.label}>
-                    {seniority.label} ({seniority.count})
-                  </li>
-                );
-              })}
-            </ul>
+            <Skills skills={_seniority} data={_data} />
           </div>
           <div>
             <h2>Data Science</h2>
-            <ul>
-              {_dataScience.map((dataScience) => {
-                return (
-                  <li key={dataScience.label}>
-                    {dataScience.label} ({dataScience.count})
-                  </li>
-                );
-              })}
-            </ul>
+            <Skills skills={_dataScience} data={_data} />
           </div>
         </div>
       </div>

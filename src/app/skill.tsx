@@ -6,24 +6,13 @@ interface SkillsProps {
 export const Skills = ({ skills, data }: SkillsProps) => {
   return (
     <>
-      {skills.map((skill) => {
-        if (skill.count > 0) {
+      <ul>
+        {skills.map((skill) => (
           <li>
             {skill.label} ({skill.count})
-          </li>;
-        }
-      })}
+          </li>
+        ))}
+      </ul>
     </>
-  );
-};
-
-export const Skill = (label: string, count: number, data: any) => {
-  const handleClick = () => {
-    alert(label);
-  };
-  return (
-    <li>
-      {label} ({count})
-    </li>
   );
 };
