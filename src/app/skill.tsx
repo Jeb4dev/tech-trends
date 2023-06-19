@@ -1,9 +1,10 @@
+import { Results } from "./page";
+
 interface SkillsProps {
   skills: { label: string; count: number }[];
-  data: any;
 }
 
-export const Skills = ({ skills, data }: SkillsProps) => {
+export const Skills = ({ skills }: SkillsProps) => {
   return (
     <>
       <ul>

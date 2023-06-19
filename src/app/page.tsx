@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Skills } from "./skill";
 
-interface Results {
+export interface Results {
   heading: string;
   date_posted: string;
   slug: string;
@@ -20,13 +20,24 @@ interface ResponseData {
   results: Results[];
 }
 
-export default async function Data() {
+export default async function Data(context: any) {
+  // Query params
+  const params = context.searchParams;
+  const params_languages: string[] = params.lang?.toLowerCase().split(",");
+  const params_frameworks: string[] = params.framework?.toLowerCase().split(",");
+  const params_databases: string[] = params.database?.toLowerCase().split(",");
+  const params_cloud: string[] = params.cloud?.toLowerCase().split(",");
+  const params_devops: string[] = params.devops?.toLowerCase().split(",");
+  const params_dataScience: string[] = params.datascience?.toLowerCase().split(",");
+  const params_softSkills: string[] = params.softskills?.toLowerCase().split(",");
+  const params_positions: string[] = params.position?.toLowerCase().split(",");
+  const params_seniorities: string[] = params.seniority?.toLowerCase().split(",");
+
+  // Fetch data
   let data = await fetch(
     "https://duunitori.fi/api/v1/jobentries?format=json&search=Tieto-+ja+tietoliikennetekniikka%28ala%29"
   );
-
   let _data: ResponseData = await data.json();
-
   for (let i = 0; i < 100; i++) {
     if (!_data.next) break;
     let nextData = await fetch(_data.next);
@@ -35,6 +46,8 @@ export default async function Data() {
     _data.next = _nextData.next;
   }
 
+  let originalData = JSON.parse(JSON.stringify(_data));
+
   // save to file
   const fs = require("fs");
   // fs.writeFile("data.json", JSON.stringify(_data), function (err: any) {
@@ -42,10 +55,10 @@ export default async function Data() {
   //   console.log("Hello World > helloworld.txt");
   // });
 
-  const languages = [
+  let languages = [
     ["JavaScript", "JS", "javascriptillä", "javascriptiä"],
     ["TypeScript", "TS", "typescriptillä", "typescriptiä"],
-    ["Python", "Py"],
+    "Python",
     ["Java", "Javaa", "Javalla", "Javasta"],
     "C#",
     "PHP",
@@ -83,7 +96,7 @@ export default async function Data() {
     "PL/SQL",
     "Prolog",
   ];
-  const frameworks = [
+  let frameworks = [
     ["Node", "Node.js", "NodeJS"],
     ["React", "React.js", "ReactJS"],
     ["Vue", "Vue.js", "VueJS"],
@@ -122,8 +135,10 @@ export default async function Data() {
     ["Keras", "Keras.js", "KerasJS"],
     ["Pandas", "Pandas.js", "PandasJS"],
     ["NumPy", "NumPy.js", "NumPyJS"],
+    "FastAPI",
+    "Jquery",
   ];
-  const databases = [
+  let databases = [
     ["Relational databases", "SQL", "mySQL", "PostgreSQL", "SQLite"],
     ["NoSQL databases", "noSQL", "no-SQL", "MongoDB", "DynamoDB", "Redis", "Cassandra", "Neo4j"],
     ["Vector databases", "vectorDB", "vector-database", "vektori tietokannat", "vektori tietokanta"],
@@ -146,10 +161,13 @@ export default async function Data() {
     "Couchbase",
     "CouchDB",
   ];
-  const cloud = [
+  let cloud = [
     ["AWS", "Amazon Web Services", "S3 Bucket", "EC2"],
     ["Azure", "Microsoft Cloud"],
     ["Google Cloud", "GCP"],
+    "Public cloud",
+    ["Private cloud", "on premise"],
+    "Hybrid cloud",
     "Digital Ocean",
     "Heroku",
     "Netlify",
@@ -167,9 +185,10 @@ export default async function Data() {
     "SAP Cloud",
     ["Cloud", "Pilvi", "pilvipalveluiden", "pilvipalvelu"],
   ];
-  const devops = [
+  let devops = [
     "Git",
     "GitHub",
+    "GitHub Actions",
     "GitLab",
     "Bitbucket",
     "Jenkins",
@@ -203,7 +222,7 @@ export default async function Data() {
     "Trello",
     "Azure DevOps",
   ];
-  const dataScience = [
+  let dataScience = [
     ["Machine Learning", "Koneoppiminen", "Koneoppimisen"],
     ["Deep Learning", "Syväoppiminen", "Syväoppimisen"],
     ["Reinforcement learning", "Vahvistuoppiminen", "Vahvistuoppimisen"],
@@ -222,7 +241,7 @@ export default async function Data() {
     ["Data Management", "Datan hallinta"],
     ["Artificial Intelligence", "Tekoäly", "Tekoälyt", "tekoäly", "tekoälyt"],
   ];
-  const softSkills = [
+  let softSkills = [
     ["Communication", "Viestintä", "kommunikointi", "kommunikaaatio"],
     ["Teamwork", "Tiimityöskentely", "Collaboration", "Yhteistyö", "tiimityö", "team player"],
     ["Problem Solving", "Problem-solving", "Ongelmanratkaisu", "critical thinking", "problem solver"],
@@ -246,7 +265,7 @@ export default async function Data() {
     ["Pressure Tolerance", "paineensietokyky", "paineensieto", "under pressure", "paineen alla"],
     ["Feedback", "palautetta", "palaute", "palautteen"],
   ];
-  const positions = [
+  let positions = [
     ["Full Stack", "Full-Stack", "Fullstack"],
     ["Front End", "Front-End", "Frontend", "frontti"],
     ["Back End", "Back-End", "Backend", "bäkkäri"],
@@ -288,13 +307,45 @@ export default async function Data() {
     ["Game Designer", "Game Design", "Pelisuunnittelija", "Pelisuunnittelu"],
     ["Test Automation", "Testausautomaatio"],
   ];
-  const seniorities = [
-    ["Intern / Trainee", "Intern", "Trainee", "Harjoittelija", "harjoittelu", "digistar"],
-    ["Junior", "Juniori", "entry", "junnu"],
-    ["Mid", "Mid-level", "Mid level", "Midlevel", "Mid Level", "Mid-Level", "Mid Level", "Midlevel"],
-    ["Senior", "Seniori", "senior", "sennu"],
+  let seniorities = [
     [
-      "Lead",
+      "Intern / Trainee",
+      "Intern ",
+      "intern,",
+      "Trainee",
+      "Harjoittelija",
+      "harjoittelu",
+      "digistar",
+      "!intern coach",
+      "!Senior Trainee",
+      "!Data Trainee Hamid",
+      "vastavalmistunut",
+    ],
+    [
+      "Junior",
+      "Juniori",
+      "entry",
+      "junnu",
+      "!mentor more",
+      "!mentor colleagues",
+      "!mentor junior",
+      "!junior colleagues",
+      "!lead and mentor",
+      "!guide junior",
+      "!guiding ",
+      "!mentoring ",
+      "!not an entry",
+      "!coach junior",
+      "!oversee ",
+      "!more junior",
+      "!support junior",
+      "!guidance to junior",
+      "!• Hybridityö Junior",
+    ],
+    ["Mid", "Mid-level", "Mid level", "Midlevel", "Mid Level", "Mid-Level", "Mid Level", "Midlevel"],
+    ["Senior", "Seniori", "senior", "sennu", "!senior colleagues"],
+    [
+      "Lead ",
       "Lead Developer",
       "Lead Engineer",
       "Lead Programmer",
@@ -312,6 +363,16 @@ export default async function Data() {
     ["Head", "Head of", "Head Engineer", "Head Developer", "Head Architect", "päällikkö"],
   ];
 
+  let _languages: { label: string; count: number; openings: Results[] }[];
+  let _frameworks: { label: string; count: number; openings: Results[] }[];
+  let _databases: { label: string; count: number; openings: Results[] }[];
+  let _cloud: { label: string; count: number; openings: Results[] }[];
+  let _devops: { label: string; count: number; openings: Results[] }[];
+  let _softSkills: { label: string; count: number; openings: Results[] }[];
+  let _positions: { label: string; count: number; openings: Results[] }[];
+  let _seniority: { label: string; count: number; openings: Results[] }[];
+  let _dataScience: { label: string; count: number; openings: Results[] }[];
+
   const escapeRegExp = (string: string) => {
     return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   };
@@ -319,9 +380,15 @@ export default async function Data() {
   function matchAll(keywords: (string | string[])[], complicated: boolean = false, slice: number = 30) {
     const _keywords = keywords
       .map((keyword) => {
+        let openings: Results[] = [];
         const keywords = Array.isArray(keyword) ? keyword : [keyword];
         const escapedKeywords = keywords.map(escapeRegExp);
         const regexString = escapedKeywords.join("|");
+        let negative: string[] = keywords
+          .filter((keyword) => keyword.startsWith("!"))
+          .map((keyword) => {
+            return keyword.replace("!", "");
+          });
 
         const regex = complicated
           ? new RegExp(`(?:\\s|^|\\()(${regexString})(?=[\\s\\-.,:;!?/)]|\\/|$)`, "gi")
@@ -331,25 +398,90 @@ export default async function Data() {
           label: keywords[0],
           count: _data.results.reduce((a, b) => {
             regex.lastIndex = 0;
-            return a + (regex.test(b.descr) ? 1 : 0);
+            return (
+              a +
+              (regex.test(b.descr) &&
+              negative &&
+              !negative.some((keyword) => b.descr.toLowerCase().includes(keyword.toLowerCase()))
+                ? 1
+                : 0)
+            );
           }, 0),
+          openings: openings.concat(
+            _data.results.filter((opening) => {
+              regex.lastIndex = 0;
+              if (negative && negative.some((keyword) => opening.descr.toLowerCase().includes(keyword.toLowerCase()))) {
+                return false;
+              }
+              return regex.test(opening.descr);
+            })
+          ),
         };
       })
       .sort((a, b) => b.count - a.count)
-      .slice(0, slice)
-      .filter((keyword) => keyword.count > 0);
+      .filter((keyword) => keyword.count > 0)
+      .slice(0, slice);
     return _keywords;
   }
 
-  const _languages = matchAll(languages, true);
-  const _frameworks = matchAll(frameworks, true);
-  const _databases = matchAll(databases, true);
-  const _cloud = matchAll(cloud, true);
-  const _devops = matchAll(devops, true);
-  const _softSkills = matchAll(softSkills, false);
-  const _positions = matchAll(positions, false);
-  const _seniority = matchAll(seniorities, true);
-  const _dataScience = matchAll(dataScience, true);
+  function updateCategories() {
+    _languages = matchAll(languages, true);
+    let filtered = _languages.find((item) => {
+      return params_languages?.includes(item.label.toLowerCase());
+    });
+    _data.results = filtered?.openings ?? _data.results;
+
+    _frameworks = matchAll(frameworks, true);
+    filtered = _frameworks.find((item) => {
+      return params_frameworks?.includes(item.label.toLowerCase());
+    });
+    _data.results = filtered?.openings ?? _data.results;
+
+    _databases = matchAll(databases, true);
+    filtered = _databases.find((item) => {
+      return params_databases?.includes(item.label.toLowerCase());
+    });
+    _data.results = filtered?.openings ?? _data.results;
+
+    _cloud = matchAll(cloud, true);
+    filtered = _cloud.find((item) => {
+      return params_cloud?.includes(item.label.toLowerCase());
+    });
+    _data.results = filtered?.openings ?? _data.results;
+
+    _devops = matchAll(devops, true);
+    filtered = _devops.find((item) => {
+      return params_devops?.includes(item.label.toLowerCase());
+    });
+    _data.results = filtered?.openings ?? _data.results;
+
+    _softSkills = matchAll(softSkills, false);
+    filtered = _softSkills.find((item) => {
+      return params_softSkills?.includes(item.label.toLowerCase());
+    });
+    _data.results = filtered?.openings ?? _data.results;
+
+    _positions = matchAll(positions, false);
+    filtered = _positions.find((item) => {
+      return params_positions?.includes(item.label.toLowerCase());
+    });
+    _data.results = filtered?.openings ?? _data.results;
+
+    _seniority = matchAll(seniorities, true);
+    filtered = _seniority.find((item) => {
+      return params_seniorities?.includes(item.label.toLowerCase());
+    });
+    _data.results = filtered?.openings ?? _data.results;
+
+    _dataScience = matchAll(dataScience, true);
+    filtered = _dataScience.find((item) => {
+      return params_dataScience?.includes(item.label.toLowerCase());
+    });
+    _data.results = filtered?.openings ?? _data.results;
+  }
+
+  updateCategories();
+  updateCategories();
 
   // get location_name and count
   const locationCounts = _data.results.reduce((acc: { [key: string]: number }, result) => {
@@ -388,32 +520,32 @@ export default async function Data() {
         <div className={"flex flex-col sm:flex-row gap-8 pt-4 sm:justify-between"}>
           <div>
             <h2>Languages</h2>
-            <Skills skills={_languages} data={_data} />
+            <Skills skills={_languages!} />
           </div>
 
           <div>
             <h2>Frameworks</h2>
-            <Skills skills={_frameworks} data={_data} />
+            <Skills skills={_frameworks!} />
           </div>
 
           <div>
             <h2>Databases</h2>
-            <Skills skills={_databases} data={_data} />
+            <Skills skills={_databases!} />
           </div>
 
           <div>
             <h2>Cloud</h2>
-            <Skills skills={_cloud} data={_data} />
+            <Skills skills={_cloud!} />
           </div>
 
           <div>
             <h2>DevOps</h2>
-            <Skills skills={_devops} data={_data} />
+            <Skills skills={_devops!} />
           </div>
 
           <div>
             <h2>Soft Skills</h2>
-            <Skills skills={_softSkills} data={_data} />
+            <Skills skills={_softSkills!} />
           </div>
         </div>
         <div></div>
@@ -434,21 +566,55 @@ export default async function Data() {
           </div>
           <div>
             <h2>Primary Location</h2>
-            <Skills skills={sortedLocationsArray} data={_data} />
+            <ul>
+              {sortedLocationsArray.map((location) => {
+                return (
+                  <li key={location.label} className={"flex flex-row"}>
+                    ({location.count})&nbsp;<span className={"max-w-full line-clamp-1"}>{location.label}</span>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
           <div>
             <h2>Role</h2>
-            <Skills skills={_positions} data={_data} />
+            <Skills skills={_positions!} />
           </div>
           <div>
             <h2>Seniority</h2>
-            <Skills skills={_seniority} data={_data} />
+            <Skills skills={_seniority!} />
           </div>
           <div>
             <h2>Data Science</h2>
-            <Skills skills={_dataScience} data={_data} />
+            <Skills skills={_dataScience!} />
           </div>
         </div>
+      </div>
+      <div className={"py-8"}>
+        <h1 className={"pb-4"}>Filtered Job Listings ({_data.results.length < 30 ? _data.results.length : 30})</h1>
+        {_data.results.slice(0, 30).map((result: Results) => (
+          <div>
+            <a href={`https://duunitori.fi/tyopaikat/tyo/${result.slug}`} className={"text-xl font-bold"}>
+              {result.heading}
+            </a>
+            <p className={"text-gray-200"}>
+              {result.company_name} - {result.municipality_name}
+            </p>
+            <p className={"text-sm text-gray-400"}>
+              {new Date(result.date_posted).toLocaleDateString("fi-FI")} -{" "}
+              {new Date(result.date_posted).toLocaleTimeString("fi-FI", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </p>
+            {/* toggle desc with html dropdown readmore */}
+            <details>
+              <summary className={"line-clamp-1 text-sm text-gray-400 tracking-wider"}>{result.descr}</summary>
+              <p className={"text-sm text-gray-400 tracking-wider"}>{result.descr}</p>
+            </details>
+            <hr className={"my-4 border-gray-400"} />
+          </div>
+        ))}
       </div>
       <hr className={"my-8 border-gray-400"} />
       <footer className={"flex flex-col sm:flex-row justify-between items-center"}>
