@@ -593,7 +593,7 @@ export default async function Data(context: any) {
       <div className={"py-8"}>
         <h1 className={"pb-4"}>Filtered Job Listings ({_data.results.length < 30 ? _data.results.length : 30})</h1>
         {_data.results.slice(0, 30).map((result: Results) => (
-          <div>
+          <div key={result.slug}>
             <a href={`https://duunitori.fi/tyopaikat/tyo/${result.slug}`} className={"text-xl font-bold"}>
               {result.heading}
             </a>

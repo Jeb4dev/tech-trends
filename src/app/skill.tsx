@@ -9,7 +9,7 @@ export const Skills = ({ skills }: SkillsProps) => {
     <>
       <ul>
         {skills.map((skill) => (
-          <li>
+          <li key={skill.label}>
             {skill.label} ({skill.count})
           </li>
         ))}
