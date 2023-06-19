@@ -38,7 +38,7 @@ export default async function Data(context: any) {
     "https://duunitori.fi/api/v1/jobentries?format=json&search=Tieto-+ja+tietoliikennetekniikka%28ala%29"
   );
   let _data: ResponseData = await data.json();
-  for (let i = 0; i < 25; i++) {
+  for (let i = 0; i < 20; i++) {
     if (!_data.next) break;
     let nextData = await fetch(_data.next);
     let _nextData: ResponseData = await nextData.json();
