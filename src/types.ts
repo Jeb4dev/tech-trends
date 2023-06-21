@@ -17,10 +17,10 @@ export interface ResponseData {
   results: Results[];
 }
 
-type Category = {
+export type Category = {
   label: string;
-  count: number;
   openings: Results[];
+  filteredOpenings: Results[];
 };
 
 export type Data = {
@@ -29,8 +29,22 @@ export type Data = {
   databases: Category[];
   cloud: Category[];
   devops: Category[];
+  dataScience: Category[];
   softSkills: Category[];
   positions: Category[];
   seniority: Category[];
-  dataScience: Category[];
+};
+
+export type QueryParams = {
+  languages: string[];
+  frameworks: string[];
+  databases: string[];
+  cloud: string[];
+  devops: string[];
+  dataScience: string[];
+  softSkills: string[];
+  positions: string[];
+  seniority: string[];
+  companies: string[];
+  locations: string[];
 };

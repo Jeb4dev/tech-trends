@@ -1,11 +1,16 @@
 import { useState } from "react";
+import { Category } from "@/types";
 
 interface SkillsProps {
-  skills: { label: string; count: number }[] | null;
+  skills: Category[] | null;
+  category?: string;
+  updateFilter?: any;
+  setLoading?: any;
 }
 
-export const Skills = ({ skills }: SkillsProps) => {
+export const Skills = ({ skills, category, updateFilter, setLoading }: SkillsProps) => {
   const [showAll, setShowAll] = useState(false);
+  skills?.sort((a, b) => b.filteredOpenings.length - a.filteredOpenings.length);
 
   if (!skills) {
     return (
@@ -24,9 +29,14 @@ export const Skills = ({ skills }: SkillsProps) => {
   return (
     <>
       <ul>
-        {(showAll ? skills!.filter((skill) => skill.count > 0) : skills!.slice(0, 5)).map((skill) => (
-          <li className={"flex flex-row"} key={skill.label}>
-            ({skill.count})&nbsp;<span className={"max-w-full line-clamp-1"}>{skill.label}</span>
+        {(showAll ? skills!.filter((skill) => skill.filteredOpenings.length > 0) : skills!.slice(0, 5)).map((skill) => (
+          <li className={"flex flex-row"} key={skill.label} onClick={() => {
+            if (!updateFilter) return;
+            setLoading(true);
+            updateFilter(category, skill.label.toLowerCase());
+            setLoading(false);
+          }}>
+            ({skill.filteredOpenings.length})&nbsp;<span className={"max-w-full line-clamp-1"}>{skill.label}</span>
           </li>
         ))}
       </ul>

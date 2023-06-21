@@ -51,7 +51,7 @@ export const Openings = ({ openings }: type) => {
         <ul>
           {openings!.slice(0, showCount).map((result) => (
             <li key={result.slug}>
-              <a href={`https://duunitori.fi/tyopaikat/tyo/${result.slug}`} className={"text-xl font-bold"}>
+              <a href={`https://duunitori.fi/tyopaikat/tyo/${result.slug}`} className={"text-xl font-bold"} target={"_blank"}>
                 {result.heading}
               </a>
               <p className={"text-gray-200"}>
