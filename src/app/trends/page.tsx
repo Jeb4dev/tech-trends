@@ -17,6 +17,7 @@ import {
   softSkills,
 } from "@/keywords";
 import { Openings } from "@/app/trends/openings";
+import { Slider } from "@/app/trends/slider";
 
 export default function Data() {
   const [data, setData] = useState<ResponseData>({ count: 0, next: null, previous: null, results: [] });
@@ -46,6 +47,8 @@ export default function Data() {
     seniority: params.getAll("seniority").map((q) => q.toLowerCase()),
     companies: params.getAll("companies").map((q) => q.toLowerCase()),
     locations: params.getAll("locations").map((q) => q.toLowerCase()),
+    minDate: [params.getAll("minDate")[0]],
+    maxDate: [params.getAll("maxDate")[0]],
   });
 
   const handleIncrement = () => {
@@ -227,15 +230,30 @@ export default function Data() {
 
   function filterByQueryParams() {
     let openings: Results[] = [];
-    function getCommon(items: Category[], queryParams: string[]) {
-      if (queryParams.length == 0) return;
+    function getCommon(items: Category[], queryParams: { labels: string[]; minDate: Date; maxDate: Date }) {
+      if (queryParams.labels.length == 0) return;
       items.forEach((item) => {
-        if (queryParams.includes(item.label.toLowerCase())) {
+        if (queryParams.labels.includes(item.label.toLowerCase())) {
           item.active = true;
           openings.length == 0
             ? (openings = openings.concat(item.openings))
             : (openings = openings.filter((opening) => item.openings.includes(opening)));
         }
+      });
+      openings = openings.filter((opening) => {
+        const date = new Date(opening.date_posted);
+        const openingDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        const minDate = new Date(
+          queryParams.minDate.getFullYear(),
+          queryParams.minDate.getMonth(),
+          queryParams.minDate.getDate()
+        );
+        const maxDate = new Date(
+          queryParams.maxDate.getFullYear(),
+          queryParams.maxDate.getMonth(),
+          queryParams.maxDate.getDate()
+        );
+        return openingDate >= minDate && openingDate <= maxDate;
       });
     }
 
@@ -245,18 +263,63 @@ export default function Data() {
           openings.length == 0 ? item.openings : openings.filter((opening) => item.openings.includes(opening));
       });
     }
+    getCommon(categoryData.languages, {
+      labels: queryParams.languages,
+      minDate: new Date(queryParams.minDate[0]),
+      maxDate: new Date(queryParams.maxDate[0]),
+    });
+    getCommon(categoryData.frameworks, {
+      labels: queryParams.frameworks,
+      minDate: new Date(queryParams.minDate[0]),
+      maxDate: new Date(queryParams.maxDate[0]),
+    });
+    getCommon(categoryData.databases, {
+      labels: queryParams.databases,
+      minDate: new Date(queryParams.minDate[0]),
+      maxDate: new Date(queryParams.maxDate[0]),
+    });
+    getCommon(categoryData.cloud, {
+      labels: queryParams.cloud,
+      minDate: new Date(queryParams.minDate[0]),
+      maxDate: new Date(queryParams.maxDate[0]),
+    });
+    getCommon(categoryData.devops, {
+      labels: queryParams.devops,
+      minDate: new Date(queryParams.minDate[0]),
+      maxDate: new Date(queryParams.maxDate[0]),
+    });
+    getCommon(categoryData.dataScience, {
+      labels: queryParams.dataScience,
+      minDate: new Date(queryParams.minDate[0]),
+      maxDate: new Date(queryParams.maxDate[0]),
+    });
+    getCommon(categoryData.softSkills, {
+      labels: queryParams.softSkills,
+      minDate: new Date(queryParams.minDate[0]),
+      maxDate: new Date(queryParams.maxDate[0]),
+    });
+    getCommon(categoryData.positions, {
+      labels: queryParams.positions,
+      minDate: new Date(queryParams.minDate[0]),
+      maxDate: new Date(queryParams.maxDate[0]),
+    });
+    getCommon(categoryData.seniority, {
+      labels: queryParams.seniority,
+      minDate: new Date(queryParams.minDate[0]),
+      maxDate: new Date(queryParams.maxDate[0]),
+    });
 
-    getCommon(categoryData.languages, queryParams.languages);
-    getCommon(categoryData.frameworks, queryParams.frameworks);
-    getCommon(categoryData.databases, queryParams.databases);
-    getCommon(categoryData.cloud, queryParams.cloud);
-    getCommon(categoryData.devops, queryParams.devops);
-    getCommon(categoryData.dataScience, queryParams.dataScience);
-    getCommon(categoryData.softSkills, queryParams.softSkills);
-    getCommon(categoryData.positions, queryParams.positions);
-    getCommon(categoryData.seniority, queryParams.seniority);
-    getCommon(companies, queryParams.companies);
-    getCommon(locations, queryParams.locations);
+    getCommon(companies, {
+      labels: queryParams.companies,
+      minDate: new Date(queryParams.minDate[0]),
+      maxDate: new Date(queryParams.maxDate[0]),
+    });
+
+    getCommon(locations, {
+      labels: queryParams.locations,
+      minDate: new Date(queryParams.minDate[0]),
+      maxDate: new Date(queryParams.maxDate[0]),
+    });
 
     filterCommon(categoryData.languages);
     filterCommon(categoryData.frameworks);
@@ -273,6 +336,11 @@ export default function Data() {
     if (openings.length == 0) openings = data.results;
 
     return openings;
+  }
+
+  function filterByDate(min: Date, max: Date) {
+    updateFilter("minDate", `${min.getFullYear()}-${min.getMonth() + 1}-${min.getDate()}`);
+    updateFilter("maxDate", `${max.getFullYear()}-${max.getMonth() + 1}-${max.getDate()}`);
   }
 
   function updateFilter(filter: string, value: string) {
@@ -341,6 +409,10 @@ export default function Data() {
             Source duunitori.fi/api/v1/jobentries?search=Tieto- ja tietoliikennetekniikka (ala)
           </h3>
           <h3>Date {new Date().toLocaleDateString("fi-FI")}</h3>
+        </div>
+
+        <div>
+          <Slider min={new Date("06/22/2022")} filteredData={filteredData} filterByDate={filterByDate} />
         </div>
 
         <div className={"categories"}>

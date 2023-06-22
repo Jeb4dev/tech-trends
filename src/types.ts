@@ -48,4 +48,6 @@ export type QueryParams = {
   seniority: string[];
   companies: string[];
   locations: string[];
+  minDate: string[];
+  maxDate: string[];
 };
