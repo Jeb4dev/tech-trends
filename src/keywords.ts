@@ -267,6 +267,7 @@ export const positions = [
   ["Test Automation", "Testausautomaatio"],
   ["Teacher / Professor", "Teacher", "Opettaja", "Professori"],
   ["Researcher", "Tutkija"],
+  ["Salesman", "Myynti", "Myyjä"],
 ];
 export const seniority = [
   ["Intern / Trainee", "Intern", "Trainee", "Harjoittelija", "harjoittelu", "digistar", "kesätyö"],
