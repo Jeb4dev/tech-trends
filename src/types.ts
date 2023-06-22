@@ -19,6 +19,7 @@ export interface ResponseData {
 
 export type Category = {
   label: string;
+  active: boolean;
   openings: Results[];
   filteredOpenings: Results[];
 };

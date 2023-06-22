@@ -187,6 +187,7 @@ export default function Data() {
 
         return {
           label: keywords[0],
+          active: false,
           openings: openings.concat(
             data.results.filter((opening) => {
               regex.lastIndex = 0;
@@ -230,6 +231,7 @@ export default function Data() {
       if (queryParams.length == 0) return;
       items.forEach((item) => {
         if (queryParams.includes(item.label.toLowerCase())) {
+          item.active = true;
           openings.length == 0
             ? (openings = openings.concat(item.openings))
             : (openings = openings.filter((opening) => item.openings.includes(opening)));
@@ -309,6 +311,7 @@ export default function Data() {
       } else {
         categories.push({
           label: result[property]!,
+          active: false,
           openings: [result],
           filteredOpenings: [],
         });
