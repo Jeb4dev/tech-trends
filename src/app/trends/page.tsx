@@ -230,30 +230,15 @@ export default function Data() {
 
   function filterByQueryParams() {
     let openings: Results[] = [];
-    function getCommon(items: Category[], queryParams: { labels: string[]; minDate: Date; maxDate: Date }) {
-      if (queryParams.labels.length == 0) return;
+    function getCommon(items: Category[], queryParams: string[]) {
+      if (queryParams.length == 0) return;
       items.forEach((item) => {
-        if (queryParams.labels.includes(item.label.toLowerCase())) {
+        if (queryParams.includes(item.label.toLowerCase())) {
           item.active = true;
           openings.length == 0
             ? (openings = openings.concat(item.openings))
             : (openings = openings.filter((opening) => item.openings.includes(opening)));
         }
-      });
-      openings = openings.filter((opening) => {
-        const date = new Date(opening.date_posted);
-        const openingDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-        const minDate = new Date(
-          queryParams.minDate.getFullYear(),
-          queryParams.minDate.getMonth(),
-          queryParams.minDate.getDate()
-        );
-        const maxDate = new Date(
-          queryParams.maxDate.getFullYear(),
-          queryParams.maxDate.getMonth(),
-          queryParams.maxDate.getDate()
-        );
-        return openingDate >= minDate && openingDate <= maxDate;
       });
     }
 
@@ -263,63 +248,18 @@ export default function Data() {
           openings.length == 0 ? item.openings : openings.filter((opening) => item.openings.includes(opening));
       });
     }
-    getCommon(categoryData.languages, {
-      labels: queryParams.languages,
-      minDate: new Date(queryParams.minDate[0]),
-      maxDate: new Date(queryParams.maxDate[0]),
-    });
-    getCommon(categoryData.frameworks, {
-      labels: queryParams.frameworks,
-      minDate: new Date(queryParams.minDate[0]),
-      maxDate: new Date(queryParams.maxDate[0]),
-    });
-    getCommon(categoryData.databases, {
-      labels: queryParams.databases,
-      minDate: new Date(queryParams.minDate[0]),
-      maxDate: new Date(queryParams.maxDate[0]),
-    });
-    getCommon(categoryData.cloud, {
-      labels: queryParams.cloud,
-      minDate: new Date(queryParams.minDate[0]),
-      maxDate: new Date(queryParams.maxDate[0]),
-    });
-    getCommon(categoryData.devops, {
-      labels: queryParams.devops,
-      minDate: new Date(queryParams.minDate[0]),
-      maxDate: new Date(queryParams.maxDate[0]),
-    });
-    getCommon(categoryData.dataScience, {
-      labels: queryParams.dataScience,
-      minDate: new Date(queryParams.minDate[0]),
-      maxDate: new Date(queryParams.maxDate[0]),
-    });
-    getCommon(categoryData.softSkills, {
-      labels: queryParams.softSkills,
-      minDate: new Date(queryParams.minDate[0]),
-      maxDate: new Date(queryParams.maxDate[0]),
-    });
-    getCommon(categoryData.positions, {
-      labels: queryParams.positions,
-      minDate: new Date(queryParams.minDate[0]),
-      maxDate: new Date(queryParams.maxDate[0]),
-    });
-    getCommon(categoryData.seniority, {
-      labels: queryParams.seniority,
-      minDate: new Date(queryParams.minDate[0]),
-      maxDate: new Date(queryParams.maxDate[0]),
-    });
 
-    getCommon(companies, {
-      labels: queryParams.companies,
-      minDate: new Date(queryParams.minDate[0]),
-      maxDate: new Date(queryParams.maxDate[0]),
-    });
-
-    getCommon(locations, {
-      labels: queryParams.locations,
-      minDate: new Date(queryParams.minDate[0]),
-      maxDate: new Date(queryParams.maxDate[0]),
-    });
+    getCommon(categoryData.languages, queryParams.languages);
+    getCommon(categoryData.frameworks, queryParams.frameworks);
+    getCommon(categoryData.databases, queryParams.databases);
+    getCommon(categoryData.cloud, queryParams.cloud);
+    getCommon(categoryData.devops, queryParams.devops);
+    getCommon(categoryData.dataScience, queryParams.dataScience);
+    getCommon(categoryData.softSkills, queryParams.softSkills);
+    getCommon(categoryData.positions, queryParams.positions);
+    getCommon(categoryData.seniority, queryParams.seniority);
+    getCommon(companies, queryParams.companies);
+    getCommon(locations, queryParams.locations);
 
     filterCommon(categoryData.languages);
     filterCommon(categoryData.frameworks);
