@@ -51,10 +51,6 @@ export default function Data() {
     maxDate: [params.getAll("maxDate")[0]],
   });
 
-  const handleIncrement = () => {
-    setCount(count + 1);
-  };
-
   useEffect(() => {
     setLoading(true);
     fetch("/api/v1")
@@ -351,9 +347,9 @@ export default function Data() {
           <h3>Date {new Date().toLocaleDateString("fi-FI")}</h3>
         </div>
 
-        <div>
-          <Slider min={new Date("06/22/2022")} filteredData={filteredData} filterByDate={filterByDate} />
-        </div>
+        {/*<div>*/}
+        {/*  <Slider min={new Date("06/22/2022")} filteredData={filteredData} filterByDate={filterByDate} />*/}
+        {/*</div>*/}
 
         <div className={"categories"}>
           <div>
@@ -474,8 +470,6 @@ export default function Data() {
           <h3 className={"py-2"}>Disclamer</h3>
           <p>The data is not 100% accurate. The app is not affiliated with duunitori.fi.</p>
         </div>
-        <p>Count: {count}</p>
-        <button onClick={handleIncrement}>Increment</button>
       </footer>
     </div>
   );
