@@ -284,14 +284,14 @@ export default function Data() {
   }
 
   function updateFilter(filter: string, value: string) {
-    // add query param to url filter=value, if value is empty remove query param, if already exists remove
     const url = new URL(window.location.href);
-    const params = new URLSearchParams(url.search);
+    let params = new URLSearchParams(url.search);
+    const encodedValue = encodeURIComponent(value).replace(/%20/g, "+")
 
-    // remove filter=value if exists, add filter=value if value is not empty, multiple same filters are allowed with different values
     if (params.has(filter)) {
-      if (params.get(filter) == value) {
-        params.delete(filter);
+      if (params.getAll(filter).includes(value)){
+        console.log(params, url.search, `${filter}=${encodedValue}`)
+        params = new URLSearchParams(url.search.replace(`${filter}=${encodedValue}`, ""));
       } else {
         params.append(filter, value);
       }
