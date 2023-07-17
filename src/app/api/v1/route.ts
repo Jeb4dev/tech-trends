@@ -4,8 +4,15 @@ import { ResponseData } from "@/types";
 import { NextResponse } from "next/server";
 
 let data: ResponseData;
+let time = new Date().getTime();
 async function fetchData() {
   let url = "https://duunitori.fi/api/v1/jobentries?format=json&search=Tieto-+ja+tietoliikennetekniikka%28ala%29";
+
+  // clear data
+  if (data) {
+    data.next = null;
+    data.results = [];
+  }
 
   while (true) {
     const response = await fetch(url);
@@ -18,6 +25,9 @@ async function fetchData() {
 }
 
 export async function GET() {
+
+  // Cache data for 24 hours
+  if (data && time + 86400000 > new Date().getTime()) return NextResponse.json({ data });
 
   if (data) return NextResponse.json({ data });
 
