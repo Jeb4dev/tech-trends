@@ -1,11 +1,18 @@
-import sqlite3 from "sqlite3";
-import { open } from "sqlite";
+import { IMain, IDatabase } from "pg-promise";
+import pgPromise from "pg-promise";
 import { ResponseData, Results } from "@/types";
 import crypto from "crypto";
 import { NextResponse } from "next/server";
 
-let data: Results[] = [];
+interface Database {
+  job: Results;
+}
 
+const pgp: IMain = pgPromise();
+const db: IDatabase<any> = pgp(process.env.POSTGRES_URL);
+
+
+let data: Results[] = [];
 function hashData(data: Results) {
   // Create a hash of the data
   const item = JSON.stringify({
@@ -27,22 +34,17 @@ async function jobAlreadyInData(newJob: Results) {
   return !!data.find((job) => hashData(job) === hash);
 }
 
-async function initializeDatabase() {
-  // Connect to SQLite database
-  const db = await open({
-    filename: "./jobs.db",
-    driver: sqlite3.Database,
-  });
 
+async function initializeDatabase() {
   // Create table if it doesn't exist
-  await db.run(`
+  await db.none(`
     CREATE TABLE IF NOT EXISTS jobs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       slug TEXT UNIQUE,
       heading TEXT,
       descr TEXT,
       company_name TEXT,
-      municipality_name TEXT
+      municipality_name TEXT,
       date_posted TEXT
     )
   `);
@@ -81,23 +83,12 @@ async function fetchDataFromApi() {
 
   return newData;
 }
-
 async function insertNewJobData(data: Results[]) {
-  const db = await open({
-    filename: "./jobs.db",
-    driver: sqlite3.Database,
-  });
-
   for (const job of data) {
     try {
-      await db.run(
-        "INSERT INTO jobs (slug, heading, descr, company_name, municipality_name, date_posted) VALUES (?, ?, ?, ?, ?, ?)",
-        job.slug,
-        job.heading,
-        job.descr,
-        job.company_name,
-        job.municipality_name,
-        job.date_posted
+      await db.none(
+        "INSERT INTO jobs (slug, heading, descr, company_name, municipality_name, date_posted) VALUES ($1, $2, $3, $4, $5, $6)",
+        [job.slug, job.heading, job.descr, job.company_name, job.municipality_name, job.date_posted]
       );
     } catch (e) {
       console.log("Error inserting job data", e);
@@ -107,24 +98,15 @@ async function insertNewJobData(data: Results[]) {
 
 async function fetchDatabaseData() {
   try {
-    const db = await open({
-      filename: "./jobs.db",
-      driver: sqlite3.Database,
-    });
     // Fetch existing job data from the database
-    return await db.all("SELECT * FROM jobs");
+    return await db.any("SELECT * FROM jobs");
   } catch (e) {
     console.log("Error opening database", e);
     await initializeDatabase();
-    const db = await open({
-      filename: "./jobs.db",
-      driver: sqlite3.Database,
-    });
     // Fetch existing job data from the database
-    return await db.all("SELECT * FROM jobs");
+    return await db.any("SELECT * FROM jobs");
   }
 }
-
 export async function GET() {
   data = [];
   // Fetch existing job data from the database
