@@ -9,6 +9,7 @@ interface Database {
 }
 
 const pgp: IMain = pgPromise();
+// @ts-ignore
 const db: IDatabase<any> = pgp(process.env.POSTGRES_URL);
 
 let data: Results[] = [];
