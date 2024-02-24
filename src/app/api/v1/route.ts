@@ -11,7 +11,6 @@ interface Database {
 const pgp: IMain = pgPromise();
 const db: IDatabase<any> = pgp(process.env.POSTGRES_URL);
 
-
 let data: Results[] = [];
 function hashData(data: Results) {
   // Create a hash of the data
@@ -33,7 +32,6 @@ async function jobAlreadyInData(newJob: Results) {
   const hash = hashData(newJob);
   return !!data.find((job) => hashData(job) === hash);
 }
-
 
 async function initializeDatabase() {
   // Create table if it doesn't exist
@@ -86,14 +84,21 @@ async function fetchDataFromApi() {
 async function insertNewJobData(data: Results[]) {
   for (const job of data) {
     try {
-      await db.none(
-        "INSERT INTO jobs (slug, heading, descr, company_name, municipality_name, date_posted) VALUES ($1, $2, $3, $4, $5, $6)",
-        [job.slug, job.heading, job.descr, job.company_name, job.municipality_name, job.date_posted]
-      );
+      // Check if a job with the same slug already exists in the database
+      const existingJob = await db.oneOrNone("SELECT * FROM jobs WHERE slug = $1", [job.slug]);
+
+      // If the job does not exist, insert it into the database
+      if (!existingJob) {
+        await db.none(
+          "INSERT INTO jobs (slug, heading, descr, company_name, municipality_name, date_posted) VALUES ($1, $2, $3, $4, $5, $6)",
+          [job.slug, job.heading, job.descr, job.company_name, job.municipality_name, job.date_posted]
+        );
+      }
     } catch (e) {
       console.log("Error inserting job data", e);
     }
   }
+  console.log(`Inserted ${data.length} new jobs into the database`);
 }
 
 async function fetchDatabaseData() {
