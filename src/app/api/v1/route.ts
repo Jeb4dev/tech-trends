@@ -24,6 +24,7 @@ function hashData(data: Results) {
   return hash.digest("hex");
 }
 
+// Removed jobAlreadyInData usage in refresh logic (still kept if needed elsewhere)
 async function jobAlreadyInData(newJob: Results) {
   // Check if the job already exists in the data, return boolean
   const hash = hashData(newJob);
@@ -83,37 +84,39 @@ function needsRefresh(lastFetchIso: string | null) {
   return ageHours >= REFRESH_INTERVAL_HOURS;
 }
 
-async function fetchDataFromApi() {
+async function fetchDataFromApi(existingSlugs: Set<string>) {
   let apiUrl =
     "https://duunitori.fi/api/v1/jobentries?format=json&page=1&search=Tieto-+ja+tietoliikennetekniikka%28ala%29";
-  let newData: Results[] = [];
-  let duplicates: number = 0;
   const seenAt = new Date().toISOString();
-  // Loop to fetch all pages of data from the API
+  const allJobs: Results[] = [];
+  let newCount = 0;
+  let existingCount = 0;
+
   while (true) {
     console.log(`Fetching ${apiUrl}`);
     const response = await fetch(apiUrl);
+    if (!response.ok) {
+      console.error("Upstream fetch error", response.status, await response.text());
+      break;
+    }
     const newPageData: ResponseData = await response.json();
 
     for (const job of newPageData.results) {
-      // enrich with last_seen_at timestamp
-      job.last_seen_at = seenAt;
-      if (await jobAlreadyInData(job)) {
-        duplicates++;
-      } else {
-        newData.push(job);
-      }
+      job.last_seen_at = seenAt; // set/update timestamp for every active posting
+      if (existingSlugs.has(job.slug)) existingCount++; else newCount++;
+      allJobs.push(job);
     }
 
     if (!newPageData.next) break;
-    if (duplicates > 10) break;
     apiUrl = newPageData.next;
   }
-  console.log(`Fetched ${newData.length} new jobs, ${duplicates} duplicates`);
-  return newData;
+
+  console.log(`Fetched pages: total active jobs=${allJobs.length} (new=${newCount}, existing=${existingCount})`);
+  return { jobs: allJobs, stats: { new: newCount, existing: existingCount, seenAt } };
 }
 
 async function insertNewJobData(data: Results[]) {
+  // Renamed semantic: upsert all jobs (new + existing) to refresh last_seen_at
   for (const job of data) {
     try {
       await db.none(
@@ -129,18 +132,18 @@ async function insertNewJobData(data: Results[]) {
         [
           job.slug,
           job.heading,
-            job.descr,
-            job.company_name,
-            job.municipality_name,
-            job.date_posted,
-            job.last_seen_at || new Date().toISOString(),
+          job.descr,
+          job.company_name,
+          job.municipality_name,
+          job.date_posted,
+          job.last_seen_at || new Date().toISOString(),
         ]
       );
     } catch (e) {
       console.log("Error upserting job data", e);
     }
   }
-  console.log(`Upserted ${data.length} jobs into the database`);
+  console.log(`Upserted (refreshed) ${data.length} active jobs`);
 }
 
 async function fetchDatabaseData() {
@@ -162,16 +165,22 @@ export async function GET() {
   const shouldRefresh = needsRefresh(lastFetch);
   console.log(`Last fetch at: ${lastFetch} -> refresh needed: ${shouldRefresh}`);
 
-  // Always fetch current DB first
+  // Load current DB snapshot (includes historical jobs)
   const existingJobData = await fetchDatabaseData();
-  data = existingJobData.concat(data);
+  const existingSlugs = new Set(existingJobData.map(j => j.slug));
 
   if (shouldRefresh) {
-    const newJobData = await fetchDataFromApi();
-    await insertNewJobData(newJobData);
+    const { jobs: activeJobs, stats } = await fetchDataFromApi(existingSlugs);
+    await insertNewJobData(activeJobs); // updates last_seen_at for all active jobs
     await setMeta("last_fetch_at", new Date().toISOString());
-    // Merge new data to the front
-    data = newJobData.concat(data);
+
+    // Merge active jobs (fresh last_seen_at) with historical (inactive) jobs not seen this run
+    const activeSlugSet = new Set(activeJobs.map(j => j.slug));
+    const inactiveJobs = existingJobData.filter(j => !activeSlugSet.has(j.slug));
+    data = activeJobs.concat(inactiveJobs);
+    console.log(`Active jobs: ${activeJobs.length}, inactive (not seen this fetch): ${inactiveJobs.length}`);
+  } else {
+    data = existingJobData; // no refresh; retain last snapshot
   }
 
   const returnData: ResponseData = {
