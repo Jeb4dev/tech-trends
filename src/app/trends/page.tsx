@@ -336,11 +336,139 @@ export default function Data() {
     return categories.sort((a, b) => b.openings.length - a.openings.length).filter((category) => category.label);
   };
 
-  const escapeRegExp = (string: string) => {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  };
+  // Remove duplicate escapeRegExp earlier and keep a single correct implementation
+  const escapeRegExp = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  // --- Seniority Scoring --------------------------------------------------------
+  // Assign exactly one best-matching seniority per opening using a scoring model.
+  // Higher weights for title matches vs description. Negative context reduces Junior noise.
+  function classifySeniority(openings: Results[]): Category[] {
+    const order = ["Intern","Junior","Mid-level","Senior","Lead","Director","Vice President","Chief"]; // simplified order for tie-breaking
+
+    const groups = seniority.map(g => {
+      const arr = Array.isArray(g) ? g : [g];
+      const [label, ...syns] = arr;
+      return { label, synonyms: [label, ...syns].filter(s=>!s.startsWith('!')).map(s=>s.toLowerCase()), negatives: [label, ...syns].filter(s=>s.startsWith('!')).map(s=>s.slice(1).toLowerCase()) };
+    });
+
+    const highLevel = new Set(["Lead","Director","Vice President","Chief"]);
+    const ambiguousHigh = new Set(["lead","head","principal","staff","architect"]); // when in description only, require pattern
+    const roleAfterAmbiguous = /(lead|head|principal|staff|architect)\s+(engineer|developer|designer|artist|programmer|researcher|analyst|manager|product|security|game|data|ui|ux)/i;
+    const teamLeadPattern = /(team|technical|tech)\s+lead/i;
+
+    const mentoringJuniorRegex = /(mentor(ing)?|coach(ing)?|guide(ing)?|support(ing)?|train(ing)?)\s+(our\s+)?junior(s)?/i;
+    const contextualHighLevelPhrase = /(report(s|ing)?\s+to|support(ing)?|assist(ing)?|work(ing)?\s+with|collaborat(e|ing)\s+with)/i;
+    const contactSectionRegex = /(lisätietoja|yhteyshenkilö|contact|ota\s+yhteyttä|rekrytoija|rekrytointipäällikkö)/i;
+
+    const resultsMap: Record<string, Category> = {};
+    groups.forEach(g=>{resultsMap[g.label]={label:g.label,active:false,openings:[],filteredOpenings:[]};});
+
+    openings.forEach(opening => {
+      const title = opening.heading.toLowerCase();
+      const desc = opening.descr.toLowerCase();
+      const full = title + '\n' + desc;
+
+      const scores: Record<string, number> = {};
+      const meta: Record<string,{titleHits:number;descHits:number;descStrong:number}> = {};
+
+      groups.forEach(g => {
+        if (g.negatives.some(n => full.includes(n))) return;
+        let titleHits = 0; let descHits = 0; let strongDesc = 0; let subtotal = 0;
+        g.synonyms.forEach(rawSyn => {
+          const syn = rawSyn.toLowerCase();
+          const safe = syn.replace(/[-/\\^$*+?.()|[\]{}]/g,'\\$&');
+          const rWord = new RegExp(`\\b${safe}\\b`,'gi');
+          const t = title.match(rWord);
+          if (t) { titleHits += t.length; subtotal += 10 * t.length; }
+          rWord.lastIndex = 0;
+          const d = desc.match(rWord);
+          if (d) {
+            if (ambiguousHigh.has(syn) && !title.match(rWord)) {
+              let valid = false;
+              if (roleAfterAmbiguous.test(desc) || teamLeadPattern.test(desc)) valid = true;
+              if (!valid) return; // skip ambiguous occurrence
+              strongDesc += d.length;
+            }
+            descHits += d.length;
+            subtotal += 2 * d.length;
+          }
+        });
+        if (subtotal>0){
+          scores[g.label]=(scores[g.label]||0)+subtotal;
+          meta[g.label]={titleHits,descHits,descStrong:strongDesc};
+        }
+      });
+
+      // Years of experience heuristic
+      const yearsMatch = desc.match(/\b(\d{1,2})\+?\s*(?:years|yrs|vuotta|v)\b/);
+      let years = yearsMatch?parseInt(yearsMatch[1],10):null;
+      if (years!==null){
+        if (years>=10) scores['Senior']=(scores['Senior']||0)+4; else if (years>=6) scores['Senior']=(scores['Senior']||0)+2; else if (years<=2) scores['Junior']=(scores['Junior']||0)+2;
+      }
+
+      if (!Object.values(meta).some(m=>m.titleHits>0)) scores['Mid-level']=(scores['Mid-level']||0)+2;
+
+      if (mentoringJuniorRegex.test(full) && scores['Junior']) scores['Junior']-=6;
+
+      // Remove contextual high-level
+      for (const hl of highLevel){
+        if (scores[hl] && (!meta[hl] || meta[hl].titleHits===0)){
+          const idx = desc.indexOf(hl.toLowerCase());
+          if (idx>-1){
+            const window = desc.slice(Math.max(0,idx-50), idx+50);
+            if (contextualHighLevelPhrase.test(window)) delete scores[hl];
+          }
+        }
+      }
+
+      // Chief-specific suppression: only keep Chief if title hit OR strong, non-contact description usage
+      if (scores['Chief']) {
+        const chiefMeta = meta['Chief'];
+        if (!chiefMeta || chiefMeta.titleHits===0) {
+          const chiefRegex = /(toimitusjohtaja|verkställande\s+direktör|chief|c-level|cio|ciso|teknologiajohtaja|tiedonhallintajohtaja|tietoturvajohtaja)/gi;
+          const matches = [...desc.matchAll(chiefRegex)].map(m=>m.index||0);
+          const contactStart = desc.search(contactSectionRegex);
+          let allInContact = contactStart>=0 && matches.length>0 && matches.every(i=>i>=contactStart);
+          let contextualCount = 0;
+          for (const idx of matches){
+            const w = desc.slice(Math.max(0,idx-60), idx+60);
+            if (contextualHighLevelPhrase.test(w)) contextualCount++;
+          }
+          if (allInContact || contextualCount===matches.length){
+            delete scores['Chief'];
+          } else if (matches.length===1 && !years) {
+            // Single weak occurrence without years reinforcement -> reduce weight to avoid beating Mid-level baseline
+            if (scores['Chief']<=2) delete scores['Chief']; else scores['Chief']-=3;
+          }
+        }
+      }
+
+      if (scores['Senior'] && meta['Senior'] && meta['Senior'].titleHits===0 && meta['Senior'].descStrong===0 && (!years || years<6)){
+        scores['Mid-level']=(scores['Mid-level']||0)+1; delete scores['Senior'];
+      }
+
+      if (scores['Lead'] && meta['Lead'] && meta['Lead'].titleHits===0 && meta['Lead'].descStrong===0){
+        if (scores['Senior']) delete scores['Lead']; else { scores['Mid-level']=(scores['Mid-level']||0)+1; delete scores['Lead']; }
+      }
+
+      if (!Object.entries(scores).some(([,v])=>v>0)) scores['Mid-level']=1;
+
+      const best = Object.entries(scores)
+        .filter(([,v])=>v>0)
+        .sort((a,b)=>{ if (b[1]!==a[1]) return b[1]-a[1]; return order.indexOf(b[0])-order.indexOf(a[0]); })[0];
+      if (best){
+        if (!resultsMap[best[0]]) resultsMap[best[0]]={label:best[0],active:false,openings:[],filteredOpenings:[]};
+        resultsMap[best[0]].openings.push(opening);
+      }
+    });
+
+    return Object.values(resultsMap).filter(c=>c.openings.length).sort((a,b)=>b.openings.length-a.openings.length);
+  }
+  // ----------------------------------------------------------------------------
 
   populateCategories();
+  // Replace simple matching for seniority with scoring-based single classification
+  categoryData.seniority = classifySeniority(data.results);
   const locations = groupResultsByProperty(data.results, "municipality_name");
   const companies = groupResultsByProperty(data.results, "company_name");
 

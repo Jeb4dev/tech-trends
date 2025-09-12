@@ -435,16 +435,11 @@ export const positions = [
 ];
 
 export const seniority = [
-  ["Intern / Trainee", "Intern", "Trainee", "Harjoittelija", "harjoittelu", "digistar", "kesätyö"],
+  ["Intern", "Trainee", "Harjoittelija", "harjoittelu", "digistar", "kesätyö"],
   ["Junior", "Juniori", "entry", "!senior"],
   ["Mid-level", "Mid", "Regular", "Intermediate"],
   ["Senior", "Seniori", "senior"],
-  ["Lead", "Tiimin vetäjä", "Johtava", "Johtaja", "Team Lead"],
-  ["Architect", "Arkkitehti"],
-  ["Staff", "Staff Engineer"],
-  ["Principal", "Head", "Päälikkö"],
-  ["Product Owner", "Omistaja", "owner"],
-  ["Director", "Executive"],
-  ["Vice President", "VP"],
-  ["Chief", "C‑level", "CTO", "CIO", "CISO"],
+  ["Lead", "Tiimin vetäjä", "Johtava", "Johtaja", "Team Lead", "Architect", "Arkkitehti", "Staff", "Staff Engineer", "Principal", "Head", "Päälikkö"],
+  ["Director", "Executive", "Vice President", "VP", "Johtaja", "direktör"],
+  ["Chief", "C-level", "CIO", "CISO", "Toimitusjohtaja", "Teknologiajohtaja", "Tiedonhallintajohtaja", "Tietoturvajohtaja", "Verkställande direktör"]
 ];
