@@ -275,24 +275,35 @@ export default function Data() {
   }
 
   function filterByDate(min: Date, max: Date) {
-    updateFilter("minDate", `${min.getFullYear()}-${min.getMonth() + 1}-${min.getDate()}`);
-    updateFilter("maxDate", `${max.getFullYear()}-${max.getMonth() + 1}-${max.getDate()}`);
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    updateFilter("minDate", `${min.getFullYear()}-${pad(min.getMonth() + 1)}-${pad(min.getDate())}`);
+    updateFilter("maxDate", `${max.getFullYear()}-${pad(max.getMonth() + 1)}-${pad(max.getDate())}`);
   }
 
   function updateFilter(filter: string, value: string) {
     const url = new URL(window.location.href);
-    let params = new URLSearchParams(url.search);
-    const encodedValue = encodeURIComponent(value).replace(/%20/g, "+")
+    const params = new URLSearchParams(url.search);
 
-    if (params.has(filter)) {
-      if (params.getAll(filter).includes(value)){
-        console.log(params, url.search, `${filter}=${encodedValue}`)
-        params = new URLSearchParams(url.search.replace(`${filter}=${encodedValue}`, ""));
+    const isSingleValue = filter === 'minDate' || filter === 'maxDate';
+
+    if (isSingleValue) {
+      // For date filters, keep only one value or toggle off if identical
+      if (params.get(filter) === value) {
+        params.delete(filter);
+      } else {
+        params.set(filter, value);
+      }
+    } else {
+      // Multi-select toggle behavior
+      const existing = params.getAll(filter);
+      if (existing.includes(value)) {
+        // remove this value
+        const remaining = existing.filter(v => v !== value);
+        params.delete(filter);
+        remaining.forEach(v => params.append(filter, v));
       } else {
         params.append(filter, value);
       }
-    } else if (value) {
-      params.append(filter, value);
     }
 
     setQueryParams({
@@ -347,9 +358,12 @@ export default function Data() {
           <h3>Date {new Date().toLocaleDateString("fi-FI")}</h3>
         </div>
 
-        {/*<div>*/}
-        {/*  <Slider min={new Date("06/22/2022")} filteredData={filteredData} filterByDate={filterByDate} />*/}
-        {/*</div>*/}
+        <div>
+        <Slider min={new Date("09/01/2025")} filteredData={filteredData} filterByDate={filterByDate}
+          initialMinDate={queryParams.minDate[0] ? new Date(queryParams.minDate[0]) : null}
+          initialMaxDate={queryParams.maxDate[0] ? new Date(queryParams.maxDate[0]) : null}
+        />
+        </div>
 
         <div className={"categories"}>
           <div>

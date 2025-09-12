@@ -8,6 +8,7 @@ export interface Results {
   descr: string;
   latitude: string | null;
   longitude: string | null;
+  last_seen_at?: string;
 }
 
 export interface ResponseData {
