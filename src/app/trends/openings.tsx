@@ -182,7 +182,7 @@ export const Openings = ({ openings, activeQuery }: TypeProps) => {
         onClick={handleShowMore}
         disabled={showCount >= openings.length}
       >
-        Load more (<span className="text-gray-200 font-bold">{showCount}/{openings.length}</span>)
+        Load more (<span className="text-gray-200 font-bold">{Math.min(showCount, openings.length)}/{openings.length}</span>)
       </button>
     </div>
   );
