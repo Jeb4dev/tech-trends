@@ -467,7 +467,7 @@ export default function Data() {
           </div>
         </div>
       </div>
-      <Openings openings={filteredData} />
+      <Openings openings={filteredData} activeQuery={queryParams} />
       <hr className={"my-8 border-gray-400"} />
       <footer className={"flex flex-col sm:flex-row justify-between items-center"}>
         <div className={"text-gray-400 max-w-xl"}>
