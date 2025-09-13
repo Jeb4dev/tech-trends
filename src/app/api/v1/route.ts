@@ -8,9 +8,14 @@ import { NextResponse } from "next/server";
 export const dynamic = 'force-dynamic';
 export const revalidate = 0; // no ISR
 
+const useDb = !!process.env.POSTGRES_URL;
 const pgp: IMain = pgPromise();
 // @ts-ignore
-const db: IDatabase<any> = pgp(process.env.POSTGRES_URL);
+const db: IDatabase<any> | null = useDb ? pgp(process.env.POSTGRES_URL) : null;
+
+// In-memory fallback when database is not available
+let inMemoryData: Results[] = [];
+let inMemoryLastFetch: string | null = null;
 
 let data: Results[] = [];
 function hashData(data: Results) {
@@ -38,6 +43,7 @@ async function jobAlreadyInData(newJob: Results) {
 const REFRESH_INTERVAL_HOURS = 6; // Fetch a few times a day
 
 async function initializeDatabase() {
+  if (!useDb) return; // skip if no DB
   // Create tables if they don't exist
   await db.tx(async (t) => {
     await t.none(`
@@ -65,6 +71,10 @@ async function initializeDatabase() {
 }
 
 async function getMeta(key: string): Promise<string | null> {
+  if (!useDb) {
+    if (key === "last_fetch_at") return inMemoryLastFetch;
+    return null;
+  }
   try {
     const row = await db.oneOrNone(`SELECT value FROM app_meta WHERE key = $1`, [key]);
     return row?.value ?? null;
@@ -74,6 +84,10 @@ async function getMeta(key: string): Promise<string | null> {
 }
 
 async function setMeta(key: string, value: string) {
+  if (!useDb) {
+    if (key === "last_fetch_at") inMemoryLastFetch = value;
+    return;
+  }
   await db.none(
     `INSERT INTO app_meta(key,value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
     [key, value]
@@ -152,6 +166,7 @@ async function insertNewJobData(data: Results[]) {
 }
 
 async function fetchDatabaseData() {
+  if (!useDb) return inMemoryData; // fallback straight to memory
   try {
     // Fetch existing job data from the database
     return await db.any("SELECT * FROM jobs");
@@ -168,24 +183,33 @@ export async function GET() {
 
   const lastFetch = await getMeta("last_fetch_at");
   const shouldRefresh = needsRefresh(lastFetch);
-  console.log(`Last fetch at: ${lastFetch} -> refresh needed: ${shouldRefresh}`);
+  console.log(`Last fetch at: ${lastFetch} -> refresh needed: ${shouldRefresh} (db=${useDb})`);
 
-  // Load current DB snapshot (includes historical jobs)
+  // Load current snapshot
   const existingJobData = await fetchDatabaseData();
-  const existingSlugs = new Set(existingJobData.map(j => j.slug));
+  const existingSlugs = new Set(existingJobData.map((j: any) => j.slug));
 
   if (shouldRefresh) {
-    const { jobs: activeJobs, stats } = await fetchDataFromApi(existingSlugs);
-    await insertNewJobData(activeJobs); // updates last_seen_at for all active jobs
+    const { jobs: activeJobs } = await fetchDataFromApi(existingSlugs);
+    if (useDb) {
+      await insertNewJobData(activeJobs);
+    } else {
+      // in-memory upsert
+      const activeSlugSet = new Set(activeJobs.map(j => j.slug));
+      const inactive = existingJobData.filter((j: any) => !activeSlugSet.has(j.slug));
+      inMemoryData = activeJobs.concat(inactive);
+    }
     await setMeta("last_fetch_at", new Date().toISOString());
 
-    // Merge active jobs (fresh last_seen_at) with historical (inactive) jobs not seen this run
-    const activeSlugSet = new Set(activeJobs.map(j => j.slug));
-    const inactiveJobs = existingJobData.filter(j => !activeSlugSet.has(j.slug));
-    data = activeJobs.concat(inactiveJobs);
-    console.log(`Active jobs: ${activeJobs.length}, inactive (not seen this fetch): ${inactiveJobs.length}`);
+    if (useDb) {
+      const activeSlugSet = new Set(activeJobs.map(j => j.slug));
+      const inactiveJobs = (existingJobData as any[]).filter(j => !activeSlugSet.has(j.slug));
+      data = activeJobs.concat(inactiveJobs);
+    } else {
+      data = inMemoryData;
+    }
   } else {
-    data = existingJobData; // no refresh; retain last snapshot
+    data = existingJobData as any[];
   }
 
   const returnData: ResponseData = {
@@ -195,6 +219,5 @@ export async function GET() {
     results: data,
   };
 
-  console.log(`Returning ${returnData.count} jobs (refreshed=${shouldRefresh})`);
   return NextResponse.json({ data: returnData });
 }
