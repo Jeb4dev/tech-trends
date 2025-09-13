@@ -1,27 +1,28 @@
-import { useState, useRef, useLayoutEffect } from "react";
+import { useState, useRef, useLayoutEffect, useMemo, useEffect } from "react";
 import { QueryParams } from "@/types";
 import { languages, frameworks, databases, cloud, devops, dataScience, softSkills, positions, seniority } from "@/keywords";
 
+interface OpeningEntry {
+  heading: string;
+  date_posted: string;
+  slug: string;
+  municipality_name: string;
+  export_image_url: string;
+  company_name: string;
+  descr: string;
+  latitude: string | null;
+  longitude: string | null;
+}
+
 interface TypeProps {
-  openings: {
-    heading: string;
-    date_posted: string;
-    slug: string;
-    municipality_name: string;
-    export_image_url: string;
-    company_name: string;
-    descr: string;
-    latitude: string | null;
-    longitude: string | null;
-  }[] | null;
+  openings: OpeningEntry[] | null;
   activeQuery?: QueryParams;
 }
 
-// --- Keyword Dictionary / Helpers --------------------------------------------------
+// ---------------- Keyword helpers ----------------
 function escapeRegExp(str: string) {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
-
 function escapeHtml(str: string) {
   return str
     .replace(/&/g, "&amp;")
@@ -50,9 +51,7 @@ const keywordDict = buildDictionary();
 
 function gatherActiveTerms(active?: QueryParams): string[] {
   if (!active) return [];
-  const buckets: (keyof QueryParams)[] = [
-    "languages","frameworks","databases","cloud","devops","dataScience","softSkills","positions","seniority"
-  ];
+  const buckets: (keyof QueryParams)[] = ["languages","frameworks","databases","cloud","devops","dataScience","softSkills","positions","seniority"];
   const terms: string[] = [];
   for (const bucket of buckets) {
     for (const label of active[bucket]) {
@@ -60,29 +59,19 @@ function gatherActiveTerms(active?: QueryParams): string[] {
       if (syns) terms.push(...syns);
     }
   }
-  // include companies & locations (exact match attempts)
   terms.push(...active.companies, ...active.locations);
   return Array.from(new Set(terms.filter(Boolean)));
 }
 
-// --- Formatting & Highlighting -----------------------------------------------------
-function formatDescription(raw: string, activeQuery?: QueryParams) {
-  if (!raw) return "";
+function buildHighlightRegex(activeTerms: string[]) {
+  if (!activeTerms.length) return null;
+  const sorted = [...activeTerms].sort((a, b) => b.length - a.length);
+  return new RegExp(`(${sorted.map(escapeRegExp).join("|")})`, "gi");
+}
+
+function highlightAndWrap(raw: string, highlightRegex: RegExp | null) {
   const text = raw.replace(/\r/g, "");
-
-  const activeTerms = gatherActiveTerms(activeQuery);
-  activeTerms.sort((a, b) => b.length - a.length);
-  const highlightRegex = activeTerms.length
-    ? new RegExp(`(${activeTerms.map(escapeRegExp).join("|")})`, "gi")
-    : null;
-  const hl = (s: string) =>
-    highlightRegex
-      ? s.replace(
-          highlightRegex,
-          m => `<mark class='bg-amber-300 text-black rounded px-0.5'>${m}</mark>`
-        )
-      : s;
-
+  const hl = (s: string) => highlightRegex ? s.replace(highlightRegex, m => `<mark class='bg-amber-300 text-black rounded px-0.5'>${m}</mark>`) : s;
   return text
     .split(/\n+/)
     .map(l => l.trim())
@@ -91,21 +80,50 @@ function formatDescription(raw: string, activeQuery?: QueryParams) {
     .join("\n");
 }
 
-
 function makeSnippet(text: string) {
   return text.slice(0, 300).replace(/\s+/g, ' ').trim();
 }
 
-// --- Component ---------------------------------------------------------------------
+// ---------------- Component ----------------
 export const Openings = ({ openings, activeQuery }: TypeProps) => {
   const [showCount, setShowCount] = useState(10);
   const [opened, setOpened] = useState<Set<string>>(new Set());
+  const formatCache = useRef<Map<string, string>>(new Map());
+
+  const activeTerms = useMemo(() => gatherActiveTerms(activeQuery), [activeQuery]);
+  const highlightRegex = useMemo(() => buildHighlightRegex(activeTerms), [activeTerms]);
+
+  // Rebuild formatted cache for currently opened items when highlight terms change
+  useEffect(() => {
+    if (!openings || opened.size === 0) {
+      formatCache.current.clear();
+      return;
+    }
+    const newMap = new Map<string, string>();
+    opened.forEach(slug => {
+      const item = openings.find(o => o.slug === slug);
+      if (item) newMap.set(slug, highlightAndWrap(item.descr, highlightRegex));
+    });
+    formatCache.current = newMap;
+  }, [highlightRegex, openings, opened]);
 
   const handleShowMore = () => {
     if (!openings) return;
     if (showCount >= openings.length) return;
-    const next = Math.min(openings.length, showCount + 100);
-    setShowCount(next);
+    setShowCount(prev => Math.min(openings.length, prev + 100));
+  };
+
+  const toggleOpen = (entry: OpeningEntry) => {
+    setOpened(prev => {
+      const next = new Set(prev);
+      if (next.has(entry.slug)) next.delete(entry.slug); else {
+        if (!formatCache.current.has(entry.slug)) {
+          formatCache.current.set(entry.slug, highlightAndWrap(entry.descr, highlightRegex));
+        }
+        next.add(entry.slug);
+      }
+      return next;
+    });
   };
 
   if (!openings) {
@@ -131,7 +149,11 @@ export const Openings = ({ openings, activeQuery }: TypeProps) => {
       <ul>
         {openings.slice(0, showCount).map(result => {
           const isOpen = opened.has(result.slug);
-          const formattedHtml = formatDescription(result.descr, activeQuery);
+          let formatted = formatCache.current.get(result.slug) || "";
+          if (isOpen && !formatted) {
+            formatted = highlightAndWrap(result.descr, highlightRegex);
+            formatCache.current.set(result.slug, formatted);
+          }
           const snippet = makeSnippet(result.descr);
           return (
             <li key={result.slug} className="mb-6">
@@ -158,7 +180,8 @@ export const Openings = ({ openings, activeQuery }: TypeProps) => {
                     type="button"
                     aria-expanded={isOpen}
                     aria-controls={`desc-${result.slug}`}
-                    onClick={() => setOpened(prev => { const next = new Set(prev); isOpen ? next.delete(result.slug) : next.add(result.slug); return next; })}
+                    aria-label={isOpen ? "Collapse description" : "Expand description"}
+                    onClick={() => toggleOpen(result)}
                     className="text-xs inline-flex items-center gap-1 text-gray-500 hover:text-gray-200 transition-colors shrink-0 mt-0.5"
                   >
                     {isOpen ? 'Show less' : 'Show more'}
@@ -171,7 +194,7 @@ export const Openings = ({ openings, activeQuery }: TypeProps) => {
                     >{snippet}</p>
                   )}
                 </div>
-                <CollapsibleSection id={`desc-${result.slug}`} open={isOpen} html={formattedHtml} />
+                <CollapsibleSection id={`desc-${result.slug}`} open={isOpen} html={formatted} />
               </article>
             </li>
           );
@@ -194,7 +217,6 @@ const CollapsibleSection = ({ id, open, html }: { id: string; open: boolean; htm
   const [height, setHeight] = useState(0);
   const [render, setRender] = useState(open);
 
-  // measure content
   useLayoutEffect(() => {
     if (open) {
       setRender(true);
@@ -202,9 +224,8 @@ const CollapsibleSection = ({ id, open, html }: { id: string; open: boolean; htm
         if (ref.current) setHeight(ref.current.scrollHeight);
       });
     } else if (ref.current) {
-      setHeight(ref.current.scrollHeight); // set to current height then collapse
+      setHeight(ref.current.scrollHeight);
       requestAnimationFrame(() => setHeight(0));
-      // after transition ends, unmount content to reduce DOM weight
       const t = setTimeout(() => setRender(false), 350);
       return () => clearTimeout(t);
     }
