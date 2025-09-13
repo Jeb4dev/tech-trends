@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Skills } from "./skill";
 import { Category, Data, QueryParams, ResponseData, Results } from "@/types";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   cloud,
@@ -19,7 +19,7 @@ import {
 import { Openings } from "@/app/trends/openings";
 import { Slider } from "@/app/trends/slider";
 
-export default function Data() {
+function TrendsPageInner() {
   const [data, setData] = useState<ResponseData>({ count: 0, next: null, previous: null, results: [] });
   const [isLoading, setLoading] = useState(false);
   const [categoryData, setCategoryData] = useState<Data>({
@@ -660,5 +660,13 @@ export default function Data() {
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function TrendsPage() {
+  return (
+    <Suspense fallback={<div className="px-8 sm:px-0">Loading...</div>}>
+      <TrendsPageInner />
+    </Suspense>
   );
 }

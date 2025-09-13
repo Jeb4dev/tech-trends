@@ -11,17 +11,38 @@ export const Slider = (props: { min: Date; filteredData: Results[]; filterByDate
   const commitTimer = useRef<NodeJS.Timeout | null>(null);
   const trackRef = useRef<HTMLDivElement | null>(null);
   const [dragging, setDragging] = useState<null | 'min' | 'max'>(null);
-  const toDate = (offsetDays: number) => new Date(min.getTime() + offsetDays * 24 * 3600 * 1000);
+
+  const toDate = useCallback((offsetDays: number) => new Date(min.getTime() + offsetDays * 24 * 3600 * 1000), [min]);
+
+  const clamp = useCallback((val: number) => Math.min(Math.max(val, 0), totalDays), [totalDays]);
+  const pct = useCallback((day: number) => (day / totalDays) * 100, [totalDays]);
+
+  // Convert pixel position to day offset
+  const posToDay = useCallback((clientX: number) => {
+    const el = trackRef.current;
+    if (!el) return 0;
+    const rect = el.getBoundingClientRect();
+    const ratio = (clientX - rect.left) / rect.width;
+    return clamp(Math.round(ratio * totalDays));
+  }, [clamp, totalDays]);
 
   const commitRange = useCallback(() => {
     const [start, end] = range;
     filterByDate(toDate(start), toDate(end));
-  }, [range, filterByDate, min]);
+  }, [range, filterByDate, toDate]);
 
-  const scheduleCommit = () => {
+  const scheduleCommit = useCallback(() => {
     if (commitTimer.current) clearTimeout(commitTimer.current);
-    commitTimer.current = setTimeout(commitRange, 300); // fallback debounce if user stops moving
-  };
+    commitTimer.current = setTimeout(commitRange, 300);
+  }, [commitRange]);
+
+  const onRelease = useCallback(() => {
+    if (commitTimer.current) {
+      clearTimeout(commitTimer.current);
+      commitTimer.current = null;
+    }
+    commitRange();
+  }, [commitRange]);
 
   function onMinChange(e: React.ChangeEvent<HTMLInputElement>) {
     const newMin = clamp(parseInt(e.target.value, 10));
@@ -35,27 +56,6 @@ export const Slider = (props: { min: Date; filteredData: Results[]; filterByDate
     setRange([range[0], newMax]);
     scheduleCommit();
   }
-
-  const onRelease = () => {
-    if (commitTimer.current) {
-      clearTimeout(commitTimer.current);
-      commitTimer.current = null;
-    }
-    commitRange();
-  };
-
-  const clamp = (val: number) => Math.min(Math.max(val, 0), totalDays);
-
-  const pct = (day: number) => (day / totalDays) * 100;
-
-  // Convert pixel position to day offset
-  const posToDay = (clientX: number) => {
-    const el = trackRef.current;
-    if (!el) return 0;
-    const rect = el.getBoundingClientRect();
-    const ratio = (clientX - rect.left) / rect.width;
-    return clamp(Math.round(ratio * totalDays));
-  };
 
   useEffect(() => {
     if (!dragging) return;
@@ -82,7 +82,7 @@ export const Slider = (props: { min: Date; filteredData: Results[]; filterByDate
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
     };
-  }, [dragging]);
+  }, [dragging, posToDay, scheduleCommit, onRelease]);
 
   const initializedFromUrl = useRef(false);
   useEffect(() => {
@@ -98,8 +98,7 @@ export const Slider = (props: { min: Date; filteredData: Results[]; filterByDate
       initializedFromUrl.current = true;
       // Do not call filterByDate here, URL already reflects state
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialMinDate, initialMaxDate, min]);
+  }, [initialMinDate, initialMaxDate, min, toDate, clamp, range]);
 
   return (
     <div className="pb-8">
