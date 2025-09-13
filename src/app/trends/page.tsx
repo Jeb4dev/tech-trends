@@ -404,29 +404,29 @@ function TrendsPageInner() {
 
   if (isLoading)
     return (
-      <div className={"px-8 sm:px-0"}>
+      <div className={"max-w-7xl mx-auto px-3 md:px-6 lg:px-8"}>
         <div>
-          <div className={"flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between"}>
-            <h1>
+          <div className={"flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between pt-4"}>
+            <h1 className="text-xl md:text-2xl">
               Job Listings (<span className={"loading-animation"}>{data.results.length}</span>)
             </h1>
-            <h3 className={"text-sm sm:text-2xl line-clamp-4"}>
+            <h3 className={"text-[11px] xs:text-xs sm:text-sm md:text-base lg:text-lg line-clamp-4 text-gray-400"}>
               Source duunitori.fi/api/v1/jobentries?search=Tieto- ja tietoliikennetekniikka (ala)
             </h3>
-            <h3>Date {new Date().toLocaleDateString("fi-FI")}</h3>
+            <h3 className="text-sm text-gray-300">Date {new Date().toLocaleDateString("fi-FI")}</h3>
           </div>
-          <div className={"categories"}>
-            <div><h2>Languages</h2><Skills skills={null} /></div>
-            <div><h2>Frameworks</h2><Skills skills={null} /></div>
-            <div><h2>Databases</h2><Skills skills={null} /></div>
-            <div><h2>Cloud</h2><Skills skills={null} /></div>
-            <div><h2>DevOps</h2><Skills skills={null} /></div>
-            <div><h2>Soft Skills</h2><Skills skills={null} /></div>
-            <div className={"sm:max-w-[25%]"}><h2>Top Companies</h2><Skills skills={null} /></div>
-            <div><h2>Primary Location</h2><Skills skills={null} /></div>
-            <div><h2>Role</h2><Skills skills={null} /></div>
-            <div><h2>Seniority</h2><Skills skills={null} /></div>
-            <div><h2>Data Science</h2><Skills skills={null} /></div>
+          <div className={"mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-6"}>
+            <div><h2 className="text-sm font-semibold mb-1">Languages</h2><Skills skills={null} /></div>
+            <div><h2 className="text-sm font-semibold mb-1">Frameworks</h2><Skills skills={null} /></div>
+            <div><h2 className="text-sm font-semibold mb-1">Databases</h2><Skills skills={null} /></div>
+            <div><h2 className="text-sm font-semibold mb-1">Cloud</h2><Skills skills={null} /></div>
+            <div><h2 className="text-sm font-semibold mb-1">DevOps</h2><Skills skills={null} /></div>
+            <div><h2 className="text-sm font-semibold mb-1">Soft Skills</h2><Skills skills={null} /></div>
+            <div><h2 className="text-sm font-semibold mb-1">Top Companies</h2><Skills skills={null} /></div>
+            <div><h2 className="text-sm font-semibold mb-1">Primary Location</h2><Skills skills={null} /></div>
+            <div><h2 className="text-sm font-semibold mb-1">Role</h2><Skills skills={null} /></div>
+            <div><h2 className="text-sm font-semibold mb-1">Seniority</h2><Skills skills={null} /></div>
+            <div><h2 className="text-sm font-semibold mb-1">Data Science</h2><Skills skills={null} /></div>
           </div>
         </div>
         <Openings openings={null} />
@@ -458,16 +458,16 @@ function TrendsPageInner() {
     );
 
   return (
-    <div className={"px-8 sm:px-0"}>
+    <div className={"max-w-7xl mx-auto px-1 md:px-6 lg:px-8"}>
       <div>
-        <div className={"flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between"}>
-          <h1>Job Listings ({filteredData.length})</h1>
-          <h3 className={"text-sm sm:text-2xl line-clamp-4"}>
+        <div className={"flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between pt-4"}>
+          <h1 className="text-2xl md:text-3xl font-semibold">Job Listings ({filteredData.length})</h1>
+          <h3 className={"text-[11px] xs:text-xs sm:text-sm md:text-base lg:text-lg line-clamp-4 text-gray-400"}>
             Source duunitori.fi/api/v1/jobentries?search=Tieto- ja tietoliikennetekniikka (ala)
           </h3>
-          <h3>Date {new Date().toLocaleDateString("fi-FI")}</h3>
+          <h3 className="text-sm text-gray-300">Date {new Date().toLocaleDateString("fi-FI")}</h3>
         </div>
-        <div>
+        <div className="mt-3 mx-1 md:mx-2">
           <Slider
             min={new Date("09/01/2025")}
             filteredData={filteredData}
@@ -476,49 +476,49 @@ function TrendsPageInner() {
             initialMaxDate={queryParams.maxDate[0] ? new Date(queryParams.maxDate[0]) : null}
           />
         </div>
-        <div className={"categories"}>
+        <div className={"mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-6"}>
           <div>
-            <h2>Languages</h2>
+            <h2 className="text-sm font-semibold mb-1">Languages</h2>
             <Skills skills={filteredCategories.languages} category={"languages"} setLoading={setLoading} updateFilter={updateFilter} />
           </div>
           <div>
-            <h2>Frameworks</h2>
+            <h2 className="text-sm font-semibold mb-1">Frameworks</h2>
             <Skills skills={filteredCategories.frameworks} category={"frameworks"} setLoading={setLoading} updateFilter={updateFilter} />
           </div>
           <div>
-            <h2>Databases</h2>
+            <h2 className="text-sm font-semibold mb-1">Databases</h2>
             <Skills skills={filteredCategories.databases} category={"databases"} setLoading={setLoading} updateFilter={updateFilter} />
           </div>
           <div>
-            <h2>Cloud</h2>
+            <h2 className="text-sm font-semibold mb-1">Cloud</h2>
             <Skills skills={filteredCategories.cloud} category={"cloud"} setLoading={setLoading} updateFilter={updateFilter} />
           </div>
           <div>
-            <h2>DevOps</h2>
+            <h2 className="text-sm font-semibold mb-1">DevOps</h2>
             <Skills skills={filteredCategories.devops} category={"devops"} setLoading={setLoading} updateFilter={updateFilter} />
           </div>
           <div>
-            <h2>Soft Skills</h2>
+            <h2 className="text-sm font-semibold mb-1">Soft Skills</h2>
             <Skills skills={filteredCategories.softSkills} category={"softSkills"} setLoading={setLoading} updateFilter={updateFilter} />
           </div>
-          <div className={"sm:max-w-[25%]"}>
-            <h2>Top Companies</h2>
+          <div>
+            <h2 className="text-sm font-semibold mb-1">Top Companies</h2>
             <Skills skills={filteredCompanies} category={"companies"} setLoading={setLoading} updateFilter={updateFilter} />
           </div>
           <div>
-            <h2>Primary Location</h2>
+            <h2 className="text-sm font-semibold mb-1">Primary Location</h2>
             <Skills skills={filteredLocations} category={"locations"} setLoading={setLoading} updateFilter={updateFilter} />
           </div>
           <div>
-            <h2>Role</h2>
+            <h2 className="text-sm font-semibold mb-1">Role</h2>
             <Skills skills={filteredCategories.positions} category={"positions"} setLoading={setLoading} updateFilter={updateFilter} />
           </div>
           <div>
-            <h2>Seniority</h2>
+            <h2 className="text-sm font-semibold mb-1">Seniority</h2>
             <Skills skills={filteredCategories.seniority} category={"seniority"} setLoading={setLoading} updateFilter={updateFilter} />
           </div>
           <div>
-            <h2>Data Science</h2>
+            <h2 className="text-sm font-semibold mb-1">Data Science</h2>
             <Skills skills={filteredCategories.dataScience} category={"dataScience"} setLoading={setLoading} updateFilter={updateFilter} />
           </div>
         </div>

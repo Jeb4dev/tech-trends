@@ -144,9 +144,9 @@ export const Openings = ({ openings, activeQuery }: TypeProps) => {
   }
 
   return (
-    <div className="py-8">
-      <h1 className="pb-4">Filtered Job Listings ({openings.length})</h1>
-      <ul>
+    <div className="py-6 md:py-8">
+      <h1 className="pb-3 md:pb-4 text-lg md:text-xl font-semibold">Filtered Job Listings ({openings.length})</h1>
+      <ul className="space-y-4 md:space-y-6">
         {openings.slice(0, showCount).map(result => {
           const isOpen = opened.has(result.slug);
           let formatted = formatCache.current.get(result.slug) || "";
@@ -156,18 +156,18 @@ export const Openings = ({ openings, activeQuery }: TypeProps) => {
           }
           const snippet = makeSnippet(result.descr);
           return (
-            <li key={result.slug} className="mb-6">
-              <article className="border border-gray-700 rounded-md p-4 bg-zinc-900/40 backdrop-blur-sm shadow-sm hover:shadow-md transition-shadow">
+            <li key={result.slug}>
+              <article className="border border-gray-700 rounded-md p-3 md:p-4 bg-zinc-900/40 backdrop-blur-sm shadow-sm hover:shadow-md transition-shadow">
                 <header className="mb-2">
                   <a
                     href={`https://duunitori.fi/tyopaikat/tyo/${result.slug}`}
-                    className="text-lg font-semibold text-green-300 hover:text-green-200"
+                    className="text-base md:text-lg font-semibold text-green-300 hover:text-green-200"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
                     {result.heading}
                   </a>
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-400 mt-1">
+                  <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] md:text-xs text-gray-400 mt-1">
                     <span>{result.company_name}</span>
                     <span className="opacity-50">•</span>
                     <span>{result.municipality_name}</span>
@@ -175,21 +175,21 @@ export const Openings = ({ openings, activeQuery }: TypeProps) => {
                     <span>{new Date(result.date_posted).toLocaleDateString("fi-FI")}</span>
                   </div>
                 </header>
-                <div className="flex items-start gap-4 mb-2">
+                <div className="flex items-start gap-3 md:gap-4 mb-1.5 md:mb-2">
                   <button
                     type="button"
                     aria-expanded={isOpen}
                     aria-controls={`desc-${result.slug}`}
                     aria-label={isOpen ? "Collapse description" : "Expand description"}
                     onClick={() => toggleOpen(result)}
-                    className="text-xs inline-flex items-center gap-1 text-gray-500 hover:text-gray-200 transition-colors shrink-0 mt-0.5"
+                    className="text-[11px] md:text-xs inline-flex items-center gap-1 text-gray-500 hover:text-gray-200 transition-colors shrink-0 py-1 px-1.5 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
                   >
                     {isOpen ? 'Show less' : 'Show more'}
                     <svg className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : 'rotate-0'}`} viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.27a.75.75 0 01.02-1.06z" /></svg>
                   </button>
                   {!isOpen && (
                     <p
-                      className="text-sm text-gray-400 leading-snug flex-1 overflow-hidden line-clamp-4 sm:line-clamp-1"
+                      className="text-[12px] md:text-sm text-gray-400 leading-snug flex-1 overflow-hidden line-clamp-4 sm:line-clamp-1"
                       title={snippet}
                     >{snippet}</p>
                   )}
@@ -200,13 +200,15 @@ export const Openings = ({ openings, activeQuery }: TypeProps) => {
           );
         })}
       </ul>
-      <button
-        className="text-gray-400 text-sm text-center disabled:cursor-not-allowed"
-        onClick={handleShowMore}
-        disabled={showCount >= openings.length}
-      >
-        Load more (<span className="text-gray-200 font-bold">{Math.min(showCount, openings.length)}/{openings.length}</span>)
-      </button>
+      <div className="mt-4 md:mt-6 flex justify-center">
+        <button
+          className="text-gray-300 text-xs md:text-sm text-center disabled:opacity-40 disabled:cursor-not-allowed border border-gray-600 hover:border-gray-400 rounded px-4 py-2 transition-colors"
+          onClick={handleShowMore}
+          disabled={showCount >= openings.length}
+        >
+          Load more <span className="text-gray-100 font-semibold ml-1">{Math.min(showCount, openings.length)}/{openings.length}</span>
+        </button>
+      </div>
     </div>
   );
 };
