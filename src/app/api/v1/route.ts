@@ -4,6 +4,10 @@ import { ResponseData, Results } from "@/types";
 import crypto from "crypto";
 import { NextResponse } from "next/server";
 
+// Ensure this Route Handler is always dynamic and never statically cached
+export const dynamic = 'force-dynamic';
+export const revalidate = 0; // no ISR
+
 const pgp: IMain = pgPromise();
 // @ts-ignore
 const db: IDatabase<any> = pgp(process.env.POSTGRES_URL);
@@ -94,7 +98,8 @@ async function fetchDataFromApi(existingSlugs: Set<string>) {
 
   while (true) {
     console.log(`Fetching ${apiUrl}`);
-    const response = await fetch(apiUrl);
+    // Explicitly disable Next.js fetch cache so new data can be pulled during runtime requests
+    const response = await fetch(apiUrl, { cache: 'no-store', next: { revalidate: 0 } });
     if (!response.ok) {
       console.error("Upstream fetch error", response.status, await response.text());
       break;
