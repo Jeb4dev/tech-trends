@@ -142,7 +142,7 @@ export const frameworks = [
   "Yii",
   "CakePHP",
   // Java & JVM
-  ["Spring", "Spring Boot"],
+  ["Spring", "Spring Boot", "!in spring", "!spring 2025", "!spring 2026", "!spring 2024", "!next spring"],
   "Hibernate",
   "Micronaut",
   "Quarkus",
