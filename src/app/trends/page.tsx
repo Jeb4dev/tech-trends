@@ -471,7 +471,7 @@ function TrendsPageInner() {
             <div><h2 className="text-sm font-semibold mb-1">Role</h2><Skills skills={null} /></div>
             <div><h2 className="text-sm font-semibold mb-1">Seniority</h2><Skills skills={null} /></div>
             <div><h2 className="text-sm font-semibold mb-1">Soft Skills</h2><Skills skills={null} /></div>
-            <div><h2 className="text-sm font-semibold mb-1">Top Companies</h2><Skills skills={null} /></div>
+            <div><h2 className="text-sm font-semibold mb-1">Companies</h2><Skills skills={null} /></div>
             <div><h2 className="text-sm font-semibold mb-1">Location</h2><Skills skills={null} /></div>
             <div><h2 className="text-sm font-semibold mb-1">Work Mode</h2><Skills skills={null} /></div>
           </div>
@@ -583,7 +583,7 @@ function TrendsPageInner() {
             <Skills skills={filteredCategories.softSkills} category={"softSkills"} setLoading={setLoading} updateFilter={updateFilter} />
           </div>
           <div>
-            <h2 className="text-sm font-semibold mb-1">Top Companies</h2>
+            <h2 className="text-sm font-semibold mb-1">Companies</h2>
             <Skills skills={filteredCompanies} category={"companies"} setLoading={setLoading} updateFilter={updateFilter} />
           </div>
           <div>
