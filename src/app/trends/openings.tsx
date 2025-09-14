@@ -164,7 +164,7 @@ export const Openings = ({ openings, activeQuery }: TypeProps) => {
   return (
     <div className="py-6 md:py-8">
       <h1 className="pb-3 md:pb-4 text-lg md:text-xl font-semibold">Filtered Job Listings ({openings.length})</h1>
-      <ul className="space-y-4 md:space-y-6">
+      <ul className="space-y-2 md:space-y-4">
         {openings.slice(0, showCount).map(result => {
           const isOpen = opened.has(result.slug);
           let formatted = formatCache.current.get(result.slug) || "";

@@ -447,14 +447,19 @@ function TrendsPageInner() {
       <div className={"max-w-7xl mx-auto px-3 md:px-6 lg:px-8"}>
         <div>
           <div className={"flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between pt-4"}>
-            <h1 className="text-xl md:text-2xl">
-              Job Listings (<span className={"loading-animation"}>{data.results.length}</span>)
-            </h1>
-            <h3 className={"text-[11px] xs:text-xs sm:text-sm md:text-base lg:text-lg line-clamp-4 text-gray-400"}>
-              Source duunitori.fi/api/v1/jobentries?search=Tieto- ja tietoliikennetekniikka (ala)
-            </h3>
-            <h3 className="text-sm text-gray-300">Date {new Date().toLocaleDateString("fi-FI")}</h3>
+            <h1 className="text-2xl md:text-3xl font-semibold">Job Listings <span className="ml-2 text-sm font-normal text-gray-500 animate-pulse">(loading)</span></h1>
+            <div className="flex flex-col sm:items-end gap-1">
+              <div className="h-3 w-64 md:w-80 rounded bg-gray-700/40 animate-pulse" />
+              <div className="h-3 w-40 rounded bg-gray-700/40 animate-pulse" />
+            </div>
+            <div className="h-5 w-28 rounded bg-gray-700/40 animate-pulse" />
           </div>
+
+          {/* Slider placeholder */}
+          <div className="mt-3 mx-1 md:mx-2">
+            <div className="h-9 md:h-11 w-full rounded bg-gradient-to-r from-gray-700/40 via-gray-600/40 to-gray-700/40 animate-pulse" />
+          </div>
+
           <div className={"mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-6"}>
             <div><h2 className="text-sm font-semibold mb-1">Languages</h2><Skills skills={null} /></div>
             <div><h2 className="text-sm font-semibold mb-1">Frameworks</h2><Skills skills={null} /></div>
@@ -471,22 +476,40 @@ function TrendsPageInner() {
             <div><h2 className="text-sm font-semibold mb-1">Work Mode</h2><Skills skills={null} /></div>
           </div>
         </div>
-        <Openings openings={null} />
-        <hr className={"my-8 border-gray-400"} />
+        <div className="mt-10 space-y-4">
+          {/* Openings placeholder skeleton */}
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="border border-gray-700 rounded-md p-4 bg-zinc-900/40">
+              <div className="h-4 w-3/4 bg-gray-700/40 rounded mb-2 animate-pulse" />
+              <div className="flex gap-2 mb-3">
+                <span className="h-3 w-20 bg-gray-700/40 rounded animate-pulse" />
+                <span className="h-3 w-4 bg-gray-800/40 rounded" />
+                <span className="h-3 w-16 bg-gray-700/40 rounded animate-pulse" />
+                <span className="h-3 w-4 bg-gray-800/40 rounded" />
+                <span className="h-3 w-16 bg-gray-700/40 rounded animate-pulse" />
+                <span className="h-3 w-4 bg-gray-800/40 rounded" />
+                <span className="h-3 w-14 bg-gray-700/40 rounded animate-pulse" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-3 w-full bg-gray-700/40 rounded animate-pulse" />
+                <div className="h-3 w-11/12 bg-gray-700/40 rounded animate-pulse" />
+                <div className="h-3 w-5/6 bg-gray-700/40 rounded animate-pulse" />
+              </div>
+            </div>
+          ))}
+        </div>
+        <hr className={"my-8 border-gray-700"} />
         <footer className={"flex flex-col sm:flex-row justify-between items-center"}>
-          <div className={"text-gray-400 max-w-xl"}>
-            <h3>How does this work?</h3>
-            <p className={"py-2"}>
-              The next.js app fetches data from {" "}
-              <a href={"https://duunitori.fi/api/v1/jobentries?ohjelmointi+ja+ohjelmistokehitys+(ala)"}>duunitori.fi</a>{" "}
-              public API and tries to match selected keywords from the job listing descriptions. Matching is done with
-              regex. Source code available at {" "}
-              <a href={"https://github.com/Jeb4dev/tech-trends"}>github.com/Jeb4dev/tech-trends</a>
-            </p>
+          <div className={"text-gray-500 max-w-xl text-xs md:text-sm animate-pulse"}>
+            <div className="h-4 w-40 bg-gray-700/40 rounded mb-2" />
+            <div className="h-3 w-72 bg-gray-700/40 rounded mb-1" />
+            <div className="h-3 w-64 bg-gray-700/40 rounded mb-1" />
+            <div className="h-3 w-56 bg-gray-700/40 rounded" />
           </div>
-          <div className={"text-gray-400 max-w-lg"}>
-            <h3 className={"py-2"}>Disclamer</h3>
-            <p>The data is not 100% accurate. The app is not affiliated with duunitori.fi.</p>
+          <div className={"text-gray-500 max-w-lg text-xs md:text-sm animate-pulse mt-6 sm:mt-0"}>
+            <div className="h-4 w-32 bg-gray-700/40 rounded mb-2" />
+            <div className="h-3 w-60 bg-gray-700/40 rounded mb-1" />
+            <div className="h-3 w-48 bg-gray-700/40 rounded" />
           </div>
         </footer>
       </div>
