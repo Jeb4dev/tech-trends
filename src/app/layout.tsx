@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://koodaripula.fi"),
+  metadataBase: new URL("https://jobs.bittive.com"),
   title: {
     default: "Tech Trends | Koodaripula",
     template: "%s | Koodaripula Tech Trends",
@@ -41,14 +41,14 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    url: "https://antiwork.jeb4.dev/",
+    url: "https://jobs.bittive.com",
     siteName: "Koodaripula Tech Trends",
     title: "Finnish Tech Job Market Trends",
     description: "Track in‑demand software skills: languages, frameworks, security, data & work mode classification.",
     locale: "en_US",
     images: [
       {
-        url: "https://koodaripula.fi/og-default.png",
+        url: "https://jobs.bittive.com/og-default.png",
         width: 1200,
         height: 630,
         alt: "Koodaripula Tech Trends Overview",
@@ -59,7 +59,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Finnish Tech Job Market Trends",
     description: "Live tracking of in‑demand software & security skills in Finland.",
-    images: ["https://koodaripula.fi/og-default.png"],
+    images: ["https://jobs.bittive.com/og-default.png"],
   },
   alternates: {
     canonical: "/",
@@ -73,23 +73,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: "Koodaripula Tech Trends",
-    url: "https://koodaripula.fi/",
+    url: "https://jobs.bittive.com/",
     description: "Finnish tech job market trends & classification (remote / hybrid / on-site)",
     potentialAction: {
       "@type": "SearchAction",
-      target: "https://koodaripula.fi/trends?search={search_term_string}",
+      target: "https://jobs.bittive.com/trends?search={search_term_string}",
       "query-input": "required name=search_term_string",
     },
     publisher: {
       "@type": "Organization",
       name: "Koodaripula",
-      url: "https://koodaripula.fi/",
+      url: "https://jobs.bittive.com/",
     },
   };
   return (
     <html lang="en">
       <head>
-        <script defer data-domain="koodaripula.fi" src="http://analytics.bittive.com/js/script.js"></script>
+        <script defer data-domain="jobs.bittive.com" src="http://analytics.bittive.com/js/script.js"></script>
         <script
           type="application/ld+json"
           // eslint-disable-next-line react/no-danger
