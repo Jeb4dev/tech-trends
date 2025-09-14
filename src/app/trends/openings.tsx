@@ -1,50 +1,10 @@
 import { useState, useRef, useLayoutEffect, useMemo, useEffect } from "react";
 import { QueryParams } from "@/types";
 import { languages, frameworks, databases, cloud, devops, dataScience, cyberSecurity, softSkills, positions, seniority } from "@/keywords";
+import { classifyWorkMode, workModeHighlightGroups } from "@/workMode";
 
-// Supplemental: Work mode keyword groups for highlighting (Remote / Hybrid / On-site)
-// These do not drive classification (handled elsewhere); they just enable highlighting of indicative phrases
-const workMode = [
-  [
-    "Remote",
-    "Fully remote",
-    "Remote-first",
-    "Remote first",
-    "100% remote",
-    "Work from home",
-    "WFH",
-    "Distributed",
-    "Work from anywhere",
-    "Location independent",
-    "Etätyö",
-    "Etänä",
-    "Pysyvästi etänä",
-  ],
-  [
-    "Hybrid",
-    "Hybrid model",
-    "Hybridimalli",
-    "Partly remote",
-    "Combination of remote and office",
-    "Few days in the office",
-    "Couple days in the office",
-    "Osittain etänä",
-    "Osittain toimistolla",
-    "Muutama päivä toimistolla",
-  ],
-  [
-    "On-site",
-    "Onsite",
-    "On site",
-    "Office-based",
-    "Office based",
-    "Paikan päällä",
-    "Lähityö",
-    "Toimistolla",
-    "Asiakkaan tiloissa",
-    "Client site",
-  ],
-];
+// Use shared work mode highlight groups
+const workMode = workModeHighlightGroups;
 
 interface OpeningEntry {
   heading: string;
@@ -135,8 +95,21 @@ export const Openings = ({ openings, activeQuery }: TypeProps) => {
   const [opened, setOpened] = useState<Set<string>>(new Set());
   const formatCache = useRef<Map<string, string>>(new Map());
 
-  const activeTerms = useMemo(() => gatherActiveTerms(activeQuery), [activeQuery]);
+  const activeTerms = useMemo(() => {
+    const base = gatherActiveTerms(activeQuery);
+    // Always include work mode indicator phrases for highlighting
+    const wm = workMode.flatMap(g => Array.isArray(g) ? g : [g]);
+    return Array.from(new Set([...base, ...wm]));
+  }, [activeQuery]);
   const highlightRegex = useMemo(() => buildHighlightRegex(activeTerms), [activeTerms]);
+  // Precompute work mode classification map (slug -> label)
+  const workModeMap = useMemo(() => {
+    if (!openings) return new Map<string, string>();
+    const categories = classifyWorkMode(openings as any); // classifyWorkMode expects Results shape (compatible)
+    const map = new Map<string, string>();
+    categories.forEach(cat => cat.openings.forEach(o => map.set(o.slug, cat.label)));
+    return map;
+  }, [openings]);
 
   // Rebuild formatted cache for currently opened items when highlight terms change
   useEffect(() => {
@@ -212,13 +185,23 @@ export const Openings = ({ openings, activeQuery }: TypeProps) => {
                   >
                     {result.heading}
                   </a>
-                  <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] md:text-xs text-gray-400 mt-1">
+                  <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] md:text-xs text-gray-400 mt-1 items-center">
                     <span>{result.company_name}</span>
                     <span className="opacity-50">•</span>
                     <span>{result.municipality_name}</span>
                     <span className="opacity-50">•</span>
                     <span>{new Date(result.date_posted).toLocaleDateString("fi-FI")}</span>
-                  </div>
+                    {workModeMap.get(result.slug) && (
+                      <>
+                        <span className="opacity-50">•</span>
+                        <span className={"px-1 py-0.5 rounded text-[10px] uppercase tracking-wide " +
+                          (workModeMap.get(result.slug)==="Remote" ? "text-emerald-300" : workModeMap.get(result.slug)==="Hybrid" ? "text-amber-300" : "text-blue-300")
+                        }>
+                          {workModeMap.get(result.slug)}
+                        </span>
+                      </>
+                    )}
+                   </div>
                 </header>
                 <div className="flex items-start gap-3 md:gap-4 mb-1.5 md:mb-2">
                   <button
