@@ -35,6 +35,7 @@ export type Data = {
   softSkills: Category[];
   positions: Category[];
   seniority: Category[];
+  cities?: Category[]; // newly added optional to avoid breaking older code
 };
 
 export type QueryParams = {
@@ -48,7 +49,8 @@ export type QueryParams = {
   positions: string[];
   seniority: string[];
   companies: string[];
-  locations: string[];
+  locations: string[]; // primary location (municipality_name)
+  cities?: string[];   // newly added mentioned cities
   minDate: string[];
   maxDate: string[];
 };

@@ -54,7 +54,8 @@ function gatherActiveTerms(active?: QueryParams): string[] {
   const buckets: (keyof QueryParams)[] = ["languages","frameworks","databases","cloud","devops","dataScience","softSkills","positions","seniority"];
   const terms: string[] = [];
   for (const bucket of buckets) {
-    for (const label of active[bucket]) {
+    const labels = active[bucket] || [] as string[];
+    for (const label of labels) {
       const syns = keywordDict[label.toLowerCase()];
       if (syns) terms.push(...syns);
     }

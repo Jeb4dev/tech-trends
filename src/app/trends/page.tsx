@@ -15,6 +15,7 @@ import {
   positions,
   seniority,
   softSkills,
+  finnishCities,
 } from "@/keywords";
 import { Openings } from "@/app/trends/openings";
 import { Slider } from "@/app/trends/slider";
@@ -250,6 +251,7 @@ function TrendsPageInner() {
     seniority: params.getAll("seniority").map((q) => q.toLowerCase()),
     companies: params.getAll("companies").map((q) => q.toLowerCase()),
     locations: params.getAll("locations").map((q) => q.toLowerCase()),
+    cities: params.getAll("cities").map((q) => q.toLowerCase()),
     minDate: [params.getAll("minDate")[0]],
     maxDate: [params.getAll("maxDate")[0]],
   });
@@ -280,11 +282,31 @@ function TrendsPageInner() {
             softSkills: [],
             positions: [],
             seniority: [],
+            cities: [],
         } as Data,
         companies: [] as Category[],
         locations: [] as Category[],
       };
     }
+    const lowerCache = new Map<Results, string>();
+    const getFull = (o: Results) => {
+      if (!lowerCache.has(o)) lowerCache.set(o, (o.heading + "\n" + o.descr).toLowerCase());
+      return lowerCache.get(o)!;
+    };
+    const cityCategories: Category[] = finnishCities.map(city => {
+      const variants = Array.isArray(city) ? city : [city];
+      const lowerVariants = variants.map(v => v.toLowerCase());
+      const pattern = lowerVariants.map(escapeRegExp).join("|");
+      const regex = new RegExp(`\\b(?:${pattern})\\b`, 'i');
+      const openings = results.filter(o => {
+        const full = getFull(o);
+        if (regex.test(full)) return true;
+        const loc = o.municipality_name ? o.municipality_name.toLowerCase() : '';
+        return loc && lowerVariants.includes(loc); // also include if primary location matches
+      });
+      return { label: variants[0], active: false, openings, filteredOpenings: [] } as Category;
+    }).filter(c => c.openings.length > 0).sort((a,b)=> b.openings.length - a.openings.length);
+
     const categories: Data = {
       languages: matchAll(results, languages, true),
       frameworks: matchAll(results, frameworks, true),
@@ -295,6 +317,7 @@ function TrendsPageInner() {
       softSkills: matchAll(results, softSkills, false),
       positions: matchAll(results, positions, false),
       seniority: classifySeniority(results),
+      cities: cityCategories,
     };
     const locations = groupResultsByProperty(results, "municipality_name");
     const companies = groupResultsByProperty(results, "company_name");
@@ -309,9 +332,11 @@ function TrendsPageInner() {
 
     let openings: Results[] = [];
 
-    function process(list: Category[], selected: string[]) {
+    function process(list: Category[] | undefined, selected: string[] | undefined) {
+      if (!list) return [] as Category[];
+      const selectedArr = selected || [];
       return list.map((item) => {
-        const active = selected.includes(item.label.toLowerCase());
+        const active = selectedArr.includes(item.label.toLowerCase());
         if (active) {
           if (openings.length === 0) openings = item.openings; else {
             const set = new Set(item.openings);
@@ -331,6 +356,7 @@ function TrendsPageInner() {
     const ss = process(categories.softSkills, queryParams.softSkills);
     const pos = process(categories.positions, queryParams.positions);
     const sen = process(categories.seniority, queryParams.seniority);
+    const cityCats = process(categories.cities, queryParams.cities);
     const comps = process(companies, queryParams.companies);
     const locs = process(locations, queryParams.locations);
 
@@ -355,6 +381,7 @@ function TrendsPageInner() {
       softSkills: attachFiltered(ss),
       positions: attachFiltered(pos),
       seniority: attachFiltered(sen),
+      cities: attachFiltered(cityCats),
     };
 
     const filteredCompanies = attachFiltered(comps);
@@ -423,7 +450,8 @@ function TrendsPageInner() {
             <div><h2 className="text-sm font-semibold mb-1">DevOps</h2><Skills skills={null} /></div>
             <div><h2 className="text-sm font-semibold mb-1">Soft Skills</h2><Skills skills={null} /></div>
             <div><h2 className="text-sm font-semibold mb-1">Top Companies</h2><Skills skills={null} /></div>
-            <div><h2 className="text-sm font-semibold mb-1">Primary Location</h2><Skills skills={null} /></div>
+            {/*<div><h2 className="text-sm font-semibold mb-1">Primary Location</h2><Skills skills={null} /></div>*/}
+            <div><h2 className="text-sm font-semibold mb-1">Location</h2><Skills skills={null} /></div>
             <div><h2 className="text-sm font-semibold mb-1">Role</h2><Skills skills={null} /></div>
             <div><h2 className="text-sm font-semibold mb-1">Seniority</h2><Skills skills={null} /></div>
             <div><h2 className="text-sm font-semibold mb-1">Data Science</h2><Skills skills={null} /></div>
@@ -505,9 +533,13 @@ function TrendsPageInner() {
             <h2 className="text-sm font-semibold mb-1">Top Companies</h2>
             <Skills skills={filteredCompanies} category={"companies"} setLoading={setLoading} updateFilter={updateFilter} />
           </div>
+          {/*<div>*/}
+          {/*  <h2 className="text-sm font-semibold mb-1">Primary Location</h2>*/}
+          {/*  <Skills skills={filteredLocations} category={"locations"} setLoading={setLoading} updateFilter={updateFilter} />*/}
+          {/*</div>*/}
           <div>
-            <h2 className="text-sm font-semibold mb-1">Primary Location</h2>
-            <Skills skills={filteredLocations} category={"locations"} setLoading={setLoading} updateFilter={updateFilter} />
+            <h2 className="text-sm font-semibold mb-1">Mentioned Cities</h2>
+            <Skills skills={filteredCategories.cities || null} category={"cities"} setLoading={setLoading} updateFilter={updateFilter} />
           </div>
           <div>
             <h2 className="text-sm font-semibold mb-1">Role</h2>
