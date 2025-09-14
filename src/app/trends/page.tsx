@@ -9,6 +9,7 @@ import {
   cloud,
   databases,
   dataScience,
+  cyberSecurity,
   devops,
   frameworks,
   languages,
@@ -246,6 +247,7 @@ function TrendsPageInner() {
     cloud: params.getAll("cloud").map((q) => q.toLowerCase()),
     devops: params.getAll("devops").map((q) => q.toLowerCase()),
     dataScience: params.getAll("dataScience").map((q) => q.toLowerCase()),
+    cyberSecurity: params.getAll("cyberSecurity").map((q) => q.toLowerCase()),
     softSkills: params.getAll("softSkills").map((q) => q.toLowerCase()),
     positions: params.getAll("positions").map((q) => q.toLowerCase()),
     seniority: params.getAll("seniority").map((q) => q.toLowerCase()),
@@ -277,12 +279,13 @@ function TrendsPageInner() {
           frameworks: [],
           databases: [],
           cloud: [],
-            devops: [],
-            dataScience: [],
-            softSkills: [],
-            positions: [],
-            seniority: [],
-            cities: [],
+          devops: [],
+          dataScience: [],
+          cyberSecurity: [],
+          softSkills: [],
+          positions: [],
+          seniority: [],
+          cities: [],
         } as Data,
         companies: [] as Category[],
         locations: [] as Category[],
@@ -315,6 +318,7 @@ function TrendsPageInner() {
       devops: matchAll(results, devops, true),
       dataScience: matchAll(results, dataScience, true),
       softSkills: matchAll(results, softSkills, false),
+      cyberSecurity: matchAll(results, cyberSecurity, true),
       positions: matchAll(results, positions, false),
       seniority: classifySeniority(results),
       cities: cityCategories,
@@ -353,6 +357,7 @@ function TrendsPageInner() {
     const cld = process(categories.cloud, queryParams.cloud);
     const dv = process(categories.devops, queryParams.devops);
     const ds = process(categories.dataScience, queryParams.dataScience);
+    const cs = process(categories.cyberSecurity, queryParams.cyberSecurity);
     const ss = process(categories.softSkills, queryParams.softSkills);
     const pos = process(categories.positions, queryParams.positions);
     const sen = process(categories.seniority, queryParams.seniority);
@@ -379,6 +384,7 @@ function TrendsPageInner() {
       devops: attachFiltered(dv),
       dataScience: attachFiltered(ds),
       softSkills: attachFiltered(ss),
+      cyberSecurity: attachFiltered(cs),
       positions: attachFiltered(pos),
       seniority: attachFiltered(sen),
       cities: attachFiltered(cityCats),
@@ -448,8 +454,9 @@ function TrendsPageInner() {
             <div><h2 className="text-sm font-semibold mb-1">Databases</h2><Skills skills={null} /></div>
             <div><h2 className="text-sm font-semibold mb-1">Cloud</h2><Skills skills={null} /></div>
             <div><h2 className="text-sm font-semibold mb-1">DevOps</h2><Skills skills={null} /></div>
+            <div><h2 className="text-sm font-semibold mb-1">Cyber Security</h2><Skills skills={null} /></div>
             <div><h2 className="text-sm font-semibold mb-1">Soft Skills</h2><Skills skills={null} /></div>
-            <div><h2 className="text-sm font-semibold mb-1">Top Companies</h2><Skills skills={null} /></div>
+            <div><h2 className="text-sm font-semibold mb-1">Company</h2><Skills skills={null} /></div>
             {/*<div><h2 className="text-sm font-semibold mb-1">Primary Location</h2><Skills skills={null} /></div>*/}
             <div><h2 className="text-sm font-semibold mb-1">Location</h2><Skills skills={null} /></div>
             <div><h2 className="text-sm font-semibold mb-1">Role</h2><Skills skills={null} /></div>
@@ -526,11 +533,15 @@ function TrendsPageInner() {
             <Skills skills={filteredCategories.devops} category={"devops"} setLoading={setLoading} updateFilter={updateFilter} />
           </div>
           <div>
+            <h2 className="text-sm font-semibold mb-1">Cyber Security</h2>
+            <Skills skills={filteredCategories.cyberSecurity} category={"cyberSecurity"} setLoading={setLoading} updateFilter={updateFilter} />
+          </div>
+          <div>
             <h2 className="text-sm font-semibold mb-1">Soft Skills</h2>
             <Skills skills={filteredCategories.softSkills} category={"softSkills"} setLoading={setLoading} updateFilter={updateFilter} />
           </div>
           <div>
-            <h2 className="text-sm font-semibold mb-1">Top Companies</h2>
+            <h2 className="text-sm font-semibold mb-1">Company</h2>
             <Skills skills={filteredCompanies} category={"companies"} setLoading={setLoading} updateFilter={updateFilter} />
           </div>
           {/*<div>*/}
@@ -538,7 +549,7 @@ function TrendsPageInner() {
           {/*  <Skills skills={filteredLocations} category={"locations"} setLoading={setLoading} updateFilter={updateFilter} />*/}
           {/*</div>*/}
           <div>
-            <h2 className="text-sm font-semibold mb-1">Mentioned Cities</h2>
+            <h2 className="text-sm font-semibold mb-1">Location</h2>
             <Skills skills={filteredCategories.cities || null} category={"cities"} setLoading={setLoading} updateFilter={updateFilter} />
           </div>
           <div>

@@ -1,6 +1,6 @@
 import { useState, useRef, useLayoutEffect, useMemo, useEffect } from "react";
 import { QueryParams } from "@/types";
-import { languages, frameworks, databases, cloud, devops, dataScience, softSkills, positions, seniority } from "@/keywords";
+import { languages, frameworks, databases, cloud, devops, dataScience, cyberSecurity, softSkills, positions, seniority } from "@/keywords";
 
 interface OpeningEntry {
   heading: string;
@@ -34,7 +34,7 @@ function escapeHtml(str: string) {
 
 function buildDictionary(): Record<string, string[]> {
   const dict: Record<string, string[]> = {};
-  const groups = [languages, frameworks, databases, cloud, devops, dataScience, softSkills, positions, seniority];
+  const groups = [languages, frameworks, databases, cloud, devops, dataScience, cyberSecurity, softSkills, positions, seniority];
   for (const group of groups) {
     for (const entry of group) {
       if (Array.isArray(entry)) {
@@ -51,7 +51,7 @@ const keywordDict = buildDictionary();
 
 function gatherActiveTerms(active?: QueryParams): string[] {
   if (!active) return [];
-  const buckets: (keyof QueryParams)[] = ["languages","frameworks","databases","cloud","devops","dataScience","softSkills","positions","seniority"];
+  const buckets: (keyof QueryParams)[] = ["languages","frameworks","databases","cloud","devops","dataScience","cyberSecurity","softSkills","positions","seniority"];
   const terms: string[] = [];
   for (const bucket of buckets) {
     const labels = active[bucket] || [] as string[];

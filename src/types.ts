@@ -32,6 +32,7 @@ export type Data = {
   cloud: Category[];
   devops: Category[];
   dataScience: Category[];
+  cyberSecurity: Category[]; // new
   softSkills: Category[];
   positions: Category[];
   seniority: Category[];
@@ -45,6 +46,7 @@ export type QueryParams = {
   cloud: string[];
   devops: string[];
   dataScience: string[];
+  cyberSecurity: string[]; // new
   softSkills: string[];
   positions: string[];
   seniority: string[];
