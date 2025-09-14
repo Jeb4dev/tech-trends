@@ -2,6 +2,50 @@ import { useState, useRef, useLayoutEffect, useMemo, useEffect } from "react";
 import { QueryParams } from "@/types";
 import { languages, frameworks, databases, cloud, devops, dataScience, cyberSecurity, softSkills, positions, seniority } from "@/keywords";
 
+// Supplemental: Work mode keyword groups for highlighting (Remote / Hybrid / On-site)
+// These do not drive classification (handled elsewhere); they just enable highlighting of indicative phrases
+const workMode = [
+  [
+    "Remote",
+    "Fully remote",
+    "Remote-first",
+    "Remote first",
+    "100% remote",
+    "Work from home",
+    "WFH",
+    "Distributed",
+    "Work from anywhere",
+    "Location independent",
+    "Etätyö",
+    "Etänä",
+    "Pysyvästi etänä",
+  ],
+  [
+    "Hybrid",
+    "Hybrid model",
+    "Hybridimalli",
+    "Partly remote",
+    "Combination of remote and office",
+    "Few days in the office",
+    "Couple days in the office",
+    "Osittain etänä",
+    "Osittain toimistolla",
+    "Muutama päivä toimistolla",
+  ],
+  [
+    "On-site",
+    "Onsite",
+    "On site",
+    "Office-based",
+    "Office based",
+    "Paikan päällä",
+    "Lähityö",
+    "Toimistolla",
+    "Asiakkaan tiloissa",
+    "Client site",
+  ],
+];
+
 interface OpeningEntry {
   heading: string;
   date_posted: string;
@@ -34,7 +78,7 @@ function escapeHtml(str: string) {
 
 function buildDictionary(): Record<string, string[]> {
   const dict: Record<string, string[]> = {};
-  const groups = [languages, frameworks, databases, cloud, devops, dataScience, cyberSecurity, softSkills, positions, seniority];
+  const groups = [languages, frameworks, databases, cloud, devops, dataScience, cyberSecurity, softSkills, positions, seniority, workMode];
   for (const group of groups) {
     for (const entry of group) {
       if (Array.isArray(entry)) {
@@ -51,7 +95,7 @@ const keywordDict = buildDictionary();
 
 function gatherActiveTerms(active?: QueryParams): string[] {
   if (!active) return [];
-  const buckets: (keyof QueryParams)[] = ["languages","frameworks","databases","cloud","devops","dataScience","cyberSecurity","softSkills","positions","seniority"];
+  const buckets: (keyof QueryParams)[] = ["languages","frameworks","databases","cloud","devops","dataScience","cyberSecurity","softSkills","positions","seniority","workMode"];
   const terms: string[] = [];
   for (const bucket of buckets) {
     const labels = active[bucket] || [] as string[];

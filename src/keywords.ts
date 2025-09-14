@@ -96,7 +96,7 @@ export const languages = [
 export const frameworks = [
   ["Node", "Node.js", "NodeJS"],
   ["React", "React.js", "ReactJS"],
-  ["NextJS", "Next.js", "Next"],
+  ["NextJS", "Next.js"],
   ["Remix", "Remix.run"],
   ["SolidJS"],
   ["Astro", "Astro.js"],

@@ -234,6 +234,83 @@ function classifySeniority(openings: Results[]): Category[] {
     .filter((c) => c.openings.length)
     .sort((a, b) => b.openings.length - a.openings.length);
 }
+
+// Work mode classification (pure, single label per opening)
+function classifyWorkMode(openings: Results[]): Category[] {
+  // Heuristic classification: Remote, Hybrid, On-site
+  const REMOTE = "Remote";
+  const HYBRID = "Hybrid";
+  const ONSITE = "On-site";
+  const buckets: Record<string, Results[]> = { [REMOTE]: [], [HYBRID]: [], [ONSITE]: [] };
+
+  const remoteStrong = [
+    /fully\s+remote/i,
+    /100%\s*remote/i,
+    /remote[- ]first/i,
+    /location\s+independent/i,
+    /work\s+from\s+anywhere/i,
+    /distributed\s+team/i,
+    /etätyö(?!n)/i,
+    /etänä\b/i,
+    /pysyvästi\s+etänä/i,
+  ];
+  const remoteIndicators = [
+    /remote/i,
+    /work\s+from\s+home/i,
+    /wfh/i,
+    /etätyö/i,
+    /etämahdollisuus/i,
+    /mahdollisuus\s+etätyöhön/i,
+    /osittain\s+etänä/i,
+  ];
+  const hybridIndicators = [
+    /hybrid/i,
+    /hybridi/i,
+    /hybridimalli/i,
+    /hybrid(-| )model/i,
+    /partly\s+remote/i,
+    /combination\s+of\s+(remote|office)/i,
+    /(\d|two|three|few)\s+days?\s+(per\s+week\s+)?(at|in)\s+the\s+office/i,
+    /osittain\s+toimistolla/i,
+    /muutama\s+p(ä|a)iv(ä|a)\s+toimistolla/i,
+  ];
+  const onsiteStrong = [
+    /on[- ]site\s+only/i,
+    /must\s+be\s+on[- ]site/i,
+    /(work|työskentelet)\s+(vain|ensisijaisesti)\s+(toimistolla|paikan\s+päällä)/i,
+    /ei\s+etätyömahdollisuutta/i,
+  ];
+  const onsiteIndicators = [
+    /on[- ]site/i,
+    /office[- ]based/i,
+    /paikan\s+päällä/i,
+    /lähityö/i,
+    /toimistolla/i,
+    /asiakkaan\s+tiloissa/i,
+    /client\s+site/i,
+  ];
+
+  openings.forEach(o => {
+    const text = (o.heading + "\n" + o.descr).toLowerCase();
+
+    const countMatches = (arr: RegExp[]) => arr.reduce((acc, r) => { r.lastIndex = 0; const m = text.match(r); return acc + (m ? m.length : 0); }, 0);
+
+    const rs = countMatches(remoteStrong);
+    const r = countMatches(remoteIndicators);
+    const h = countMatches(hybridIndicators);
+    const os = countMatches(onsiteStrong);
+    const oi = countMatches(onsiteIndicators);
+
+    let label: string;
+    if (rs > 0 && os === 0 && oi === 0 && h === 0) label = REMOTE; else if (h > 0 || ((r > 0 || rs > 0) && (oi > 0 || os > 0))) label = HYBRID; else if (os > 0 || (oi > 0 && r === 0 && rs === 0)) label = ONSITE; else if (r > 0 && (oi === 0 && os === 0)) label = REMOTE; else label = ONSITE; // default fallback
+
+    buckets[label].push(o);
+  });
+
+  return Object.entries(buckets)
+    .filter(([, list]) => list.length > 0)
+    .map(([label, list]) => ({ label, active: false, openings: list, filteredOpenings: [] }));
+}
 // -----------------------------------------------------------------------------
 
 function TrendsPageInner() {
@@ -251,6 +328,7 @@ function TrendsPageInner() {
     softSkills: params.getAll("softSkills").map((q) => q.toLowerCase()),
     positions: params.getAll("positions").map((q) => q.toLowerCase()),
     seniority: params.getAll("seniority").map((q) => q.toLowerCase()),
+    workMode: params.getAll("workMode").map(q => q.toLowerCase()),
     companies: params.getAll("companies").map((q) => q.toLowerCase()),
     locations: params.getAll("locations").map((q) => q.toLowerCase()),
     cities: params.getAll("cities").map((q) => q.toLowerCase()),
@@ -285,6 +363,7 @@ function TrendsPageInner() {
           softSkills: [],
           positions: [],
           seniority: [],
+          workMode: [],
           cities: [],
         } as Data,
         companies: [] as Category[],
@@ -321,6 +400,7 @@ function TrendsPageInner() {
       cyberSecurity: matchAll(results, cyberSecurity, true),
       positions: matchAll(results, positions, false),
       seniority: classifySeniority(results),
+      workMode: classifyWorkMode(results),
       cities: cityCategories,
     };
     const locations = groupResultsByProperty(results, "municipality_name");
@@ -359,6 +439,7 @@ function TrendsPageInner() {
     const ds = process(categories.dataScience, queryParams.dataScience);
     const cs = process(categories.cyberSecurity, queryParams.cyberSecurity);
     const ss = process(categories.softSkills, queryParams.softSkills);
+    const wm = process(categories.workMode, queryParams.workMode);
     const pos = process(categories.positions, queryParams.positions);
     const sen = process(categories.seniority, queryParams.seniority);
     const cityCats = process(categories.cities, queryParams.cities);
@@ -387,6 +468,7 @@ function TrendsPageInner() {
       cyberSecurity: attachFiltered(cs),
       positions: attachFiltered(pos),
       seniority: attachFiltered(sen),
+      workMode: attachFiltered(wm),
       cities: attachFiltered(cityCats),
     };
 
@@ -455,13 +537,13 @@ function TrendsPageInner() {
             <div><h2 className="text-sm font-semibold mb-1">Cloud</h2><Skills skills={null} /></div>
             <div><h2 className="text-sm font-semibold mb-1">DevOps</h2><Skills skills={null} /></div>
             <div><h2 className="text-sm font-semibold mb-1">Cyber Security</h2><Skills skills={null} /></div>
-            <div><h2 className="text-sm font-semibold mb-1">Soft Skills</h2><Skills skills={null} /></div>
-            <div><h2 className="text-sm font-semibold mb-1">Company</h2><Skills skills={null} /></div>
-            {/*<div><h2 className="text-sm font-semibold mb-1">Primary Location</h2><Skills skills={null} /></div>*/}
-            <div><h2 className="text-sm font-semibold mb-1">Location</h2><Skills skills={null} /></div>
+            <div><h2 className="text-sm font-semibold mb-1">Data Science</h2><Skills skills={null} /></div>
             <div><h2 className="text-sm font-semibold mb-1">Role</h2><Skills skills={null} /></div>
             <div><h2 className="text-sm font-semibold mb-1">Seniority</h2><Skills skills={null} /></div>
-            <div><h2 className="text-sm font-semibold mb-1">Data Science</h2><Skills skills={null} /></div>
+            <div><h2 className="text-sm font-semibold mb-1">Soft Skills</h2><Skills skills={null} /></div>
+            <div><h2 className="text-sm font-semibold mb-1">Top Companies</h2><Skills skills={null} /></div>
+            <div><h2 className="text-sm font-semibold mb-1">Location</h2><Skills skills={null} /></div>
+            <div><h2 className="text-sm font-semibold mb-1">Work Mode</h2><Skills skills={null} /></div>
           </div>
         </div>
         <Openings openings={null} />
@@ -537,20 +619,8 @@ function TrendsPageInner() {
             <Skills skills={filteredCategories.cyberSecurity} category={"cyberSecurity"} setLoading={setLoading} updateFilter={updateFilter} />
           </div>
           <div>
-            <h2 className="text-sm font-semibold mb-1">Soft Skills</h2>
-            <Skills skills={filteredCategories.softSkills} category={"softSkills"} setLoading={setLoading} updateFilter={updateFilter} />
-          </div>
-          <div>
-            <h2 className="text-sm font-semibold mb-1">Company</h2>
-            <Skills skills={filteredCompanies} category={"companies"} setLoading={setLoading} updateFilter={updateFilter} />
-          </div>
-          {/*<div>*/}
-          {/*  <h2 className="text-sm font-semibold mb-1">Primary Location</h2>*/}
-          {/*  <Skills skills={filteredLocations} category={"locations"} setLoading={setLoading} updateFilter={updateFilter} />*/}
-          {/*</div>*/}
-          <div>
-            <h2 className="text-sm font-semibold mb-1">Location</h2>
-            <Skills skills={filteredCategories.cities || null} category={"cities"} setLoading={setLoading} updateFilter={updateFilter} />
+            <h2 className="text-sm font-semibold mb-1">Data Science</h2>
+            <Skills skills={filteredCategories.dataScience} category={"dataScience"} setLoading={setLoading} updateFilter={updateFilter} />
           </div>
           <div>
             <h2 className="text-sm font-semibold mb-1">Role</h2>
@@ -561,8 +631,20 @@ function TrendsPageInner() {
             <Skills skills={filteredCategories.seniority} category={"seniority"} setLoading={setLoading} updateFilter={updateFilter} />
           </div>
           <div>
-            <h2 className="text-sm font-semibold mb-1">Data Science</h2>
-            <Skills skills={filteredCategories.dataScience} category={"dataScience"} setLoading={setLoading} updateFilter={updateFilter} />
+            <h2 className="text-sm font-semibold mb-1">Soft Skills</h2>
+            <Skills skills={filteredCategories.softSkills} category={"softSkills"} setLoading={setLoading} updateFilter={updateFilter} />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold mb-1">Top Companies</h2>
+            <Skills skills={filteredCompanies} category={"companies"} setLoading={setLoading} updateFilter={updateFilter} />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold mb-1">Location</h2>
+            <Skills skills={filteredCategories.cities || null} category={"cities"} setLoading={setLoading} updateFilter={updateFilter} />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold mb-1">Work Mode</h2>
+            <Skills skills={filteredCategories.workMode || null} category={"workMode"} setLoading={setLoading} updateFilter={updateFilter} />
           </div>
         </div>
       </div>

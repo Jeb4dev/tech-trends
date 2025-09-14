@@ -32,11 +32,12 @@ export type Data = {
   cloud: Category[];
   devops: Category[];
   dataScience: Category[];
-  cyberSecurity: Category[]; // new
+  cyberSecurity: Category[];
   softSkills: Category[];
   positions: Category[];
   seniority: Category[];
-  cities?: Category[]; // newly added optional to avoid breaking older code
+  workMode?: Category[]; // new classification (Remote / Hybrid / On-site)
+  cities?: Category[];
 };
 
 export type QueryParams = {
@@ -46,13 +47,14 @@ export type QueryParams = {
   cloud: string[];
   devops: string[];
   dataScience: string[];
-  cyberSecurity: string[]; // new
+  cyberSecurity: string[];
   softSkills: string[];
   positions: string[];
   seniority: string[];
+  workMode: string[]; // new query param
   companies: string[];
-  locations: string[]; // primary location (municipality_name)
-  cities?: string[];   // newly added mentioned cities
+  locations: string[];
+  cities?: string[];
   minDate: string[];
   maxDate: string[];
 };
