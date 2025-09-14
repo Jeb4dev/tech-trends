@@ -89,7 +89,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
-        <script defer data-domain="jobs.bittive.com" src="http://analytics.bittive.com/js/script.js"></script>
+        <script defer data-domain="jobs.bittive.com" src="https://analytics.bittive.com/js/script.js"></script>
         <script
           type="application/ld+json"
           // eslint-disable-next-line react/no-danger
