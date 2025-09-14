@@ -41,7 +41,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    url: "https://koodaripula.fi/",
+    url: "https://antiwork.jeb4.dev/",
     siteName: "Koodaripula Tech Trends",
     title: "Finnish Tech Job Market Trends",
     description: "Track in‑demand software skills: languages, frameworks, security, data & work mode classification.",
