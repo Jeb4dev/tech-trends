@@ -89,6 +89,112 @@ function makeSnippet(text: string) {
   return text.slice(0, 300).replace(/\s+/g, ' ').trim();
 }
 
+// ---------------- Salary extraction helpers ----------------
+// Extract a monthly salary (fixed or range) from Finnish/English job text.
+// Returns display string like "2300–2700€", "4200€+", "2141€", "1300€ + bonus" or "€" placeholder.
+function extractSalary(text: string): string | null {
+  if (!text) return null;
+  const original = text;
+  const cleaned = original
+    .replace(/[\u2013\u2014]/g, '-')
+    .replace(/€/g, '€');
+  const lowered = cleaned.toLowerCase();
+
+  const lines = cleaned.split(/\n+/).filter(Boolean);
+  // Candidate lines: contain currency tokens or salary keywords
+  const currencyToken = /(€|e\/kk|euroa?|eur|per month|\/month|monthly|kuukausi|kuukausipalkka|palkka|salary)/i;
+  const salaryLines = lines.filter(l => currencyToken.test(l.toLowerCase()));
+
+  // Number pattern (captures decimals with , or .) and optional currency right after number
+  const numberCore = '(?:\\d{1,3}(?:[ .]\\d{3})+|\\d+)(?:[.,]\\d{1,2})?';
+  const numberWithCur = `(${numberCore})\s*(?:€|e|eur|euroa)?`;
+  // Range: num (opt cur) - num (opt cur) (opt shared currency) (opt monthly qualifier)
+  const rangePattern = new RegExp(`${numberWithCur}\s*[–-]\s*${numberWithCur}(?:\s*(?:€|e|eur|euroa))?(?:\s*(?:/\\s*kk|e/kk|/month|per\\s+month|month|monthly|kuukausi|kuukausipalkka|kk))?`, 'i');
+  // Single value + monthly qualifier somewhere nearby or explicit monthly context words pre-line
+  const singlePattern = new RegExp(`${numberWithCur}(?:\s*(?:€|e|eur|euroa))?(?:\s*(?:/\\s*kk|e/kk|/month|per\\s+month|month|monthly|kuukausi|kuukausipalkka|kk))`, 'i');
+
+  // Helper utils
+  const normalizeDisplay = (raw: string): string => {
+    let s = raw.trim();
+    s = s.replace(/ /g, '');
+    s = s.replace(/\.(?=\d{3}(?:\D|$))/g, ''); // thousand dots
+    if (/\.\d{1,2}$/.test(s)) s = s.replace(/\.(\d{1,2})$/, ',$1'); // use comma for decimals
+    return s;
+  };
+  const toNumber = (raw: string): number | null => {
+    let s = raw.replace(/ /g, '').replace(/\.(?=\d{3}(?:\D|$))/g, '').replace(/,(?=\d{1,2}$)/, '.');
+    const n = parseFloat(s); return isNaN(n) ? null : n;
+  };
+  const plausible = (n: number | null) => n !== null && n >= 400 && n <= 30000; // monthly salary bounds
+
+  // Pass 1: explicit ranges
+  for (const line of salaryLines) {
+    const m = rangePattern.exec(line);
+    if (m) {
+      const n1 = toNumber(m[1]);
+      const n2 = toNumber(m[2]);
+      if (plausible(n1) && plausible(n2)) {
+        const a = normalizeDisplay(m[1]);
+        const b = normalizeDisplay(m[2]);
+        // Ensure ordering
+        let first = a, second = b;
+        if (n1! > n2!) { first = b; second = a; }
+        return `${first}–${second}€`;
+      }
+    }
+  }
+
+  // Pass 2: English/Finnish context led range like "Monthly salary: 4500€-6500€" or "Salary range ... 6400 - 6800 per month"
+  for (const line of salaryLines) {
+    if (!/(salary|monthly|kuukausipalkka|palkka)/i.test(line)) continue;
+    // Looser range: capture two numbers separated by dash even w/o qualifiers
+    const looseRange = new RegExp(`${numberWithCur}\s*[–-]\s*${numberWithCur}`, 'i').exec(line);
+    if (looseRange) {
+      const n1 = toNumber(looseRange[1]);
+      const n2 = toNumber(looseRange[2]);
+      if (plausible(n1) && plausible(n2)) {
+        const a = normalizeDisplay(looseRange[1]);
+        const b = normalizeDisplay(looseRange[2]);
+        let first = a, second = b;
+        if (n1! > n2!) { first = b; second = a; }
+        return `${first}–${second}€`;
+      }
+    }
+  }
+
+  // Pass 3: single explicit monthly figure with qualifier or strong context word preceding
+  for (const line of salaryLines) {
+    const m = singlePattern.exec(line);
+    if (m) {
+      const n = toNumber(m[1]);
+      if (plausible(n)) {
+        const base = normalizeDisplay(m[1]);
+        // Open ended indicators
+        const tail = line.slice(m.index + m[0].length, m.index + m[0].length + 50).toLowerCase();
+        if (/(ylöspäin|alkaen|lähtien|from|starting)/.test(tail)) return `${base}€+`;
+        // Bonus indication in same line
+        if (/\+\s*\d{2,5}\s*[–-]\s*\d{2,5}\s*€.*(bonus|tulos|tulospalkkio)/i.test(line)) return `${base}€ + bonus`;
+        return `${base}€`;
+      }
+    }
+  }
+
+  // Pass 4: single number in a strong salary context line (no explicit monthly qualifier) e.g. "kuukausipalkka on 4847,64 ..."
+  for (const line of salaryLines) {
+    if (/(kuukausipalkka|monthly salary|palkka|salary)/i.test(line)) {
+      const singleLoose = new RegExp(numberWithCur, 'i').exec(line);
+      if (singleLoose) {
+        const n = toNumber(singleLoose[1]);
+        if (plausible(n)) return `${normalizeDisplay(singleLoose[1])}€`;
+      }
+    }
+  }
+
+  // Fallback placeholder: mention of currency but no parsable monthly figure
+  if (/(€|\beuroa?\b|e\/kk|per month|monthly)/i.test(lowered)) return '€';
+  return null;
+}
+
 // ---------------- Component ----------------
 export const Openings = ({ openings, activeQuery }: TypeProps) => {
   const [showCount, setShowCount] = useState(10);
@@ -109,6 +215,17 @@ export const Openings = ({ openings, activeQuery }: TypeProps) => {
     const map = new Map<string, string>();
     categories.forEach(cat => cat.openings.forEach(o => map.set(o.slug, cat.label)));
     return map;
+  }, [openings]);
+
+  // Salary extraction map
+  const salaryMap = useMemo(() => {
+    const m = new Map<string, string>();
+    if (!openings) return m;
+    openings.forEach(o => {
+      const sal = extractSalary(o.heading + "\n" + o.descr);
+      if (sal) m.set(o.slug, sal);
+    });
+    return m;
   }, [openings]);
 
   // Rebuild formatted cache for currently opened items when highlight terms change
@@ -191,6 +308,12 @@ export const Openings = ({ openings, activeQuery }: TypeProps) => {
                     <span>{result.municipality_name}</span>
                     <span className="opacity-50">•</span>
                     <span>{new Date(result.date_posted).toLocaleDateString("fi-FI")}</span>
+                    {salaryMap.get(result.slug) && (
+                      <>
+                        <span className="opacity-50">•</span>
+                        <span className="px-1 py-0.5 rounded text-[10px] uppercase tracking-wide text-pink-300">{salaryMap.get(result.slug)}</span>
+                      </>
+                    )}
                     {workModeMap.get(result.slug) && (
                       <>
                         <span className="opacity-50">•</span>

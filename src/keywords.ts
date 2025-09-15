@@ -515,11 +515,11 @@ export const positions = [
     "Cyber Security",
     "Security Engineering",
     "Security Engineer",
-    "Tietoturva",
     "Tietoturvakonsultti",
-    "tietoturvan",
     "Security Analyst",
     "SOC Analyst",
+    "Tietoturva asiantuntija",
+    "Tietoturva-asiantuntija",
   ],
   ["Penetration Tester", "Pentester", "Penetraatiotestaaja"],
   ["Network Engineer", "Verkkoinsinööri"],
@@ -542,6 +542,7 @@ export const positions = [
   ["Teacher / Professor", "Teacher", "Opettaja", "Professori"],
   ["Researcher", "Tutkija"],
   ["Salesman", "Myynti", "Myyjä"],
+  ["Technical Support", "IT Support", "tukihenkilö", "Tekninen tuki", "Support Specialist", "Helpdesk", "it tuki", "it-tuki", "teknisen tuen"]
 ];
 
 export const seniority = [
@@ -623,4 +624,5 @@ export const location = [
   ["Germany", "Deutschland", "Saksa"],
   ["Estonia", "Eesti", "Viro"],
   ["Spain", "España", "Espanja"],
+  ["Greece", "Ελλάδα", "Kreikka"],
 ];
