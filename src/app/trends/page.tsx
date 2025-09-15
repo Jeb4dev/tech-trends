@@ -18,9 +18,10 @@ import {
   softSkills,
   location,
 } from "@/keywords";
-import { Openings } from "@/app/trends/openings";
-import { Slider } from "@/app/trends/slider";
+import { Openings } from "./openings";
+import { Slider } from "./slider";
 import { classifyWorkMode } from "@/workMode";
+import { extractSalaryRaw } from "@/salary";
 
 // --- Helper utilities (pure) --------------------------------------------------
 const escapeRegExp = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -257,6 +258,7 @@ function TrendsPageInner() {
     companies: params.getAll("companies").map((q) => q.toLowerCase()),
     locations: params.getAll("locations").map((q) => q.toLowerCase()),
     cities: params.getAll("cities").map((q) => q.toLowerCase()),
+    salary: params.getAll("salary").map((q) => q.toLowerCase()),
     minDate: [params.getAll("minDate")[0]],
     maxDate: [params.getAll("maxDate")[0]],
   });
@@ -327,14 +329,57 @@ function TrendsPageInner() {
       seniority: classifySeniority(results),
       workMode: classifyWorkMode(results),
       cities: cityCategories,
+      salary: [],
     };
+
+    // Build salary categories
+    const salaryRanges = [
+      { label: "0-2000", min: 0, max: 1999 },
+      { label: "2000-3000", min: 2000, max: 2999 },
+      { label: "3000-4000", min: 3000, max: 3999 },
+      { label: "4000-5000", min: 4000, max: 4999 },
+      { label: "5000-6000", min: 5000, max: 5999 },
+      { label: "6000-7000", min: 6000, max: 6999 },
+      { label: "7000-8000", min: 7000, max: 7999 },
+      { label: "8000+", min: 8000, max: Infinity },
+    ];
+    const salaryIncluded: Results[] = [];
+    const rangeBuckets: Record<string, Results[]> = Object.fromEntries(salaryRanges.map(r => [r.label, []]));
+
+    results.forEach(o => {
+      const sal = extractSalaryRaw(o.heading + "\n" + o.descr);
+      if (!sal) return; // no mention
+      salaryIncluded.push(o);
+      if (sal.min != null) {
+        const minVal = sal.min;
+        const maxVal = sal.max ?? sal.min;
+        salaryRanges.forEach(r => {
+          // overlap condition
+            if (maxVal >= r.min && minVal < r.max) {
+              rangeBuckets[r.label].push(o);
+            }
+            // Special case for 8000+ (Infinity max) already covered by condition above
+        });
+      }
+    });
+
+    const salaryCategories: Category[] = [];
+    if (salaryIncluded.length) {
+      salaryCategories.push({ label: "Salary Included", active: false, openings: salaryIncluded, filteredOpenings: [] });
+    }
+    salaryRanges.forEach(r => {
+      const arr = rangeBuckets[r.label];
+      if (arr.length) salaryCategories.push({ label: r.label, active: false, openings: arr, filteredOpenings: [] });
+    });
+    categories.salary = salaryCategories;
+
     const locations = groupResultsByProperty(results, "municipality_name");
     const companies = groupResultsByProperty(results, "company_name");
     return { categories, companies, locations };
   }, [data.results]);
 
   // Filter categories + compute filtered openings on query changes
-  const { filteredData, filteredCategories, filteredCompanies, filteredLocations } = useMemo(() => {
+  const { filteredData, filteredCategories, filteredCompanies } = useMemo(() => {
     const { categories, companies, locations } = baseCategories;
 
     const clone = (c: Category) => ({ ...c, openings: c.openings, filteredOpenings: c.filteredOpenings, active: false });
@@ -367,6 +412,7 @@ function TrendsPageInner() {
     const wm = process(categories.workMode, queryParams.workMode);
     const pos = process(categories.positions, queryParams.positions);
     const sen = process(categories.seniority, queryParams.seniority);
+    const salaryCats = process(categories.salary, queryParams.salary);
     const cityCats = process(categories.cities, queryParams.cities);
     const comps = process(companies, queryParams.companies);
     const locs = process(locations, queryParams.locations);
@@ -395,12 +441,13 @@ function TrendsPageInner() {
       seniority: attachFiltered(sen),
       workMode: attachFiltered(wm),
       cities: attachFiltered(cityCats),
+      salary: attachFiltered(salaryCats),
     };
 
     const filteredCompanies = attachFiltered(comps);
     const filteredLocations = attachFiltered(locs);
 
-    return { filteredData: openings, filteredCategories, filteredCompanies, filteredLocations };
+    return { filteredData: openings, filteredCategories, filteredCompanies, filteredLocations: filteredLocations }; // keep structure (filteredLocations unused)
   }, [baseCategories, queryParams, data.results]);
 
   const updateFilter = useCallback((filter: string, value: string) => {
@@ -593,6 +640,10 @@ function TrendsPageInner() {
           <div>
             <h2 className="text-sm font-semibold mb-1">Work Mode</h2>
             <Skills skills={filteredCategories.workMode || null} category={"workMode"} setLoading={setLoading} updateFilter={updateFilter} />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold mb-1">Salary</h2>
+            <Skills skills={filteredCategories.salary || null} category={"salary"} setLoading={setLoading} updateFilter={updateFilter} />
           </div>
         </div>
       </div>

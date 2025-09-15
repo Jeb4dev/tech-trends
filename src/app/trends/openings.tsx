@@ -2,6 +2,7 @@ import { useState, useRef, useLayoutEffect, useMemo, useEffect } from "react";
 import { QueryParams } from "@/types";
 import { languages, frameworks, databases, cloud, devops, dataScience, cyberSecurity, softSkills, positions, seniority } from "@/keywords";
 import { classifyWorkMode, workModeHighlightGroups } from "@/workMode";
+import { extractSalaryRaw } from "@/salary";
 
 // Use shared work mode highlight groups
 const workMode = workModeHighlightGroups;
@@ -89,110 +90,6 @@ function makeSnippet(text: string) {
   return text.slice(0, 300).replace(/\s+/g, ' ').trim();
 }
 
-// ---------------- Salary extraction helpers ----------------
-// Extract a monthly salary (fixed or range) from Finnish/English job text.
-// Returns display string like "2300–2700€", "4200€+", "2141€", "1300€ + bonus" or "€" placeholder.
-function extractSalary(text: string): string | null {
-  if (!text) return null;
-  const original = text;
-  const cleaned = original
-    .replace(/[\u2013\u2014]/g, '-')
-    .replace(/€/g, '€');
-  const lowered = cleaned.toLowerCase();
-
-  const lines = cleaned.split(/\n+/).filter(Boolean);
-  // Candidate lines: contain currency tokens or salary keywords
-  const currencyToken = /(€|e\/kk|euroa?|eur|per month|\/month|monthly|kuukausi|kuukausipalkka|palkka|salary)/i;
-  const salaryLines = lines.filter(l => currencyToken.test(l.toLowerCase()));
-
-  // Patterns
-  const numberCore = '(?:\\d{1,3}(?:[ .]\\d{3})+|\\d+)(?:[.,]\\d{1,2})?';
-  // Allow optional leading or trailing currency symbols around the number, capture only the numeric core.
-  const numberWithCur = `(?:€\\s*)?(${numberCore})(?:\\s*(?:€|e|eur|euroa))?`;
-  const monthlyQualifier = '(?:/\\s*kk|e/kk|/month|per\\s+month|month|monthly|kuukausi|kuukausipalkka|kuukausipalkka|kuukausittain|kk|kuukaudessa)';
-  const rangePattern = new RegExp(`${numberWithCur}\\s*[–-]\\s*${numberWithCur}(?:\\s*(?:€|e|eur|euroa))?(?:\\s*${monthlyQualifier})?`, 'i');
-  const singlePattern = new RegExp(`${numberWithCur}(?:\\s*(?:€|e|eur|euroa))?(?:\\s*${monthlyQualifier})`, 'i');
-
-  // Helpers
-  const normalizeDisplay = (raw: string): string => {
-    let s = raw.trim();
-    s = s.replace(/ /g, '');
-    s = s.replace(/\.(?=\d{3}(?:\D|$))/g, '');
-    if (/\.\d{1,2}$/.test(s)) s = s.replace(/\.(\d{1,2})$/, ',$1');
-    return s;
-  };
-  const toNumber = (raw: string): number | null => {
-    let s = raw.replace(/ /g, '').replace(/\.(?=\d{3}(?:\D|$))/g, '').replace(/,(?=\d{1,2}$)/, '.');
-    const n = parseFloat(s); return isNaN(n) ? null : n;
-  };
-  const plausible = (n: number | null) => n !== null && n >= 400 && n <= 30000;
-
-  // Pass 1: explicit ranges
-  for (const line of salaryLines) {
-    const m = rangePattern.exec(line);
-    if (m) {
-      const n1 = toNumber(m[1]);
-      const n2 = toNumber(m[2]);
-      if (plausible(n1) && plausible(n2)) {
-        const a = normalizeDisplay(m[1]);
-        const b = normalizeDisplay(m[2]);
-        const first = n1! <= n2! ? a : b;
-        const second = n1! <= n2! ? b : a;
-        return `${first}–${second}€`;
-      }
-    }
-  }
-
-  // Pass 2: context-led loose range
-  const looseRangeRegex = new RegExp(`${numberWithCur}\\s*[–-]\\s*${numberWithCur}`, 'i');
-  for (const line of salaryLines) {
-    if (!/(salary|monthly|kuukausipalkka|palkka)/i.test(line)) continue;
-    const lr = looseRangeRegex.exec(line);
-    if (lr) {
-      const n1 = toNumber(lr[1]);
-      const n2 = toNumber(lr[2]);
-      if (plausible(n1) && plausible(n2)) {
-        const a = normalizeDisplay(lr[1]);
-        const b = normalizeDisplay(lr[2]);
-        const first = n1! <= n2! ? a : b;
-        const second = n1! <= n2! ? b : a;
-        return `${first}–${second}€`;
-      }
-    }
-  }
-
-  // Pass 3: single explicit monthly figure
-  for (const line of salaryLines) {
-    const m = singlePattern.exec(line);
-    if (m) {
-      const n = toNumber(m[1]);
-      if (plausible(n)) {
-        const base = normalizeDisplay(m[1]);
-        const tail = line.slice(m.index + m[0].length, m.index + m[0].length + 60).toLowerCase();
-        if (/(ylöspäin|alkaen|lähtien|from|starting)/.test(tail)) return `${base}€+`;
-        if (/\+\s*\d{2,5}\s*[–-]\s*\d{2,5}\s*€.*(bonus|tulos|tulospalkkio)/i.test(line)) return `${base}€ + bonus`;
-        return `${base}€`;
-      }
-    }
-  }
-
-  // Pass 4: single number in strong salary context without qualifier
-  const singleLooseNumber = new RegExp(numberWithCur, 'i');
-  for (const line of salaryLines) {
-    if (/(kuukausipalkka|monthly salary|palkka|salary)/i.test(line)) {
-      const sl = singleLooseNumber.exec(line);
-      if (sl) {
-        const n = toNumber(sl[1]);
-        if (plausible(n)) return `${normalizeDisplay(sl[1])}€`;
-      }
-    }
-  }
-
-  // Fallback placeholder
-  if (/(€|\beuroa?\b|e\/kk|per month|monthly)/i.test(lowered)) return '€';
-  return null;
-}
-
 // ---------------- Component ----------------
 export const Openings = ({ openings, activeQuery }: TypeProps) => {
   const [showCount, setShowCount] = useState(10);
@@ -220,8 +117,8 @@ export const Openings = ({ openings, activeQuery }: TypeProps) => {
     const m = new Map<string, string>();
     if (!openings) return m;
     openings.forEach(o => {
-      const sal = extractSalary(o.heading + "\n" + o.descr);
-      if (sal) m.set(o.slug, sal);
+      const sal = extractSalaryRaw(o.heading + "\n" + o.descr);
+      if (sal) m.set(o.slug, sal.label);
     });
     return m;
   }, [openings]);

@@ -38,6 +38,7 @@ export type Data = {
   seniority: Category[];
   workMode?: Category[]; // new classification (Remote / Hybrid / On-site)
   cities?: Category[];
+  salary?: Category[]; // salary ranges
 };
 
 export type QueryParams = {
@@ -55,6 +56,7 @@ export type QueryParams = {
   companies: string[];
   locations: string[];
   cities?: string[];
+  salary?: string[]; // salary range filters
   minDate: string[];
   maxDate: string[];
 };
