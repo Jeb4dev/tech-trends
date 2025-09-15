@@ -36,39 +36,38 @@ function matchAll(
   return keywords
     .map((keyword) => {
       const list = Array.isArray(keyword) ? keyword : [keyword];
-      const escapedKeywords = list.map(escapeRegExp);
+      const positives = list.filter(k => !k.startsWith("!"));
+      if (positives.length === 0) return null; // skip if only negatives
+      const escapedKeywords = positives.map(escapeRegExp);
       const regexString = escapedKeywords.join("|");
-      const negative: string[] = list
+      const negativesLower: string[] = list
         .filter((kw) => kw.startsWith("!"))
-        .map((kw) => kw.replace("!", ""));
+        .map((kw) => kw.replace("!", "").toLowerCase());
 
       const regex = complicated
-        ? new RegExp(`(?:\\s|^|\\()(${regexString})(?=[\\s\\-.,:;!?/)]|\\/|$)`, "gi")
-        : new RegExp(`\\b(?:${regexString})`, "gi");
+        ? new RegExp(`(?:\\s|^|\\()(${regexString})(?=[\\s\\-.,:;!?/)]|\\/|$)`, "i")
+        : new RegExp(`\\b(?:${regexString})`, "i");
 
-      const matched = results.filter((opening) => {
-        regex.lastIndex = 0;
-        if (
-          negative &&
-          negative.some((neg) =>
-            title
-              ? opening.heading.toLowerCase().includes(neg.toLowerCase())
-              : opening.descr.toLowerCase().includes(neg.toLowerCase())
-          )
-        )
-          return false;
-        return regex.test(title ? opening.heading : opening.descr);
-      });
+      // Pre-scan openings once
+      const matched: Results[] = [];
+      for (let i = 0; i < results.length; i++) {
+        const opening = results[i];
+        const text = title ? (opening._headingLower || opening.heading.toLowerCase()) : (opening._descrLower || opening.descr.toLowerCase());
+        if (negativesLower.length && negativesLower.some(neg => text.includes(neg))) continue;
+        if (regex.test(text)) matched.push(opening);
+      }
+
+      if (!matched.length) return null;
 
       return {
-        label: list[0],
+        label: positives[0],
         active: false,
         openings: matched,
         filteredOpenings: [],
       } as Category;
     })
+    .filter((c): c is Category => !!c)
     .sort((a, b) => b.openings.length - a.openings.length)
-    .filter((k) => k.openings.length > 0)
     .slice(0, slice);
 }
 
@@ -269,7 +268,13 @@ function TrendsPageInner() {
       .then((res) => res.json())
       .then((data: ResponseData) => {
         // @ts-ignore
-        setData(data.data);
+        const incoming: ResponseData = data.data;
+        // cache lowercase strings once
+        incoming.results.forEach(r => {
+          if (!r._headingLower) r._headingLower = r.heading.toLowerCase();
+            if (!r._descrLower) r._descrLower = r.descr.toLowerCase();
+        });
+        setData(incoming);
         setLoading(false);
       });
   }, []);
@@ -381,73 +386,86 @@ function TrendsPageInner() {
   // Filter categories + compute filtered openings on query changes
   const { filteredData, filteredCategories, filteredCompanies } = useMemo(() => {
     const { categories, companies, locations } = baseCategories;
+    if (!data.results) return { filteredData: [], filteredCategories: {} as Data, filteredCompanies: [] };
 
+    // helper to clone category without changing reference arrays
     const clone = (c: Category) => ({ ...c, openings: c.openings, filteredOpenings: c.filteredOpenings, active: false });
 
-    let openings: Results[] = [];
+    type CatProcess = { list: Category[] | undefined; selected: string[] | undefined; key: keyof Data | 'companies' | 'locations' };
+    const catConfigs: CatProcess[] = [
+      { list: categories.languages, selected: queryParams.languages, key: 'languages' },
+      { list: categories.frameworks, selected: queryParams.frameworks, key: 'frameworks' },
+      { list: categories.databases, selected: queryParams.databases, key: 'databases' },
+      { list: categories.cloud, selected: queryParams.cloud, key: 'cloud' },
+      { list: categories.devops, selected: queryParams.devops, key: 'devops' },
+      { list: categories.dataScience, selected: queryParams.dataScience, key: 'dataScience' },
+      { list: categories.cyberSecurity, selected: queryParams.cyberSecurity, key: 'cyberSecurity' },
+      { list: categories.softSkills, selected: queryParams.softSkills, key: 'softSkills' },
+      { list: categories.positions, selected: queryParams.positions, key: 'positions' },
+      { list: categories.seniority, selected: queryParams.seniority, key: 'seniority' },
+      { list: categories.workMode, selected: queryParams.workMode, key: 'workMode' },
+      { list: categories.cities, selected: queryParams.cities, key: 'cities' },
+      { list: categories.salary, selected: queryParams.salary, key: 'salary' },
+      { list: companies, selected: queryParams.companies, key: 'companies' },
+      { list: locations, selected: queryParams.locations, key: 'locations' },
+    ];
 
-    function process(list: Category[] | undefined, selected: string[] | undefined) {
-      if (!list) return [] as Category[];
-      const selectedArr = selected || [];
-      return list.map((item) => {
-        const active = selectedArr.includes(item.label.toLowerCase());
-        if (active) {
-          if (openings.length === 0) openings = item.openings; else {
-            const set = new Set(item.openings);
-            openings = openings.filter((o) => set.has(o));
-          }
-        }
+    const processed: Record<string, Category[]> = {};
+    const activeSets: Results[][] = [];
+
+    for (const cfg of catConfigs) {
+      if (!cfg.list) { processed[cfg.key] = []; continue; }
+      const selectedLower = (cfg.selected || []).map(s => s.toLowerCase());
+      const arr = cfg.list.map(item => {
+        const active = selectedLower.includes(item.label.toLowerCase());
+        if (active) activeSets.push(item.openings);
         return { ...clone(item), active };
       });
+      processed[cfg.key] = arr;
     }
 
-    const lang = process(categories.languages, queryParams.languages);
-    const fw = process(categories.frameworks, queryParams.frameworks);
-    const dbs = process(categories.databases, queryParams.databases);
-    const cld = process(categories.cloud, queryParams.cloud);
-    const dv = process(categories.devops, queryParams.devops);
-    const ds = process(categories.dataScience, queryParams.dataScience);
-    const cs = process(categories.cyberSecurity, queryParams.cyberSecurity);
-    const ss = process(categories.softSkills, queryParams.softSkills);
-    const wm = process(categories.workMode, queryParams.workMode);
-    const pos = process(categories.positions, queryParams.positions);
-    const sen = process(categories.seniority, queryParams.seniority);
-    const salaryCats = process(categories.salary, queryParams.salary);
-    const cityCats = process(categories.cities, queryParams.cities);
-    const comps = process(companies, queryParams.companies);
-    const locs = process(locations, queryParams.locations);
+    function intersectArrays(arrays: Results[][]): Results[] {
+      if (!arrays.length) return data.results;
+      // sort by size ascending for efficient intersection
+      arrays.sort((a,b)=> a.length - b.length);
+      let result = arrays[0];
+      for (let i=1;i<arrays.length;i++) {
+        const set = new Set(arrays[i]);
+        result = result.filter(o => set.has(o));
+        if (!result.length) break;
+      }
+      return result;
+    }
 
-    if (openings.length === 0) openings = data.results; // no active filters => show all
-
+    const openings = intersectArrays(activeSets);
     const openingsSet = openings === data.results ? null : new Set(openings);
 
     function attachFiltered(list: Category[]) {
-      return list.map((item) => ({
+      return list.map(item => ({
         ...item,
-        filteredOpenings: openingsSet ? item.openings.filter((o) => openingsSet.has(o)) : item.openings,
+        filteredOpenings: openingsSet ? item.openings.filter(o => openingsSet.has(o)) : item.openings,
       }));
     }
 
     const filteredCategories: Data = {
-      languages: attachFiltered(lang),
-      frameworks: attachFiltered(fw),
-      databases: attachFiltered(dbs),
-      cloud: attachFiltered(cld),
-      devops: attachFiltered(dv),
-      dataScience: attachFiltered(ds),
-      softSkills: attachFiltered(ss),
-      cyberSecurity: attachFiltered(cs),
-      positions: attachFiltered(pos),
-      seniority: attachFiltered(sen),
-      workMode: attachFiltered(wm),
-      cities: attachFiltered(cityCats),
-      salary: attachFiltered(salaryCats),
+      languages: attachFiltered(processed.languages),
+      frameworks: attachFiltered(processed.frameworks),
+      databases: attachFiltered(processed.databases),
+      cloud: attachFiltered(processed.cloud),
+      devops: attachFiltered(processed.devops),
+      dataScience: attachFiltered(processed.dataScience),
+      softSkills: attachFiltered(processed.softSkills),
+      cyberSecurity: attachFiltered(processed.cyberSecurity),
+      positions: attachFiltered(processed.positions),
+      seniority: attachFiltered(processed.seniority),
+      workMode: attachFiltered(processed.workMode),
+      cities: attachFiltered(processed.cities),
+      salary: attachFiltered(processed.salary),
     };
 
-    const filteredCompanies = attachFiltered(comps);
-    const filteredLocations = attachFiltered(locs);
+    const filteredCompanies = attachFiltered(processed.companies);
 
-    return { filteredData: openings, filteredCategories, filteredCompanies, filteredLocations: filteredLocations }; // keep structure (filteredLocations unused)
+    return { filteredData: openings, filteredCategories, filteredCompanies, filteredLocations: attachFiltered(processed.locations) };
   }, [baseCategories, queryParams, data.results]);
 
   const updateFilter = useCallback((filter: string, value: string) => {

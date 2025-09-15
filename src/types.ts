@@ -9,6 +9,9 @@ export interface Results {
   latitude: string | null;
   longitude: string | null;
   last_seen_at?: string;
+  // Cached lowercase variants to avoid recomputing repeatedly during filtering
+  _headingLower?: string;
+  _descrLower?: string;
 }
 
 export interface ResponseData {
