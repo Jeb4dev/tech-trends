@@ -525,7 +525,7 @@ export const positions = [
   ["Network Engineer", "Verkkoinsinööri"],
   ["QA Engineer", "QA Engineering", "Test Engineer", "Test Engineering", "Testauksen"],
   ["Test Automation", "Testausautomaatio"],
-  ["UX Designer", "UX Design", "Käytettävyys", "Saavutettavuus"],
+  ["UX Designer", "UX Design", "Käytettävyys", "Saavutettavuus", "WCAG"],
   ["UI Designer", "UI Design", "Käyttöliittymäsuunnittelija", "Käyttöliittymäsuunnittelu"],
   ["Product Designer", "Tuotesuunnittelija"],
   ["Designer", "Suunnittelija"],
