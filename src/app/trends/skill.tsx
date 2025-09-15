@@ -61,7 +61,7 @@ export const Skills = ({ skills, category, updateFilter, setLoading }: SkillsPro
             <li
               className={`flex flex-row cursor-pointer select-none py-0.5 ${
                 skill.active
-                  ? "text-green-500 hover:text-red-500 hover:line-through"
+                  ? "text-green-500 focus:text-red-500 active:text-red-500 focus:line-through active:line-through"
                   : "hover:text-green-400"
               }`}
               key={skill.label}
