@@ -207,7 +207,12 @@ function TrendsPageInner() {
     const params = new URLSearchParams(url.search);
     const isSingleValue = filter === "minDate" || filter === "maxDate" || filter === "activeToday";
     if (isSingleValue) {
-      if (params.get(filter) === value) params.delete(filter); else params.set(filter, value);
+      if (filter === 'activeToday') {
+        if (params.has('activeToday')) params.delete('activeToday');
+        else params.set('activeToday', '1');
+      } else {
+        if (params.get(filter) === value) params.delete(filter); else params.set(filter, value);
+      }
     } else {
       const existing = params.getAll(filter);
       if (existing.includes(value)) {
@@ -305,7 +310,7 @@ function TrendsPageInner() {
       </p>
     );
 
-  const activeTodayOn = !!(queryParams.activeToday && queryParams.activeToday.length);
+  const activeTodayOn = !!(queryParams.activeToday && queryParams.activeToday.includes('1'));
 
   return (
     <div className={"max-w-7xl mx-auto px-1 md:px-6 lg:px-8"}>
@@ -326,7 +331,7 @@ function TrendsPageInner() {
                   type="checkbox"
                   className="sr-only peer"
                   checked={activeTodayOn}
-                  onChange={() => updateFilter('activeToday', activeTodayOn ? '0' : '1')}
+                  onChange={() => updateFilter('activeToday', '1')}
                 />
                 <div className="w-10 h-5 bg-gray-600 peer-focus:ring-2 peer-focus:ring-green-400 rounded-full peer peer-checked:bg-green-500 transition-all duration-300"></div>
                 <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform duration-300 peer-checked:translate-x-5"></div>
