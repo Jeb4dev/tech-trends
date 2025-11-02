@@ -3,21 +3,17 @@ import pgPromise from "pg-promise";
 import { ResponseData, Results } from "@/types";
 import { NextResponse } from "next/server";
 import { computeBaseSlim } from "@/compute";
+import { unstable_cache, revalidateTag } from "next/cache";
 
-// Ensure this Route Handler is always dynamic and never statically cached
-export const dynamic = 'force-dynamic';
-export const revalidate = 0; // no ISR
+// Cache the route output for all users; refresh roughly twice a day
+export const dynamic = 'force-static';
+export const revalidate = 21600; // 6 hours
 
 const pgp: IMain = pgPromise();
 // @ts-ignore
 const db: IDatabase<any> = pgp(process.env.POSTGRES_URL);
 
 const REFRESH_INTERVAL_HOURS = 6; // Fetch a few times a day
-
-// In-memory cache for API response with precomputed aggregates
-let cachedResponse: any | null = null;
-let cachedAt = 0;
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes in-memory cache to avoid recomputing
 
 async function initializeDatabase() {
   // Create tables if they don't exist
@@ -80,8 +76,8 @@ async function fetchDataFromApi(existingSlugs: Set<string>) {
 
   while (true) {
     console.log(`Fetching ${apiUrl}`);
-    // Explicitly disable Next.js fetch cache so new data can be pulled during runtime requests
-    const response = await fetch(apiUrl, { cache: 'no-store', next: { revalidate: 0 } });
+    // Explicitly disable fetch cache so new data can be pulled during runtime requests
+    const response = await fetch(apiUrl, { cache: 'no-store' });
     if (!response.ok) {
       console.error("Upstream fetch error", response.status, await response.text());
       break;
@@ -106,7 +102,7 @@ async function fetchDataFromApi(existingSlugs: Set<string>) {
 }
 
 async function insertNewJobData(data: Results[]) {
-  // Renamed semantic: upsert all jobs (new + existing) to refresh last_seen_at
+  // Upsert all jobs (new + existing) to refresh last_seen_at
   for (const job of data) {
     try {
       await db.none(
@@ -179,19 +175,15 @@ async function refreshInBackground() {
     const { jobs: activeJobs } = await fetchDataFromApi(new Set(existingJobData.map((j: any) => j.slug)));
     await insertNewJobData(activeJobs);
     await setMeta("last_fetch_at", new Date().toISOString());
+    // Invalidate Next.js tag so next request recomputes cached route
+    revalidateTag('api-v1');
   } catch (e) {
     console.error("Background refresh failed", e);
   }
 }
 
-async function getFreshResponse(forceRefresh = false) {
+async function getFreshResponse() {
   await initializeDatabase();
-
-  // Use an in-memory cache for the full response
-  const now = Date.now();
-  if (!forceRefresh && cachedResponse && now - cachedAt < CACHE_TTL_MS) {
-    return cachedResponse;
-  }
 
   const lastFetch = await getMeta("last_fetch_at");
   const shouldRefresh = needsRefresh(lastFetch);
@@ -203,30 +195,28 @@ async function getFreshResponse(forceRefresh = false) {
   if (shouldRefresh) {
     // Serve current snapshot immediately and refresh in background
     const immediate = await buildResponseFromJobs(existingJobData as any);
-    cachedResponse = immediate;
-    cachedAt = now;
     // Fire and forget refresh to update DB for next requests
-    refreshInBackground()
-      .then(async () => {
-        try {
-          const latest = await fetchDatabaseData();
-          cachedResponse = await buildResponseFromJobs(latest as any);
-          cachedAt = Date.now();
-        } catch (e) {
-          console.error("Post-refresh snapshot compute failed", e);
-        }
-      })
-      .catch((e) => console.error("Refresh scheduling failed", e));
+    refreshInBackground().catch((e) => console.error("Refresh scheduling failed", e));
     return immediate;
   } else {
-    const resp = await buildResponseFromJobs(existingJobData as any);
-    cachedResponse = resp;
-    cachedAt = now;
-    return resp;
+    return await buildResponseFromJobs(existingJobData as any);
   }
 }
 
+const getCachedResponse = unstable_cache(
+  async () => {
+    return await getFreshResponse();
+  },
+  ['api/v1'],
+  { revalidate: 21600, tags: ['api-v1'] }
+);
+
 export async function GET() {
-  const response = await getFreshResponse(false);
-  return NextResponse.json(response, { headers: { 'Cache-Control': 's-maxage=300, stale-while-revalidate=60' } });
+  const response = await getCachedResponse();
+  return NextResponse.json(response, {
+    headers: {
+      // Shared cache for 6h; allow long stale-while-revalidate for better UX
+      'Cache-Control': 'public, s-maxage=21600, stale-while-revalidate=86400',
+    },
+  });
 }
