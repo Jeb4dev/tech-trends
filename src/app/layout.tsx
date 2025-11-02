@@ -1,11 +1,11 @@
 import "./globals.css";
 import { Inter } from "next/font/google";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://jobs.bittive.com"),
+  metadataBase: new URL("https://koodaripula.fi"),
   title: {
     default: "Tech Trends | Koodaripula",
     template: "%s | Koodaripula Tech Trends",
@@ -41,14 +41,14 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: "website",
-    url: "https://jobs.bittive.com",
+    url: "https://koodaripula.fi",
     siteName: "Koodaripula Tech Trends",
     title: "Finnish Tech Job Market Trends",
     description: "Track in‑demand software skills: languages, frameworks, security, data & work mode classification.",
     locale: "en_US",
     images: [
       {
-        url: "https://jobs.bittive.com/og-default.png",
+        url: "https://koodaripula.fi/og-default.png",
         width: 1200,
         height: 630,
         alt: "Koodaripula Tech Trends Overview",
@@ -59,12 +59,15 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Finnish Tech Job Market Trends",
     description: "Live tracking of in‑demand software & security skills in Finland.",
-    images: ["https://jobs.bittive.com/og-default.png"],
+    images: ["https://koodaripula.fi/og-default.png"],
   },
   alternates: {
     canonical: "/",
   },
   category: "technology",
+};
+
+export const viewport: Viewport = {
   themeColor: "#0f172a",
 };
 
@@ -73,23 +76,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: "Koodaripula Tech Trends",
-    url: "https://jobs.bittive.com/",
+    url: "https://koodaripula.fi/",
     description: "Finnish tech job market trends & classification (remote / hybrid / on-site)",
     potentialAction: {
       "@type": "SearchAction",
-      target: "https://jobs.bittive.com/trends?search={search_term_string}",
+      target: "https://koodaripula.fi/trends?search={search_term_string}",
       "query-input": "required name=search_term_string",
     },
     publisher: {
       "@type": "Organization",
       name: "Koodaripula",
-      url: "https://jobs.bittive.com/",
+      url: "https://koodaripula.fi/",
     },
   };
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
-        <script defer data-domain="jobs.bittive.com" src="https://analytics.bittive.com/js/script.js"></script>
+        <script defer data-domain="koodaripula.fi" src="https://analytics.bittive.com/js/script.js"></script>
         <script
           type="application/ld+json"
           // eslint-disable-next-line react/no-danger

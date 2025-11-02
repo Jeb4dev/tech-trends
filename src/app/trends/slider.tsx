@@ -4,8 +4,9 @@ import { Results } from "@/types";
 // Custom dual-thumb date range slider replacing react-slider
 export const Slider = (props: { min: Date; filteredData: Results[]; filterByDate: (min: Date, max: Date) => void; initialMinDate?: Date | null; initialMaxDate?: Date | null; }) => {
   const { min, filterByDate, initialMinDate, initialMaxDate } = props;
-  const max = new Date();
-  const totalDays = Math.max(1, Math.floor((max.getTime() - min.getTime()) / (1000 * 3600 * 24)));
+  const [max, setMax] = useState<Date | null>(null);
+  useEffect(() => { setMax(new Date()); }, []);
+  const totalDays = max ? Math.max(1, Math.floor((max.getTime() - min.getTime()) / (1000 * 3600 * 24))) : 1;
 
   const [range, setRange] = useState<[number, number]>([0, totalDays]);
   const commitTimer = useRef<NodeJS.Timeout | null>(null);
@@ -100,11 +101,14 @@ export const Slider = (props: { min: Date; filteredData: Results[]; filterByDate
     }
   }, [initialMinDate, initialMaxDate, min, toDate, clamp, range]);
 
+  const startLabel = max ? toDate(range[0]).toLocaleDateString("fi-FI") : "";
+  const endLabel = max ? toDate(range[1]).toLocaleDateString("fi-FI") : "";
+
   return (
     <div className="pb-8">
-      <div className="flex justify-between text-sm mb-2">
-        <span>{toDate(range[0]).toLocaleDateString("fi-FI")}</span>
-        <span>{toDate(range[1]).toLocaleDateString("fi-FI")}</span>
+      <div className="flex justify-between text-sm mb-2" suppressHydrationWarning>
+        <span>{startLabel}</span>
+        <span>{endLabel}</span>
       </div>
       <div ref={trackRef} className="relative h-8 select-none">
         <div className="absolute top-1/2 -translate-y-1/2 w-full h-1 rounded bg-gray-300" />
@@ -119,7 +123,7 @@ export const Slider = (props: { min: Date; filteredData: Results[]; filterByDate
             aria-valuemin={0}
             aria-valuemax={range[1]-1}
             aria-valuenow={range[0]}
-            aria-valuetext={toDate(range[0]).toLocaleDateString("fi-FI")}
+            aria-valuetext={startLabel}
           className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-white border border-gray-500 shadow focus:outline-none focus:ring-2 focus:ring-green-500"
           style={{ left: pct(range[0]) + "%" }}
           onKeyDown={(e) => {
@@ -136,7 +140,7 @@ export const Slider = (props: { min: Date; filteredData: Results[]; filterByDate
             aria-valuemin={range[0]+1}
             aria-valuemax={totalDays}
             aria-valuenow={range[1]}
-            aria-valuetext={toDate(range[1]).toLocaleDateString("fi-FI")}
+            aria-valuetext={endLabel}
           className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-white border border-gray-500 shadow focus:outline-none focus:ring-2 focus:ring-green-500"
           style={{ left: pct(range[1]) + "%" }}
           onKeyDown={(e) => {
@@ -147,9 +151,9 @@ export const Slider = (props: { min: Date; filteredData: Results[]; filterByDate
           onPointerDown={(e) => { e.preventDefault(); setDragging('max'); }}
         />
       </div>
-      <div className="flex justify-between text-xs mt-1 text-gray-400">
+      <div className="flex justify-between text-xs mt-1 text-gray-400" suppressHydrationWarning>
         <span>{min.toLocaleDateString("fi-FI")}</span>
-        <span>{max.toLocaleDateString("fi-FI")}</span>
+        <span>{max ? max.toLocaleDateString("fi-FI") : ""}</span>
       </div>
     </div>
   );

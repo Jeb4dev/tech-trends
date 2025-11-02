@@ -90,6 +90,15 @@ function makeSnippet(text: string) {
   return text.slice(0, 300).replace(/\s+/g, ' ').trim();
 }
 
+// Deterministic date formatter to avoid timezone mismatches
+function formatISOToFiDate(iso: string): string {
+  // Expecting iso like 2025-10-30 or 2025-10-30T...
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return iso;
+  const [, y, mo, d] = m;
+  return `${d}.${mo}.${y}`; // dd.mm.yyyy
+}
+
 // ---------------- Component ----------------
 export const Openings = ({ openings, activeQuery }: TypeProps) => {
   const [showCount, setShowCount] = useState(10);
@@ -202,7 +211,7 @@ export const Openings = ({ openings, activeQuery }: TypeProps) => {
                     <span className="opacity-50">•</span>
                     <span>{result.municipality_name}</span>
                     <span className="opacity-50">•</span>
-                    <span>{new Date(result.date_posted).toLocaleDateString("fi-FI")}</span>
+                    <span>{formatISOToFiDate(result.date_posted)}</span>
                     {salaryMap.get(result.slug) && (
                       <>
                         <span className="opacity-50">•</span>

@@ -507,6 +507,12 @@ function TrendsPageInner() {
     window.history.pushState({}, "", url.toString());
   }
 
+  // Client-only date for header to avoid SSR/client mismatch
+  const [today, setToday] = useState<string>("");
+  useEffect(() => {
+    setToday(new Date().toLocaleDateString("fi-FI"));
+  }, []);
+
   if (isLoading)
     return (
       <div className={"max-w-7xl mx-auto px-3 md:px-6 lg:px-8"}>
@@ -595,7 +601,7 @@ function TrendsPageInner() {
           <h3 className={"text-[11px] xs:text-xs sm:text-sm md:text-base lg:text-lg line-clamp-4 text-gray-400"}>
             Source duunitori.fi/api/v1/jobentries?search=Tieto- ja tietoliikennetekniikka (ala)
           </h3>
-          <h3 className="text-sm text-gray-300">Date {new Date().toLocaleDateString("fi-FI")}</h3>
+          <h3 className="text-sm text-gray-300" suppressHydrationWarning>Date {today}</h3>
         </div>
         <div className="mt-3 mx-1 md:mx-2">
           <Slider
