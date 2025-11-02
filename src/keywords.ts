@@ -521,6 +521,7 @@ export const positions = [
     "Tietoturva asiantuntija",
     "Tietoturva-asiantuntija",
   ],
+  ["Security specialist", "Tietoturva asiantuntija", "Tietoturva-asiantuntija"],
   ["Penetration Tester", "Pentester", "Penetraatiotestaaja"],
   ["Network Engineer", "Verkkoinsinööri"],
   ["QA Engineer", "QA Engineering", "Test Engineer", "Test Engineering", "Testauksen"],

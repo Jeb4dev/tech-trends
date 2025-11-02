@@ -5,238 +5,12 @@ import { Skills } from "./skill";
 import { Category, Data, QueryParams, ResponseData, Results } from "@/types";
 import { useEffect, useState, Suspense, useMemo, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import {
-  cloud,
-  databases,
-  dataScience,
-  cyberSecurity,
-  devops,
-  frameworks,
-  languages,
-  positions,
-  seniority,
-  softSkills,
-  location,
-} from "@/keywords";
+import { frameworks, languages } from "@/keywords"; // minimal imports kept if needed elsewhere
 import { Openings } from "./openings";
-import { Slider } from "./slider";
-import { classifyWorkMode } from "@/workMode";
-import { extractSalaryRaw } from "@/salary";
 import { computeBase } from "@/compute"; // optional fallback if API doesn't send base
 import type { SlimBase } from "@/compute";
-
-// --- Helper utilities (pure) --------------------------------------------------
-const escapeRegExp = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-function matchAll(
-  results: Results[],
-  keywords: (string | string[])[],
-  complicated: boolean = false,
-  slice: number = 50,
-  title = false
-): Category[] {
-  return keywords
-    .map((keyword) => {
-      const list = Array.isArray(keyword) ? keyword : [keyword];
-      const positives = list.filter(k => !k.startsWith("!"));
-      if (positives.length === 0) return null; // skip if only negatives
-      const escapedKeywords = positives.map(escapeRegExp);
-      const regexString = escapedKeywords.join("|");
-      const negativesLower: string[] = list
-        .filter((kw) => kw.startsWith("!"))
-        .map((kw) => kw.replace("!", "").toLowerCase());
-
-      const regex = complicated
-        ? new RegExp(`(?:\\s|^|\\()(${regexString})(?=[\\s\\-.,:;!?/)]|\\/|$)`, "i")
-        : new RegExp(`\\b(?:${regexString})`, "i");
-
-      // Pre-scan openings once
-      const matched: Results[] = [];
-      for (let i = 0; i < results.length; i++) {
-        const opening = results[i];
-        const text = title ? (opening._headingLower || opening.heading.toLowerCase()) : (opening._descrLower || opening.descr.toLowerCase());
-        if (negativesLower.length && negativesLower.some(neg => text.includes(neg))) continue;
-        if (regex.test(text)) matched.push(opening);
-      }
-
-      if (!matched.length) return null;
-
-      return {
-        label: positives[0],
-        active: false,
-        openings: matched,
-        filteredOpenings: [],
-      } as Category;
-    })
-    .filter((c): c is Category => !!c)
-    .sort((a, b) => b.openings.length - a.openings.length)
-    .slice(0, slice);
-}
-
-function groupResultsByProperty(results: Results[], property: keyof Results): Category[] {
-  const categories: Category[] = [];
-  results.forEach((result) => {
-    if (!result[property]) return;
-    const existing = categories.find((c) => c.label === result[property]);
-    if (existing) existing.openings.push(result);
-    else
-      categories.push({
-        label: result[property]!,
-        active: false,
-        openings: [result],
-        filteredOpenings: [],
-      });
-  });
-  return categories.sort((a, b) => b.openings.length - a.openings.length).filter((c) => c.label);
-}
-
-// Seniority classification (pure, single label per opening)
-function classifySeniority(openings: Results[]): Category[] {
-  const order = ["Intern", "Junior", "Mid-level", "Senior", "Lead", "Director", "Vice President", "Chief"];
-  const groups = seniority.map((g) => {
-    const arr = Array.isArray(g) ? g : [g];
-    const [label, ...syns] = arr;
-    return {
-      label,
-      synonyms: [label, ...syns].filter((s) => !s.startsWith("!")).map((s) => s.toLowerCase()),
-      negatives: [label, ...syns].filter((s) => s.startsWith("!")).map((s) => s.slice(1).toLowerCase()),
-    };
-  });
-
-  const highLevel = new Set(["Lead", "Director", "Vice President", "Chief"]);
-  const ambiguousHigh = new Set(["lead", "head", "principal", "staff", "architect"]);
-  const roleAfterAmbiguous =
-    /(lead|head|principal|staff|architect)\s+(engineer|developer|designer|artist|programmer|researcher|analyst|manager|product|security|game|data|ui|ux)/i;
-  const teamLeadPattern = /(team|technical|tech)\s+lead/i;
-  const mentoringJuniorRegex = /(mentor(ing)?|coach(ing)?|guide(ing)?|support(ing)?|train(ing)?)\s+(our\s+)?junior(s)?/i;
-  const contextualHighLevelPhrase = /(report(s|ing)?\s+to|support(ing)?|assist(ing)?|work(ing)?\s+with|collaborat(e|ing)\s+with)/i;
-  const contactSectionRegex = /(lisätietoja|yhteyshenkilö|contact|ota\s+yhteyttä|rekrytoija|rekrytointipäällikkö)/i;
-
-  const resultsMap: Record<string, Category> = {};
-  groups.forEach((g) => {
-    resultsMap[g.label] = { label: g.label, active: false, openings: [], filteredOpenings: [] };
-  });
-
-  openings.forEach((opening) => {
-    const title = opening.heading.toLowerCase();
-    const desc = opening.descr.toLowerCase();
-    const full = title + "\n" + desc;
-    const scores: Record<string, number> = {};
-    const meta: Record<string, { titleHits: number; descHits: number; descStrong: number }> = {};
-
-    groups.forEach((g) => {
-      if (g.negatives.some((n) => full.includes(n))) return;
-      let titleHits = 0;
-      let descHits = 0;
-      let strongDesc = 0;
-      let subtotal = 0;
-      g.synonyms.forEach((rawSyn) => {
-        const syn = rawSyn.toLowerCase();
-        const safe = syn.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
-        const rWord = new RegExp(`\\b${safe}\\b`, "gi");
-        const t = title.match(rWord);
-        if (t) {
-          titleHits += t.length;
-          subtotal += 10 * t.length;
-        }
-        rWord.lastIndex = 0;
-        const d = desc.match(rWord);
-        if (d) {
-          if (ambiguousHigh.has(syn) && !title.match(rWord)) {
-            let valid = false;
-            if (roleAfterAmbiguous.test(desc) || teamLeadPattern.test(desc)) valid = true;
-            if (!valid) return;
-            strongDesc += d.length;
-          }
-          descHits += d.length;
-          subtotal += 2 * d.length;
-        }
-      });
-      if (subtotal > 0) {
-        scores[g.label] = (scores[g.label] || 0) + subtotal;
-        meta[g.label] = { titleHits, descHits, descStrong: strongDesc };
-      }
-    });
-
-    const yearsMatch = desc.match(/\b(\d{1,2})\+?\s*(?:years|yrs|vuotta|v)\b/);
-    let years = yearsMatch ? parseInt(yearsMatch[1], 10) : null;
-    if (years !== null) {
-      if (years >= 10) scores["Senior"] = (scores["Senior"] || 0) + 4;
-      else if (years >= 6) scores["Senior"] = (scores["Senior"] || 0) + 2;
-      else if (years <= 2) scores["Junior"] = (scores["Junior"] || 0) + 2;
-    }
-
-    if (!Object.values(meta).some((m) => m.titleHits > 0)) scores["Mid-level"] = (scores["Mid-level"] || 0) + 2;
-
-    if (mentoringJuniorRegex.test(full) && scores["Junior"]) scores["Junior"] -= 6;
-
-    highLevel.forEach((hl) => {
-      if (scores[hl] && (!meta[hl] || meta[hl].titleHits === 0)) {
-        const idx = desc.indexOf(hl.toLowerCase());
-        if (idx > -1) {
-          const window = desc.slice(Math.max(0, idx - 50), idx + 50);
-          if (contextualHighLevelPhrase.test(window)) delete scores[hl];
-        }
-      }
-    });
-
-    if (scores["Chief"]) {
-      const chiefMeta = meta["Chief"];
-      if (!chiefMeta || chiefMeta.titleHits === 0) {
-        const chiefRegex =
-          /(toimitusjohtaja|verkställande\s+direktör|chief|c-level|cio|ciso|teknologiajohtaja|tiedonhallintajohtaja|tietoturvajohtaja)/gi;
-        const matches: number[] = [];
-        let _m: RegExpExecArray | null;
-        while ((_m = chiefRegex.exec(desc)) !== null) {
-          matches.push(_m.index);
-          if (_m.index === chiefRegex.lastIndex) chiefRegex.lastIndex++;
-        }
-        const contactStart = desc.search(contactSectionRegex);
-        const contextualHighLevelPhrase2 = contextualHighLevelPhrase;
-        let allInContact = contactStart >= 0 && matches.length > 0 && matches.every((i) => i >= contactStart);
-        let contextualCount = 0;
-        for (const idx of matches) {
-          const w = desc.slice(Math.max(0, idx - 60), idx + 60);
-            if (contextualHighLevelPhrase2.test(w)) contextualCount++;
-        }
-        if (allInContact || contextualCount === matches.length) {
-          delete scores["Chief"];
-        } else if (matches.length === 1 && !years) {
-          if (scores["Chief"] <= 2) delete scores["Chief"]; else scores["Chief"] -= 3;
-        }
-      }
-    }
-
-    if (
-      scores["Senior"] &&
-      meta["Senior"] &&
-      meta["Senior"].titleHits === 0 &&
-      meta["Senior"].descStrong === 0 &&
-      (!years || years < 6)
-    ) {
-      scores["Mid-level"] = (scores["Mid-level"] || 0) + 1;
-      delete scores["Senior"];
-    }
-
-    if (scores["Lead"] && meta["Lead"] && meta["Lead"].titleHits === 0 && meta["Lead"].descStrong === 0) {
-      if (scores["Senior"]) delete scores["Lead"]; else { scores["Mid-level"] = (scores["Mid-level"] || 0) + 1; delete scores["Lead"]; }
-    }
-
-    if (!Object.entries(scores).some(([, v]) => v > 0)) scores["Mid-level"] = 1;
-
-    const best = Object.entries(scores)
-      .filter(([, v]) => v > 0)
-      .sort((a, b) => (b[1] !== a[1] ? b[1] - a[1] : order.indexOf(b[0]) - order.indexOf(a[0])))[0];
-    if (best) {
-      if (!resultsMap[best[0]]) resultsMap[best[0]] = { label: best[0], active: false, openings: [], filteredOpenings: [] };
-      resultsMap[best[0]].openings.push(opening);
-    }
-  });
-
-  return Object.values(resultsMap)
-    .filter((c) => c.openings.length)
-    .sort((a, b) => b.openings.length - a.openings.length);
-}
+import ActiveOpeningsAreaChart from "./active-area-chart";
+import ExtraCharts from "./extra-charts";
 
 // -----------------------------------------------------------------------------
 
@@ -263,6 +37,7 @@ function TrendsPageInner() {
     salary: params.getAll("salary").map((q) => q.toLowerCase()),
     minDate: [params.getAll("minDate")[0]],
     maxDate: [params.getAll("maxDate")[0]],
+    activeToday: params.getAll("activeToday").map((q) => q.toLowerCase()),
   });
 
   useEffect(() => {
@@ -282,7 +57,6 @@ function TrendsPageInner() {
   }, []);
 
   const baseCategories = useMemo(() => {
-    // If slim precomputed exists, rebuild categories from slugs using current results
     if (precomputedSlim && data.results.length) {
       const byId = new Map<string, Results>();
       data.results.forEach((o) => byId.set(o.slug, o));
@@ -313,7 +87,6 @@ function TrendsPageInner() {
         locations: makeCats(precomputedSlim.locations),
       };
     }
-    // Fallback to computeBase (dev or first run)
     if (!data.results.length) {
       return {
         categories: {
@@ -342,7 +115,6 @@ function TrendsPageInner() {
     const { categories, companies, locations } = baseCategories;
     if (!data.results) return { filteredData: [], filteredCategories: {} as Data, filteredCompanies: [] };
 
-    // helper to clone category without changing reference arrays
     const clone = (c: Category) => ({ ...c, openings: c.openings, filteredOpenings: c.filteredOpenings, active: false });
 
     type CatProcess = { list: Category[] | undefined; selected: string[] | undefined; key: keyof Data | 'companies' | 'locations' };
@@ -370,17 +142,15 @@ function TrendsPageInner() {
     for (const cfg of catConfigs) {
       if (!cfg.list) { processed[cfg.key] = []; continue; }
       const selectedLower = (cfg.selected || []).map(s => s.toLowerCase());
-      const arr = cfg.list.map(item => {
+      processed[cfg.key] = cfg.list.map(item => {
         const active = selectedLower.includes(item.label.toLowerCase());
         if (active) activeSets.push(item.openings);
         return { ...clone(item), active };
       });
-      processed[cfg.key] = arr;
     }
 
     function intersectArrays(arrays: Results[][]): Results[] {
       if (!arrays.length) return data.results;
-      // sort by size ascending for efficient intersection
       arrays.sort((a,b)=> a.length - b.length);
       let result = arrays[0];
       for (let i=1;i<arrays.length;i++) {
@@ -391,15 +161,25 @@ function TrendsPageInner() {
       return result;
     }
 
-    const openings = intersectArrays(activeSets);
+    let openings = intersectArrays(activeSets);
+
+    if (queryParams.activeToday && queryParams.activeToday.length) {
+      const today = new Date();
+      const y = today.getFullYear(), m = today.getMonth(), d = today.getDate();
+      const isSameLocalDate = (iso?: string) => {
+        if (!iso) return false;
+        const dt = new Date(iso);
+        return dt.getFullYear() === y && dt.getMonth() === m && dt.getDate() === d;
+      };
+      openings = openings.filter(o => isSameLocalDate(o.last_seen_at));
+    }
+
     const openingsSet = openings === data.results ? null : new Set(openings);
 
-    function attachFiltered(list: Category[]) {
-      return list.map(item => ({
-        ...item,
-        filteredOpenings: openingsSet ? item.openings.filter(o => openingsSet.has(o)) : item.openings,
-      }));
-    }
+    const attachFiltered = (list: Category[]) => list.map(item => ({
+      ...item,
+      filteredOpenings: openingsSet ? item.openings.filter(o => openingsSet.has(o)) : item.openings,
+    }));
 
     const filteredCategories: Data = {
       languages: attachFiltered(processed.languages),
@@ -425,7 +205,7 @@ function TrendsPageInner() {
   const updateFilter = useCallback((filter: string, value: string) => {
     const url = new URL(window.location.href);
     const params = new URLSearchParams(url.search);
-    const isSingleValue = filter === "minDate" || filter === "maxDate";
+    const isSingleValue = filter === "minDate" || filter === "maxDate" || filter === "activeToday";
     if (isSingleValue) {
       if (params.get(filter) === value) params.delete(filter); else params.set(filter, value);
     } else {
@@ -443,29 +223,12 @@ function TrendsPageInner() {
     window.history.pushState({}, "", url.toString());
   }, []);
 
-  function filterByDate(min: Date, max: Date) {
-    const pad = (n: number) => n.toString().padStart(2, "0");
-    const minStr = `${min.getFullYear()}-${pad(min.getMonth() + 1)}-${pad(min.getDate())}`;
-    const maxStr = `${max.getFullYear()}-${pad(max.getMonth() + 1)}-${pad(max.getDate())}`;
-    // Single history/state update
-    const url = new URL(window.location.href);
-    const params = new URLSearchParams(url.search);
-    if (params.get("minDate") === minStr) params.delete("minDate"); else params.set("minDate", minStr);
-    if (params.get("maxDate") === maxStr) params.delete("maxDate"); else params.set("maxDate", maxStr);
-    setQueryParams((prev) => ({
-      ...prev,
-      minDate: params.getAll("minDate").map(v => v.toLowerCase()),
-      maxDate: params.getAll("maxDate").map(v => v.toLowerCase()),
-    }));
-    url.search = params.toString();
-    window.history.pushState({}, "", url.toString());
-  }
-
-  // Client-only date for header to avoid SSR/client mismatch
   const [today, setToday] = useState<string>("");
   useEffect(() => {
     setToday(new Date().toLocaleDateString("fi-FI"));
   }, []);
+
+  const [showMoreGraphs, setShowMoreGraphs] = useState(false);
 
   if (isLoading)
     return (
@@ -478,11 +241,6 @@ function TrendsPageInner() {
               <div className="h-3 w-40 rounded bg-gray-700/40 animate-pulse" />
             </div>
             <div className="h-5 w-28 rounded bg-gray-700/40 animate-pulse" />
-          </div>
-
-          {/* Slider placeholder */}
-          <div className="mt-3 mx-1 md:mx-2">
-            <div className="h-9 md:h-11 w-full rounded bg-gradient-to-r from-gray-700/40 via-gray-600/40 to-gray-700/40 animate-pulse" />
           </div>
 
           <div className={"mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-6"}>
@@ -547,6 +305,8 @@ function TrendsPageInner() {
       </p>
     );
 
+  const activeTodayOn = !!(queryParams.activeToday && queryParams.activeToday.length);
+
   return (
     <div className={"max-w-7xl mx-auto px-1 md:px-6 lg:px-8"}>
       <div>
@@ -555,16 +315,26 @@ function TrendsPageInner() {
           <h3 className={"text-[11px] xs:text-xs sm:text-sm md:text-base lg:text-lg line-clamp-4 text-gray-400"}>
             Source duunitori.fi/api/v1/jobentries?search=Tieto- ja tietoliikennetekniikka (ala)
           </h3>
-          <h3 className="text-sm text-gray-300" suppressHydrationWarning>Date {today}</h3>
-        </div>
-        <div className="mt-3 mx-1 md:mx-2">
-          <Slider
-            min={new Date("09/01/2025")}
-            filteredData={filteredData}
-            filterByDate={filterByDate}
-            initialMinDate={queryParams.minDate[0] ? new Date(queryParams.minDate[0]) : null}
-            initialMaxDate={queryParams.maxDate[0] ? new Date(queryParams.maxDate[0]) : null}
-          />
+          <div className="flex items-center gap-4">
+            <label
+              htmlFor="active-today-toggle"
+              className="flex items-center gap-2 cursor-pointer select-none text-sm text-gray-300"
+            >
+              <div className="relative">
+                <input
+                  id="active-today-toggle"
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={activeTodayOn}
+                  onChange={() => updateFilter('activeToday', activeTodayOn ? '0' : '1')}
+                />
+                <div className="w-10 h-5 bg-gray-600 peer-focus:ring-2 peer-focus:ring-green-400 rounded-full peer peer-checked:bg-green-500 transition-all duration-300"></div>
+                <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform duration-300 peer-checked:translate-x-5"></div>
+              </div>
+              Active today only
+            </label>
+            <h3 className="text-sm text-gray-300" suppressHydrationWarning>Date {today}</h3>
+          </div>
         </div>
         <div className={"mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-6"}>
           <div>
@@ -625,6 +395,27 @@ function TrendsPageInner() {
           </div>
         </div>
       </div>
+      <div className="mt-6">
+        <ActiveOpeningsAreaChart openings={filteredData as Results[]} />
+      </div>
+      <div className="mt-4 flex items-center justify-end">
+        <button
+          type="button"
+          onClick={() => setShowMoreGraphs((v) => !v)}
+          className={
+            "px-3 py-1.5 text-sm rounded-md border transition-colors " +
+            (showMoreGraphs ? "border-green-500 bg-green-500/15 text-green-300 hover:bg-green-500/25" : "border-gray-600 text-gray-200 hover:bg-gray-800/60")
+          }
+          aria-expanded={showMoreGraphs}
+        >
+          {showMoreGraphs ? "Hide more graphs" : "Show more graphs"}
+        </button>
+      </div>
+      {showMoreGraphs && (
+        <div className="mt-4">
+          <ExtraCharts openings={filteredData as Results[]} />
+        </div>
+      )}
       <Openings openings={filteredData} activeQuery={queryParams} />
       <hr className={"my-8 border-gray-400"} />
       <footer className={"flex flex-col sm:flex-row justify-between items-center"}>

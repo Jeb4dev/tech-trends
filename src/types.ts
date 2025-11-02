@@ -62,4 +62,5 @@ export type QueryParams = {
   salary?: string[]; // salary range filters
   minDate: string[];
   maxDate: string[];
+  activeToday: string[]; // presence of any value => filter to last_seen today
 };
