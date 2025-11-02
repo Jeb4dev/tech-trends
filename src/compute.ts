@@ -329,7 +329,7 @@ export function computeBase(results: Results[]) {
   return { categories, companies, locations };
 }
 
-export type SlimCategory = { label: string; ids: string[] };
+export type SlimCategory = { label: string; ids: number[] };
 export type SlimBase = {
   categories: {
     languages: SlimCategory[];
@@ -353,7 +353,7 @@ export type SlimBase = {
 export function computeBaseSlim(results: Results[]): SlimBase {
   const full = computeBase(results);
   const toSlim = (cats: Category[] | undefined): SlimCategory[] =>
-    (cats || []).map((c) => ({ label: c.label, ids: c.openings.map((o) => o.slug) }));
+    (cats || []).map((c) => ({ label: c.label, ids: c.openings.map((o) => o.id) }));
   return {
     categories: {
       languages: toSlim(full.categories.languages),

@@ -135,29 +135,27 @@ async function insertNewJobData(data: Results[]) {
 async function fetchDatabaseData() {
   try {
     // Fetch existing job data from the database
-    return await db.any("SELECT * FROM jobs");
+    return await db.any("SELECT id, slug, heading, descr, company_name, municipality_name, date_posted, last_seen_at FROM jobs");
   } catch (e) {
     console.log("Error opening database", e);
     await initializeDatabase();
     // Fetch existing job data from the database
-    return await db.any("SELECT * FROM jobs");
+    return await db.any("SELECT id, slug, heading, descr, company_name, municipality_name, date_posted, last_seen_at FROM jobs");
   }
 }
 
 async function buildResponseFromJobs(jobs: Results[]) {
   // Precompute aggregates once here
   const base = computeBaseSlim(jobs);
-  // Remove internal cached fields before sending
-  const results: Results[] = jobs.map((j) => ({
+  // Remove internal cached fields before sending (compact payload)
+  const results: Results[] = jobs.map((j: any) => ({
+    id: j.id,
     heading: j.heading,
     date_posted: j.date_posted,
     slug: j.slug,
     municipality_name: j.municipality_name,
-    export_image_url: j.export_image_url,
     company_name: j.company_name,
     descr: j.descr,
-    latitude: j.latitude,
-    longitude: j.longitude,
     last_seen_at: j.last_seen_at,
   }));
   const returnData: ResponseData = {

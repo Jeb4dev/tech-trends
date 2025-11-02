@@ -1,13 +1,11 @@
 export interface Results {
+  id: number; // compact numeric id
   heading: string;
   date_posted: string;
-  slug: string;
+  slug: string; // keep for external linking
   municipality_name: string;
-  export_image_url: string;
   company_name: string;
   descr: string;
-  latitude: string | null;
-  longitude: string | null;
   last_seen_at?: string;
   // Cached lowercase variants to avoid recomputing repeatedly during filtering
   _headingLower?: string;
@@ -63,4 +61,4 @@ export type QueryParams = {
   minDate: string[];
   maxDate: string[];
   activeToday: string[]; // presence of any value => filter to last_seen today
-};
+}

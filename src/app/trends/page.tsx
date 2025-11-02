@@ -58,9 +58,9 @@ function TrendsPageInner() {
 
   const baseCategories = useMemo(() => {
     if (precomputedSlim && data.results.length) {
-      const byId = new Map<string, Results>();
-      data.results.forEach((o) => byId.set(o.slug, o));
-      const makeCats = (arr: { label: string; ids: string[] }[] | undefined) =>
+      const byId = new Map<number, Results>();
+      data.results.forEach((o) => byId.set(o.id, o));
+      const makeCats = (arr: { label: string; ids: number[] }[] | undefined) =>
         (arr || []).map((c) => ({
           label: c.label,
           active: false,

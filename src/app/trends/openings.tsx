@@ -8,15 +8,13 @@ import { extractSalaryRaw } from "@/salary";
 const workMode = workModeHighlightGroups;
 
 interface OpeningEntry {
+  id: number;
   heading: string;
   date_posted: string;
   slug: string;
   municipality_name: string;
-  export_image_url: string;
   company_name: string;
   descr: string;
-  latitude: string | null;
-  longitude: string | null;
 }
 
 interface TypeProps {
