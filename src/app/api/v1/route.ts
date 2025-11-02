@@ -1,8 +1,8 @@
 import { IMain, IDatabase } from "pg-promise";
 import pgPromise from "pg-promise";
 import { ResponseData, Results } from "@/types";
-import crypto from "crypto";
 import { NextResponse } from "next/server";
+import { computeBaseSlim } from "@/compute";
 
 // Ensure this Route Handler is always dynamic and never statically cached
 export const dynamic = 'force-dynamic';
@@ -12,30 +12,12 @@ const pgp: IMain = pgPromise();
 // @ts-ignore
 const db: IDatabase<any> = pgp(process.env.POSTGRES_URL);
 
-let data: Results[] = [];
-function hashData(data: Results) {
-  // Create a hash of the data
-  const item = JSON.stringify({
-    slug: data.slug,
-    heading: data.heading,
-    descr: data.descr,
-    company_name: data.company_name,
-    municipality_name: data.municipality_name,
-  });
-
-  const hash = crypto.createHash("sha256");
-  hash.update(JSON.stringify(item));
-  return hash.digest("hex");
-}
-
-// Removed jobAlreadyInData usage in refresh logic (still kept if needed elsewhere)
-async function jobAlreadyInData(newJob: Results) {
-  // Check if the job already exists in the data, return boolean
-  const hash = hashData(newJob);
-  return !!data.find((job) => hashData(job) === hash);
-}
-
 const REFRESH_INTERVAL_HOURS = 6; // Fetch a few times a day
+
+// In-memory cache for API response with precomputed aggregates
+let cachedResponse: any | null = null;
+let cachedAt = 0;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes in-memory cache to avoid recomputing
 
 async function initializeDatabase() {
   // Create tables if they don't exist
@@ -109,6 +91,9 @@ async function fetchDataFromApi(existingSlugs: Set<string>) {
     for (const job of newPageData.results) {
       job.last_seen_at = seenAt; // set/update timestamp for every active posting
       if (existingSlugs.has(job.slug)) existingCount++; else newCount++;
+      // lowercase cache once
+      if (!job._headingLower) job._headingLower = job.heading.toLowerCase();
+      if (!job._descrLower) job._descrLower = job.descr.toLowerCase();
       allJobs.push(job);
     }
 
@@ -162,9 +147,51 @@ async function fetchDatabaseData() {
     return await db.any("SELECT * FROM jobs");
   }
 }
-export async function GET() {
-  data = [];
+
+async function buildResponseFromJobs(jobs: Results[]) {
+  // Precompute aggregates once here
+  const base = computeBaseSlim(jobs);
+  // Remove internal cached fields before sending
+  const results: Results[] = jobs.map((j) => ({
+    heading: j.heading,
+    date_posted: j.date_posted,
+    slug: j.slug,
+    municipality_name: j.municipality_name,
+    export_image_url: j.export_image_url,
+    company_name: j.company_name,
+    descr: j.descr,
+    latitude: j.latitude,
+    longitude: j.longitude,
+    last_seen_at: j.last_seen_at,
+  }));
+  const returnData: ResponseData = {
+    count: results.length,
+    next: null,
+    previous: null,
+    results,
+  };
+  return { data: returnData, base };
+}
+
+async function refreshInBackground() {
+  try {
+    const existingJobData = await fetchDatabaseData();
+    const { jobs: activeJobs } = await fetchDataFromApi(new Set(existingJobData.map((j: any) => j.slug)));
+    await insertNewJobData(activeJobs);
+    await setMeta("last_fetch_at", new Date().toISOString());
+  } catch (e) {
+    console.error("Background refresh failed", e);
+  }
+}
+
+async function getFreshResponse(forceRefresh = false) {
   await initializeDatabase();
+
+  // Use an in-memory cache for the full response
+  const now = Date.now();
+  if (!forceRefresh && cachedResponse && now - cachedAt < CACHE_TTL_MS) {
+    return cachedResponse;
+  }
 
   const lastFetch = await getMeta("last_fetch_at");
   const shouldRefresh = needsRefresh(lastFetch);
@@ -172,29 +199,34 @@ export async function GET() {
 
   // Load current DB snapshot (includes historical jobs)
   const existingJobData = await fetchDatabaseData();
-  const existingSlugs = new Set(existingJobData.map(j => j.slug));
 
   if (shouldRefresh) {
-    const { jobs: activeJobs, stats } = await fetchDataFromApi(existingSlugs);
-    await insertNewJobData(activeJobs); // updates last_seen_at for all active jobs
-    await setMeta("last_fetch_at", new Date().toISOString());
-
-    // Merge active jobs (fresh last_seen_at) with historical (inactive) jobs not seen this run
-    const activeSlugSet = new Set(activeJobs.map(j => j.slug));
-    const inactiveJobs = existingJobData.filter(j => !activeSlugSet.has(j.slug));
-    data = activeJobs.concat(inactiveJobs);
-    console.log(`Active jobs: ${activeJobs.length}, inactive (not seen this fetch): ${inactiveJobs.length}`);
+    // Serve current snapshot immediately and refresh in background
+    const immediate = await buildResponseFromJobs(existingJobData as any);
+    cachedResponse = immediate;
+    cachedAt = now;
+    // Fire and forget refresh to update DB for next requests
+    refreshInBackground()
+      .then(async () => {
+        try {
+          const latest = await fetchDatabaseData();
+          cachedResponse = await buildResponseFromJobs(latest as any);
+          cachedAt = Date.now();
+        } catch (e) {
+          console.error("Post-refresh snapshot compute failed", e);
+        }
+      })
+      .catch((e) => console.error("Refresh scheduling failed", e));
+    return immediate;
   } else {
-    data = existingJobData; // no refresh; retain last snapshot
+    const resp = await buildResponseFromJobs(existingJobData as any);
+    cachedResponse = resp;
+    cachedAt = now;
+    return resp;
   }
+}
 
-  const returnData: ResponseData = {
-    count: data.length,
-    next: null,
-    previous: null,
-    results: data,
-  };
-
-  console.log(`Returning ${returnData.count} jobs (refreshed=${shouldRefresh})`);
-  return NextResponse.json({ data: returnData });
+export async function GET() {
+  const response = await getFreshResponse(false);
+  return NextResponse.json(response, { headers: { 'Cache-Control': 's-maxage=300, stale-while-revalidate=60' } });
 }

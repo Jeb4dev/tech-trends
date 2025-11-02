@@ -22,6 +22,8 @@ import { Openings } from "./openings";
 import { Slider } from "./slider";
 import { classifyWorkMode } from "@/workMode";
 import { extractSalaryRaw } from "@/salary";
+import { computeBase } from "@/compute"; // optional fallback if API doesn't send base
+import type { SlimBase } from "@/compute";
 
 // --- Helper utilities (pure) --------------------------------------------------
 const escapeRegExp = (string: string) => string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -240,6 +242,7 @@ function classifySeniority(openings: Results[]): Category[] {
 
 function TrendsPageInner() {
   const [data, setData] = useState<ResponseData>({ count: 0, next: null, previous: null, results: [] });
+  const [precomputedSlim, setPrecomputedSlim] = useState<SlimBase | null>(null);
   const [isLoading, setLoading] = useState(false);
   const params = useSearchParams();
   const [queryParams, setQueryParams] = useState<QueryParams>({
@@ -266,23 +269,52 @@ function TrendsPageInner() {
     setLoading(true);
     fetch("/api/v1")
       .then((res) => res.json())
-      .then((data: ResponseData) => {
-        // @ts-ignore
-        const incoming: ResponseData = data.data;
-        // cache lowercase strings once
-        incoming.results.forEach(r => {
+      .then((payload) => {
+        const incoming: ResponseData = payload.data;
+        incoming.results.forEach((r) => {
           if (!r._headingLower) r._headingLower = r.heading.toLowerCase();
-            if (!r._descrLower) r._descrLower = r.descr.toLowerCase();
+          if (!r._descrLower) r._descrLower = r.descr.toLowerCase();
         });
         setData(incoming);
+        if (payload.base) setPrecomputedSlim(payload.base as SlimBase);
         setLoading(false);
       });
   }, []);
 
-  // Build base categories only when data.results changes
   const baseCategories = useMemo(() => {
-    const results = data.results;
-    if (!results || results.length === 0) {
+    // If slim precomputed exists, rebuild categories from slugs using current results
+    if (precomputedSlim && data.results.length) {
+      const byId = new Map<string, Results>();
+      data.results.forEach((o) => byId.set(o.slug, o));
+      const makeCats = (arr: { label: string; ids: string[] }[] | undefined) =>
+        (arr || []).map((c) => ({
+          label: c.label,
+          active: false,
+          openings: c.ids.map((id) => byId.get(id)!).filter(Boolean),
+          filteredOpenings: [],
+        }));
+      return {
+        categories: {
+          languages: makeCats(precomputedSlim.categories.languages),
+          frameworks: makeCats(precomputedSlim.categories.frameworks),
+          databases: makeCats(precomputedSlim.categories.databases),
+          cloud: makeCats(precomputedSlim.categories.cloud),
+          devops: makeCats(precomputedSlim.categories.devops),
+          dataScience: makeCats(precomputedSlim.categories.dataScience),
+          softSkills: makeCats(precomputedSlim.categories.softSkills),
+          cyberSecurity: makeCats(precomputedSlim.categories.cyberSecurity),
+          positions: makeCats(precomputedSlim.categories.positions),
+          seniority: makeCats(precomputedSlim.categories.seniority),
+          workMode: makeCats(precomputedSlim.categories.workMode),
+          cities: makeCats(precomputedSlim.categories.cities),
+          salary: makeCats(precomputedSlim.categories.salary),
+        },
+        companies: makeCats(precomputedSlim.companies),
+        locations: makeCats(precomputedSlim.locations),
+      };
+    }
+    // Fallback to computeBase (dev or first run)
+    if (!data.results.length) {
       return {
         categories: {
           languages: [],
@@ -302,86 +334,8 @@ function TrendsPageInner() {
         locations: [] as Category[],
       };
     }
-    const lowerCache = new Map<Results, string>();
-    const getFull = (o: Results) => {
-      if (!lowerCache.has(o)) lowerCache.set(o, (o.heading + "\n" + o.descr).toLowerCase());
-      return lowerCache.get(o)!;
-    };
-    const cityCategories: Category[] = location.map(city => {
-      const variants = Array.isArray(city) ? city : [city];
-      const lowerVariants = variants.map(v => v.toLowerCase());
-      const pattern = lowerVariants.map(escapeRegExp).join("|");
-      const regex = new RegExp(`\\b(?:${pattern})\\b`, 'i');
-      const openings = results.filter(o => {
-        const full = getFull(o);
-        if (regex.test(full)) return true;
-        const loc = o.municipality_name ? o.municipality_name.toLowerCase() : '';
-        return loc && lowerVariants.includes(loc); // also include if primary location matches
-      });
-      return { label: variants[0], active: false, openings, filteredOpenings: [] } as Category;
-    }).filter(c => c.openings.length > 0).sort((a,b)=> b.openings.length - a.openings.length);
-
-    const categories: Data = {
-      languages: matchAll(results, languages, true),
-      frameworks: matchAll(results, frameworks, true),
-      databases: matchAll(results, databases, true),
-      cloud: matchAll(results, cloud, true),
-      devops: matchAll(results, devops, true),
-      dataScience: matchAll(results, dataScience, true),
-      softSkills: matchAll(results, softSkills, false),
-      cyberSecurity: matchAll(results, cyberSecurity, true),
-      positions: matchAll(results, positions, false),
-      seniority: classifySeniority(results),
-      workMode: classifyWorkMode(results),
-      cities: cityCategories,
-      salary: [],
-    };
-
-    // Build salary categories
-    const salaryRanges = [
-      { label: "0-2000", min: 0, max: 1999 },
-      { label: "2000-3000", min: 2000, max: 2999 },
-      { label: "3000-4000", min: 3000, max: 3999 },
-      { label: "4000-5000", min: 4000, max: 4999 },
-      { label: "5000-6000", min: 5000, max: 5999 },
-      { label: "6000-7000", min: 6000, max: 6999 },
-      { label: "7000-8000", min: 7000, max: 7999 },
-      { label: "8000+", min: 8000, max: Infinity },
-    ];
-    const salaryIncluded: Results[] = [];
-    const rangeBuckets: Record<string, Results[]> = Object.fromEntries(salaryRanges.map(r => [r.label, []]));
-
-    results.forEach(o => {
-      const sal = extractSalaryRaw(o.heading + "\n" + o.descr);
-      if (!sal) return; // no mention
-      salaryIncluded.push(o);
-      if (sal.min != null) {
-        const minVal = sal.min;
-        const maxVal = sal.max ?? sal.min;
-        salaryRanges.forEach(r => {
-          // overlap condition
-            if (maxVal >= r.min && minVal < r.max) {
-              rangeBuckets[r.label].push(o);
-            }
-            // Special case for 8000+ (Infinity max) already covered by condition above
-        });
-      }
-    });
-
-    const salaryCategories: Category[] = [];
-    if (salaryIncluded.length) {
-      salaryCategories.push({ label: "Salary Included", active: false, openings: salaryIncluded, filteredOpenings: [] });
-    }
-    salaryRanges.forEach(r => {
-      const arr = rangeBuckets[r.label];
-      if (arr.length) salaryCategories.push({ label: r.label, active: false, openings: arr, filteredOpenings: [] });
-    });
-    categories.salary = salaryCategories;
-
-    const locations = groupResultsByProperty(results, "municipality_name");
-    const companies = groupResultsByProperty(results, "company_name");
-    return { categories, companies, locations };
-  }, [data.results]);
+    return computeBase(data.results);
+  }, [precomputedSlim, data.results]);
 
   // Filter categories + compute filtered openings on query changes
   const { filteredData, filteredCategories, filteredCompanies } = useMemo(() => {
