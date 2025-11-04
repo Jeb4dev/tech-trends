@@ -1,5 +1,5 @@
 import { useState, useRef, useLayoutEffect, useMemo, useEffect } from "react";
-import { QueryParams } from "@/types";
+import { QueryParams, WorkMode } from "@/types";
 import { languages, frameworks, databases, cloud, devops, dataScience, cyberSecurity, softSkills, positions, seniority } from "@/keywords";
 import { classifyWorkMode, workModeHighlightGroups } from "@/workMode";
 import { extractSalaryRaw } from "@/salary";
@@ -15,6 +15,8 @@ interface OpeningEntry {
   municipality_name: string;
   company_name: string;
   descr: string;
+  // AI-classified working mode from database when available
+  work_mode?: WorkMode;
 }
 
 interface TypeProps {
@@ -95,6 +97,25 @@ function formatISOToFiDate(iso: string): string {
   if (!m) return iso;
   const [, y, mo, d] = m;
   return `${d}.${mo}.${y}`; // dd.mm.yyyy
+}
+
+// Map DB work_mode to display label and color
+function mapDbWorkMode(wm?: WorkMode): { label: string; className: string } | null {
+  switch (wm) {
+    case 'remote':
+      return { label: 'Remote', className: 'text-emerald-300' };
+    case 'hybrid':
+      return { label: 'Hybrid', className: 'text-amber-300' };
+    case 'onsite':
+      return { label: 'On-site', className: 'text-blue-300' };
+    default:
+      return null; // unknown or undefined -> do not display
+  }
+}
+
+function classForHeuristicLabel(lbl?: string | null): string {
+  if (!lbl) return '';
+  return lbl === 'Remote' ? 'text-emerald-300' : lbl === 'Hybrid' ? 'text-amber-300' : 'text-blue-300';
 }
 
 // ---------------- Component ----------------
@@ -192,6 +213,15 @@ export const Openings = ({ openings, activeQuery }: TypeProps) => {
             formatCache.current.set(result.slug, formatted);
           }
           const snippet = makeSnippet(result.descr);
+
+          const heuristicLabel = workModeMap.get(result.slug) || null;
+          const heuristicClass = classForHeuristicLabel(heuristicLabel);
+          const dbInfo = mapDbWorkMode(result.work_mode);
+
+          // Decide if we should render both or a single label (avoid duplicates)
+          const showDb = !!dbInfo;
+          const showHeuristic = !!heuristicLabel && (!dbInfo || dbInfo.label !== heuristicLabel);
+
           return (
             <li key={result.slug}>
               <article className="border border-gray-700 rounded-md p-3 md:p-4 bg-zinc-900/40 backdrop-blur-sm shadow-sm hover:shadow-md transition-shadow">
@@ -216,13 +246,25 @@ export const Openings = ({ openings, activeQuery }: TypeProps) => {
                         <span className="px-1 py-0.5 rounded text-[10px] uppercase tracking-wide text-pink-300">{salaryMap.get(result.slug)}</span>
                       </>
                     )}
-                    {workModeMap.get(result.slug) && (
+                    {showDb && (
                       <>
                         <span className="opacity-50">•</span>
-                        <span className={"px-1 py-0.5 rounded text-[10px] uppercase tracking-wide " +
-                          (workModeMap.get(result.slug)==="Remote" ? "text-emerald-300" : workModeMap.get(result.slug)==="Hybrid" ? "text-amber-300" : "text-blue-300")
-                        }>
-                          {workModeMap.get(result.slug)}
+                        <span
+                          className={"px-1 py-0.5 rounded text-[10px] uppercase tracking-wide " + dbInfo!.className}
+                          title="AI classified work mode"
+                        >
+                          {dbInfo!.label}
+                        </span>
+                      </>
+                    )}
+                    {showHeuristic && (
+                      <>
+                        <span className="opacity-50">•</span>
+                        <span
+                          className={"px-1 py-0.5 rounded text-[10px] uppercase tracking-wide " + heuristicClass}
+                          title="Keyword-based work mode"
+                        >
+                          {heuristicLabel}
                         </span>
                       </>
                     )}

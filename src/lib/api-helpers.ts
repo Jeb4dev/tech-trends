@@ -15,6 +15,7 @@ export async function getJobsData(): Promise<ResponseData> {
     company_name: j.company_name,
     descr: j.descr,
     last_seen_at: j.last_seen_at,
+    work_mode: j.work_mode,
   }));
 
   return {
@@ -29,4 +30,3 @@ export async function getBaseStats() {
   const existingJobData = await fetchDatabaseData();
   return computeBaseSlim(existingJobData as any);
 }
-

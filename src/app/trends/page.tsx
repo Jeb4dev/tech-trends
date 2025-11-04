@@ -347,7 +347,7 @@ function TrendsPageInner() {
       </p>
     );
 
-  const activeTodayOn = !!(queryParams.activeToday && queryParams.activeToday.includes('1'));
+  const activeTodayOn = (queryParams.activeToday && queryParams.activeToday.includes('1'));
 
   return (
     <div className={"max-w-7xl mx-auto px-1 md:px-6 lg:px-8"}>
@@ -383,59 +383,59 @@ function TrendsPageInner() {
         <div className={"mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-6"}>
           <div>
             <h2 className="text-sm font-semibold mb-1">Languages</h2>
-            <Skills skills={filteredCategories.languages} category={"languages"} setLoading={setLoading} updateFilter={updateFilter} />
+            <Skills skills={filteredCategories.languages} category={"languages"} setLoading={setLoading} updateFilter={updateFilter} jobsLoaded={!isLoadingJobs} />
           </div>
           <div>
             <h2 className="text-sm font-semibold mb-1">Frameworks</h2>
-            <Skills skills={filteredCategories.frameworks} category={"frameworks"} setLoading={setLoading} updateFilter={updateFilter} />
+            <Skills skills={filteredCategories.frameworks} category={"frameworks"} setLoading={setLoading} updateFilter={updateFilter} jobsLoaded={!isLoadingJobs} />
           </div>
           <div>
             <h2 className="text-sm font-semibold mb-1">Databases</h2>
-            <Skills skills={filteredCategories.databases} category={"databases"} setLoading={setLoading} updateFilter={updateFilter} />
+            <Skills skills={filteredCategories.databases} category={"databases"} setLoading={setLoading} updateFilter={updateFilter} jobsLoaded={!isLoadingJobs} />
           </div>
           <div>
             <h2 className="text-sm font-semibold mb-1">Cloud</h2>
-            <Skills skills={filteredCategories.cloud} category={"cloud"} setLoading={setLoading} updateFilter={updateFilter} />
+            <Skills skills={filteredCategories.cloud} category={"cloud"} setLoading={setLoading} updateFilter={updateFilter} jobsLoaded={!isLoadingJobs} />
           </div>
           <div>
             <h2 className="text-sm font-semibold mb-1">DevOps</h2>
-            <Skills skills={filteredCategories.devops} category={"devops"} setLoading={setLoading} updateFilter={updateFilter} />
+            <Skills skills={filteredCategories.devops} category={"devops"} setLoading={setLoading} updateFilter={updateFilter} jobsLoaded={!isLoadingJobs} />
           </div>
           <div>
             <h2 className="text-sm font-semibold mb-1">Cyber Security</h2>
-            <Skills skills={filteredCategories.cyberSecurity} category={"cyberSecurity"} setLoading={setLoading} updateFilter={updateFilter} />
+            <Skills skills={filteredCategories.cyberSecurity} category={"cyberSecurity"} setLoading={setLoading} updateFilter={updateFilter} jobsLoaded={!isLoadingJobs} />
           </div>
           <div>
             <h2 className="text-sm font-semibold mb-1">Data Science</h2>
-            <Skills skills={filteredCategories.dataScience} category={"dataScience"} setLoading={setLoading} updateFilter={updateFilter} />
+            <Skills skills={filteredCategories.dataScience} category={"dataScience"} setLoading={setLoading} updateFilter={updateFilter} jobsLoaded={!isLoadingJobs} />
           </div>
           <div>
             <h2 className="text-sm font-semibold mb-1">Role</h2>
-            <Skills skills={filteredCategories.positions} category={"positions"} setLoading={setLoading} updateFilter={updateFilter} />
+            <Skills skills={filteredCategories.positions} category={"positions"} setLoading={setLoading} updateFilter={updateFilter} jobsLoaded={!isLoadingJobs} />
           </div>
           <div>
             <h2 className="text-sm font-semibold mb-1">Seniority</h2>
-            <Skills skills={filteredCategories.seniority} category={"seniority"} setLoading={setLoading} updateFilter={updateFilter} />
+            <Skills skills={filteredCategories.seniority} category={"seniority"} setLoading={setLoading} updateFilter={updateFilter} jobsLoaded={!isLoadingJobs} />
           </div>
           <div>
             <h2 className="text-sm font-semibold mb-1">Soft Skills</h2>
-            <Skills skills={filteredCategories.softSkills} category={"softSkills"} setLoading={setLoading} updateFilter={updateFilter} />
+            <Skills skills={filteredCategories.softSkills} category={"softSkills"} setLoading={setLoading} updateFilter={updateFilter} jobsLoaded={!isLoadingJobs} />
           </div>
           <div>
             <h2 className="text-sm font-semibold mb-1">Companies</h2>
-            <Skills skills={filteredCompanies} category={"companies"} setLoading={setLoading} updateFilter={updateFilter} />
+            <Skills skills={filteredCompanies} category={"companies"} setLoading={setLoading} updateFilter={updateFilter} jobsLoaded={!isLoadingJobs} />
           </div>
           <div>
             <h2 className="text-sm font-semibold mb-1">Location</h2>
-            <Skills skills={filteredCategories.cities || null} category={"cities"} setLoading={setLoading} updateFilter={updateFilter} />
+            <Skills skills={filteredCategories.cities || null} category={"cities"} setLoading={setLoading} updateFilter={updateFilter} jobsLoaded={!isLoadingJobs} />
           </div>
           <div>
             <h2 className="text-sm font-semibold mb-1">Work Mode</h2>
-            <Skills skills={filteredCategories.workMode || null} category={"workMode"} setLoading={setLoading} updateFilter={updateFilter} />
+            <Skills skills={filteredCategories.workMode || null} category={"workMode"} setLoading={setLoading} updateFilter={updateFilter} jobsLoaded={!isLoadingJobs} />
           </div>
           <div>
             <h2 className="text-sm font-semibold mb-1">Salary</h2>
-            <Skills skills={filteredCategories.salary || null} category={"salary"} setLoading={setLoading} updateFilter={updateFilter} />
+            <Skills skills={filteredCategories.salary || null} category={"salary"} setLoading={setLoading} updateFilter={updateFilter} jobsLoaded={!isLoadingJobs} />
           </div>
         </div>
       </div>

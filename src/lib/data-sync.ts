@@ -1,6 +1,7 @@
 import { IMain, IDatabase } from "pg-promise";
 import pgPromise from "pg-promise";
 import { ResponseData, Results } from "@/types";
+import { getWorkingMode } from "@/lib/openai";
 
 const pgp: IMain = pgPromise();
 // @ts-ignore
@@ -20,11 +21,13 @@ export async function initializeDatabase() {
         company_name TEXT,
         municipality_name TEXT,
         date_posted TEXT,
-        last_seen_at TIMESTAMPTZ
+        last_seen_at TIMESTAMPTZ,
+        work_mode TEXT
       )
     `);
     // Ensure new column exists if table was created earlier without it
     await t.none(`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ`);
+    await t.none(`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS work_mode TEXT`);
 
     await t.none(`
       CREATE TABLE IF NOT EXISTS app_meta (
@@ -125,15 +128,53 @@ async function insertNewJobData(data: Results[]) {
   console.log(`Upserted (refreshed) ${data.length} active jobs`);
 }
 
+async function classifyMissingWorkModes() {
+  // Skip if no OpenAI key configured
+  if (!process.env.OPENAI_API_KEY) {
+    console.warn('Skipping work_mode classification: OPENAI_API_KEY not set');
+    return;
+  }
+
+  // Fetch jobs that are missing classification
+  // noinspection SqlResolve
+  const toClassify: { id: number; heading: string; descr: string }[] = await db.any(
+    `SELECT id, heading, descr FROM jobs WHERE work_mode IS NULL`
+  );
+
+  if (!toClassify.length) {
+    console.log('No jobs require work_mode classification');
+    return;
+  }
+
+  console.log(`Classifying work_mode for ${toClassify.length} jobs`);
+
+  // Process sequentially to stay within rate limits; could be optimized with small concurrency if needed
+  for (const row of toClassify) {
+    try {
+      const mode = await getWorkingMode(row.descr || '', row.heading || '');
+      // noinspection SqlResolve
+      await db.none(`UPDATE jobs SET work_mode = $1 WHERE id = $2`, [mode, row.id]);
+    } catch (err) {
+      console.error(`Failed to classify work_mode for job id=${row.id}:`, err);
+      // Don't throw; continue with others
+    }
+  }
+
+  console.log('work_mode classification complete');
+}
+
 export async function fetchDatabaseData() {
   try {
+    await initializeDatabase();
     // Fetch existing job data from the database
-    return await db.any("SELECT id, slug, heading, descr, company_name, municipality_name, date_posted, last_seen_at FROM jobs");
+    // noinspection SqlResolve
+    return await db.any("SELECT id, slug, heading, descr, company_name, municipality_name, date_posted, last_seen_at, work_mode FROM jobs");
   } catch (e) {
     console.log("Error opening database", e);
     await initializeDatabase();
     // Fetch existing job data from the database
-    return await db.any("SELECT id, slug, heading, descr, company_name, municipality_name, date_posted, last_seen_at FROM jobs");
+    // noinspection SqlResolve
+    return await db.any("SELECT id, slug, heading, descr, company_name, municipality_name, date_posted, last_seen_at, work_mode FROM jobs");
   }
 }
 
@@ -149,12 +190,20 @@ export async function syncDataIfNeeded() {
       const existingJobData = await fetchDatabaseData();
       const { jobs: activeJobs } = await fetchDataFromApi(new Set(existingJobData.map((j: any) => j.slug)));
       await insertNewJobData(activeJobs);
+      // After refreshing active postings, classify any rows missing work_mode
+      await classifyMissingWorkModes();
       await setMeta("last_fetch_at", new Date().toISOString());
       console.log("Data sync completed successfully");
     } catch (e) {
       console.error("Data sync failed", e);
       throw e;
     }
+  } else {
+    // No refresh; avoid classification here to keep request paths fast and build-time stable
   }
 }
 
+export async function runWorkModeBackfill() {
+  await initializeDatabase();
+  await classifyMissingWorkModes();
+}

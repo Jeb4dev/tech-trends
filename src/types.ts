@@ -10,7 +10,10 @@ export interface Results {
   // Cached lowercase variants to avoid recomputing repeatedly during filtering
   _headingLower?: string;
   _descrLower?: string;
+  work_mode?: WorkMode; // AI-classified working mode when available
 }
+
+export type WorkMode = 'remote' | 'onsite' | 'hybrid' | 'unknown';
 
 export interface ResponseData {
   count: number;

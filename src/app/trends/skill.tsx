@@ -6,9 +6,11 @@ interface SkillsProps {
   category?: string;
   updateFilter?: any;
   setLoading?: any;
+  // New: tells component whether job data is loaded, so counts use filteredData only
+  jobsLoaded?: boolean;
 }
 
-export const Skills = ({ skills, category, updateFilter, setLoading }: SkillsProps) => {
+export const Skills = ({ skills, category, updateFilter, setLoading, jobsLoaded = false }: SkillsProps) => {
   const [showAll, setShowAll] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLUListElement | null>(null);
@@ -18,13 +20,13 @@ export const Skills = ({ skills, category, updateFilter, setLoading }: SkillsPro
   // Memoized sorted copy (do not mutate incoming props)
   const sorted = useMemo(() => {
     if (!skills) return null;
-    // Sort by filteredOpenings if available, otherwise by _baseCount
+    // Sort by filteredOpenings if jobs are loaded, otherwise by _baseCount
     return [...skills].sort((a, b) => {
-      const countA = a.filteredOpenings.length || a._baseCount || 0;
-      const countB = b.filteredOpenings.length || b._baseCount || 0;
+      const countA = jobsLoaded ? a.filteredOpenings.length : (a._baseCount ?? 0);
+      const countB = jobsLoaded ? b.filteredOpenings.length : (b._baseCount ?? 0);
       return countB - countA;
     });
-  }, [skills]);
+  }, [skills, jobsLoaded]);
 
   // Measure and set maxHeight for animation
   useLayoutEffect(() => {
@@ -56,15 +58,20 @@ export const Skills = ({ skills, category, updateFilter, setLoading }: SkillsPro
     );
   }
 
-  const visible = showAll ? sorted.filter(s => (s.filteredOpenings.length || s._baseCount || 0) > 0) : sorted.slice(0, COLLAPSED_COUNT);
+  const visible = showAll
+    ? sorted.filter(s => {
+        const count = jobsLoaded ? s.filteredOpenings.length : (s._baseCount ?? 0);
+        return count > 0;
+      })
+    : sorted.slice(0, COLLAPSED_COUNT);
 
   return (
     <div ref={containerRef} className="group/skills">
       <div style={{ maxHeight, transition: "max-height 400ms ease", overflow: "hidden" }}>
         <ul ref={contentRef} className="relative">
           {visible.map((skill) => {
-            // Use filteredOpenings count if available, otherwise use _baseCount from base stats
-            const displayCount = skill.filteredOpenings.length || skill._baseCount || 0;
+            // Use filteredOpenings count when jobs are loaded; otherwise use _baseCount from base stats
+            const displayCount = jobsLoaded ? skill.filteredOpenings.length : (skill._baseCount ?? 0);
             return (
               <li
                 className={`flex flex-row cursor-pointer select-none py-0.5 ${

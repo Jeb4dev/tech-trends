@@ -576,6 +576,7 @@ export const seniority = [
     "Tiedonhallintajohtaja",
     "Tietoturvajohtaja",
     "Verkställande direktör",
+    "!toimitusjohtajalle"
   ],
 ];
 
