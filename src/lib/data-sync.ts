@@ -3,9 +3,22 @@ import pgPromise from "pg-promise";
 import { ResponseData, Results } from "@/types";
 import { getWorkingMode } from "@/lib/openai";
 
-const pgp: IMain = pgPromise();
-// @ts-ignore
-const db: IDatabase<any> = pgp(process.env.POSTGRES_URL);
+// Ensure a single pg-promise instance and DB connection across the process
+const g = globalThis as unknown as {
+  __pgp?: IMain,
+  __db?: IDatabase<any>
+}
+
+const pgp: IMain = g.__pgp ?? pgPromise();
+if (!g.__pgp) g.__pgp = pgp;
+
+const connection = process.env.POSTGRES_URL || '';
+if (!connection) {
+  console.warn('[data-sync] POSTGRES_URL is not set; database operations will fail');
+}
+// @ts-ignore - type inferred by pg-promise
+const db: IDatabase<any> = g.__db ?? pgp(connection);
+if (!g.__db) g.__db = db;
 
 const REFRESH_INTERVAL_HOURS = 6; // Fetch a few times a day
 
@@ -194,6 +207,17 @@ export async function syncDataIfNeeded() {
       await classifyMissingWorkModes();
       await setMeta("last_fetch_at", new Date().toISOString());
       console.log("Data sync completed successfully");
+
+      // Proactively invalidate cached API responses so clients get fresh data
+      try {
+        const { revalidateTag } = await import('next/cache');
+        revalidateTag('api-v1-base');
+        revalidateTag('api-v1-jobs');
+        revalidateTag('api-v1');
+        console.log('Revalidated cache tags: api-v1-base, api-v1-jobs, api-v1');
+      } catch (e) {
+        console.warn('Failed to revalidate tags (non-fatal).', e);
+      }
     } catch (e) {
       console.error("Data sync failed", e);
       throw e;
