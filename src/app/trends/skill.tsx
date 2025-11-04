@@ -18,7 +18,12 @@ export const Skills = ({ skills, category, updateFilter, setLoading }: SkillsPro
   // Memoized sorted copy (do not mutate incoming props)
   const sorted = useMemo(() => {
     if (!skills) return null;
-    return [...skills].sort((a, b) => b.filteredOpenings.length - a.filteredOpenings.length);
+    // Sort by filteredOpenings if available, otherwise by _baseCount
+    return [...skills].sort((a, b) => {
+      const countA = a.filteredOpenings.length || a._baseCount || 0;
+      const countB = b.filteredOpenings.length || b._baseCount || 0;
+      return countB - countA;
+    });
   }, [skills]);
 
   // Measure and set maxHeight for animation
@@ -51,31 +56,35 @@ export const Skills = ({ skills, category, updateFilter, setLoading }: SkillsPro
     );
   }
 
-  const visible = showAll ? sorted.filter(s => s.filteredOpenings.length > 0) : sorted.slice(0, COLLAPSED_COUNT);
+  const visible = showAll ? sorted.filter(s => (s.filteredOpenings.length || s._baseCount || 0) > 0) : sorted.slice(0, COLLAPSED_COUNT);
 
   return (
     <div ref={containerRef} className="group/skills">
       <div style={{ maxHeight, transition: "max-height 400ms ease", overflow: "hidden" }}>
         <ul ref={contentRef} className="relative">
-          {visible.map((skill) => (
-            <li
-              className={`flex flex-row cursor-pointer select-none py-0.5 ${
-                skill.active
-                  ? "text-green-500 md:hover:text-red-500 md:hover:line-through"
-                  : "md:hover:text-green-400"
-              }`}
-              key={skill.label}
-              onClick={() => {
-                if (!updateFilter) return;
-                setLoading?.(true);
-                updateFilter(category, skill.label.toLowerCase());
-                setLoading?.(false);
-              }}
-            >
-              <span className="text-gray-500 mr-1">({skill.filteredOpenings.length})</span>
-              <span className="max-w-full truncate" title={skill.label}>{skill.label}</span>
-            </li>
-          ))}
+          {visible.map((skill) => {
+            // Use filteredOpenings count if available, otherwise use _baseCount from base stats
+            const displayCount = skill.filteredOpenings.length || skill._baseCount || 0;
+            return (
+              <li
+                className={`flex flex-row cursor-pointer select-none py-0.5 ${
+                  skill.active
+                    ? "text-green-500 md:hover:text-red-500 md:hover:line-through"
+                    : "md:hover:text-green-400"
+                }`}
+                key={skill.label}
+                onClick={() => {
+                  if (!updateFilter) return;
+                  setLoading?.(true);
+                  updateFilter(category, skill.label.toLowerCase());
+                  setLoading?.(false);
+                }}
+              >
+                <span className="text-gray-500 mr-1">({displayCount})</span>
+                <span className="max-w-full truncate" title={skill.label}>{skill.label}</span>
+              </li>
+            );
+          })}
         </ul>
       </div>
       {sorted.length > COLLAPSED_COUNT && (

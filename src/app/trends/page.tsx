@@ -18,6 +18,7 @@ function TrendsPageInner() {
   const [data, setData] = useState<ResponseData>({ count: 0, next: null, previous: null, results: [] });
   const [precomputedSlim, setPrecomputedSlim] = useState<SlimBase | null>(null);
   const [isLoading, setLoading] = useState(false);
+  const [isLoadingJobs, setLoadingJobs] = useState(true);
   const params = useSearchParams();
   const [queryParams, setQueryParams] = useState<QueryParams>({
     languages: params.getAll("languages").map((q) => q.toLowerCase()),
@@ -41,31 +42,51 @@ function TrendsPageInner() {
   });
 
   useEffect(() => {
+    // First fetch base stats to show filters immediately
     setLoading(true);
-    fetch("/api/v1")
+    setLoadingJobs(true);
+    fetch("/api/v1/base")
       .then((res) => res.json())
-      .then((payload) => {
-        const incoming: ResponseData = payload.data;
+      .then((baseData) => {
+        if (baseData) setPrecomputedSlim(baseData as SlimBase);
+        setLoading(false);
+
+        // Then lazy load jobs data
+        return fetch("/api/v1/jobs").then((res) => res.json());
+      })
+      .then((jobsData) => {
+        const incoming: ResponseData = jobsData;
         incoming.results.forEach((r) => {
           if (!r._headingLower) r._headingLower = r.heading.toLowerCase();
           if (!r._descrLower) r._descrLower = r.descr.toLowerCase();
         });
         setData(incoming);
-        if (payload.base) setPrecomputedSlim(payload.base as SlimBase);
+        setLoadingJobs(false);
+      })
+      .catch((error) => {
+        console.error("Error fetching data:", error);
         setLoading(false);
+        setLoadingJobs(false);
       });
   }, []);
 
   const baseCategories = useMemo(() => {
-    if (precomputedSlim && data.results.length) {
+    if (precomputedSlim) {
       const byId = new Map<number, Results>();
-      data.results.forEach((o) => byId.set(o.id, o));
+      // Build the ID map only if we have jobs data
+      if (data.results.length) {
+        data.results.forEach((o) => byId.set(o.id, o));
+      }
+
       const makeCats = (arr: { label: string; ids: number[] }[] | undefined) =>
         (arr || []).map((c) => ({
           label: c.label,
           active: false,
-          openings: c.ids.map((id) => byId.get(id)!).filter(Boolean),
+          // If jobs loaded, map IDs to actual job objects; otherwise use empty array
+          openings: data.results.length ? c.ids.map((id) => byId.get(id)!).filter(Boolean) : [],
           filteredOpenings: [],
+          // Store the count from base stats (ids.length) for display even without jobs
+          _baseCount: c.ids.length,
         }));
       return {
         categories: {
@@ -87,6 +108,7 @@ function TrendsPageInner() {
         locations: makeCats(precomputedSlim.locations),
       };
     }
+    // Only use empty state if we don't have precomputedSlim yet
     if (!data.results.length) {
       return {
         categories: {
@@ -113,9 +135,14 @@ function TrendsPageInner() {
   // Filter categories + compute filtered openings on query changes
   const { filteredData, filteredCategories, filteredCompanies } = useMemo(() => {
     const { categories, companies, locations } = baseCategories;
-    if (!data.results) return { filteredData: [], filteredCategories: {} as Data, filteredCompanies: [] };
 
-    const clone = (c: Category) => ({ ...c, openings: c.openings, filteredOpenings: c.filteredOpenings, active: false });
+    const clone = (c: Category) => ({
+      ...c,
+      openings: c.openings,
+      filteredOpenings: c.filteredOpenings,
+      active: false,
+      _baseCount: c._baseCount // Preserve _baseCount through cloning
+    });
 
     type CatProcess = { list: Category[] | undefined; selected: string[] | undefined; key: keyof Data | 'companies' | 'locations' };
     const catConfigs: CatProcess[] = [
@@ -150,7 +177,7 @@ function TrendsPageInner() {
     }
 
     function intersectArrays(arrays: Results[][]): Results[] {
-      if (!arrays.length) return data.results;
+      if (!arrays.length) return data.results || [];
       arrays.sort((a,b)=> a.length - b.length);
       let result = arrays[0];
       for (let i=1;i<arrays.length;i++) {
@@ -174,11 +201,21 @@ function TrendsPageInner() {
       openings = openings.filter(o => isSameLocalDate(o.last_seen_at));
     }
 
+    // Sort by date_posted, newest first
+    openings = [...openings].sort((a, b) => {
+      const dateA = new Date(a.date_posted).getTime();
+      const dateB = new Date(b.date_posted).getTime();
+      return dateB - dateA;
+    });
+
     const openingsSet = openings === data.results ? null : new Set(openings);
 
     const attachFiltered = (list: Category[]) => list.map(item => ({
       ...item,
-      filteredOpenings: openingsSet ? item.openings.filter(o => openingsSet.has(o)) : item.openings,
+      // When jobs not loaded (data.results empty), keep filteredOpenings empty
+      // so Skills component uses _baseCount instead
+      filteredOpenings: !data.results.length ? [] : (openingsSet ? item.openings.filter(o => openingsSet.has(o)) : item.openings),
+      _baseCount: item._baseCount, // Preserve _baseCount
     }));
 
     const filteredCategories: Data = {
@@ -316,7 +353,9 @@ function TrendsPageInner() {
     <div className={"max-w-7xl mx-auto px-1 md:px-6 lg:px-8"}>
       <div>
         <div className={"flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between pt-4"}>
-          <h1 className="text-2xl md:text-3xl font-semibold">Job Listings ({filteredData.length})</h1>
+          <h1 className="text-2xl md:text-3xl font-semibold">
+            Job Listings {isLoadingJobs ? <span className="ml-2 text-sm font-normal text-gray-500 animate-pulse">(loading)</span> : `(${filteredData.length})`}
+          </h1>
           <h3 className={"text-[11px] xs:text-xs sm:text-sm md:text-base lg:text-lg line-clamp-4 text-gray-400"}>
             Source duunitori.fi/api/v1/jobentries?search=Tieto- ja tietoliikennetekniikka (ala)
           </h3>
@@ -400,28 +439,55 @@ function TrendsPageInner() {
           </div>
         </div>
       </div>
-      <div className="mt-6">
-        <ActiveOpeningsAreaChart openings={filteredData as Results[]} />
-      </div>
-      <div className="mt-4 flex items-center justify-end">
-        <button
-          type="button"
-          onClick={() => setShowMoreGraphs((v) => !v)}
-          className={
-            "px-3 py-1.5 text-sm rounded-md border transition-colors " +
-            (showMoreGraphs ? "border-green-500 bg-green-500/15 text-green-300 hover:bg-green-500/25" : "border-gray-600 text-gray-200 hover:bg-gray-800/60")
-          }
-          aria-expanded={showMoreGraphs}
-        >
-          {showMoreGraphs ? "Hide more graphs" : "Show more graphs"}
-        </button>
-      </div>
-      {showMoreGraphs && (
-        <div className="mt-4">
-          <ExtraCharts openings={filteredData as Results[]} />
+      {isLoadingJobs ? (
+        <div className="mt-10 space-y-4">
+          {/* Openings placeholder skeleton */}
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="border border-gray-700 rounded-md p-4 bg-zinc-900/40">
+              <div className="h-4 w-3/4 bg-gray-700/40 rounded mb-2 animate-pulse" />
+              <div className="flex gap-2 mb-3">
+                <span className="h-3 w-20 bg-gray-700/40 rounded animate-pulse" />
+                <span className="h-3 w-4 bg-gray-800/40 rounded" />
+                <span className="h-3 w-16 bg-gray-700/40 rounded animate-pulse" />
+                <span className="h-3 w-4 bg-gray-800/40 rounded" />
+                <span className="h-3 w-16 bg-gray-700/40 rounded animate-pulse" />
+                <span className="h-3 w-4 bg-gray-800/40 rounded" />
+                <span className="h-3 w-14 bg-gray-700/40 rounded animate-pulse" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-3 w-full bg-gray-700/40 rounded animate-pulse" />
+                <div className="h-3 w-11/12 bg-gray-700/40 rounded animate-pulse" />
+                <div className="h-3 w-5/6 bg-gray-700/40 rounded animate-pulse" />
+              </div>
+            </div>
+          ))}
         </div>
+      ) : (
+        <>
+          <div className="mt-6">
+            <ActiveOpeningsAreaChart openings={filteredData as Results[]} />
+          </div>
+          <div className="mt-4 flex items-center justify-end">
+            <button
+              type="button"
+              onClick={() => setShowMoreGraphs((v) => !v)}
+              className={
+                "px-3 py-1.5 text-sm rounded-md border transition-colors " +
+                (showMoreGraphs ? "border-green-500 bg-green-500/15 text-green-300 hover:bg-green-500/25" : "border-gray-600 text-gray-200 hover:bg-gray-800/60")
+              }
+              aria-expanded={showMoreGraphs}
+            >
+              {showMoreGraphs ? "Hide more graphs" : "Show more graphs"}
+            </button>
+          </div>
+          {showMoreGraphs && (
+            <div className="mt-4">
+              <ExtraCharts openings={filteredData as Results[]} />
+            </div>
+          )}
+          <Openings openings={filteredData} activeQuery={queryParams} />
+        </>
       )}
-      <Openings openings={filteredData} activeQuery={queryParams} />
       <hr className={"my-8 border-gray-400"} />
       <footer className={"flex flex-col sm:flex-row justify-between items-center"}>
         <div className={"text-gray-400 max-w-xl"}>

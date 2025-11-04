@@ -24,6 +24,7 @@ export type Category = {
   active: boolean;
   openings: Results[];
   filteredOpenings: Results[];
+  _baseCount?: number; // Count from base stats (ids.length), available before jobs load
 };
 
 export type Data = {

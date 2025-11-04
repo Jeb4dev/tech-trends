@@ -16,6 +16,8 @@ export const workModeHighlightGroups: (string | string[])[] = [
     "Etätyö",
     "Etänä",
     "Pysyvästi etänä",
+    "(etä)",
+    "(etätyö)"
   ],
   [
     "Hybrid",
