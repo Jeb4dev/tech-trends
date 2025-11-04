@@ -378,6 +378,7 @@ function TrendsPageInner() {
               Active today only
             </label>
             <h3 className="text-sm text-gray-300" suppressHydrationWarning>Date {today}</h3>
+            <Link href="/trends/languages" className="text-sm text-green-400 hover:underline">Languages popularity →</Link>
           </div>
         </div>
         <div className={"mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-6"}>
