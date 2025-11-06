@@ -17,7 +17,8 @@ export const workModeHighlightGroups: (string | string[])[] = [
     "Etänä",
     "Pysyvästi etänä",
     "(etä)",
-    "(etätyö)"
+    "(etätyö)",
+    "LI-REMOTE"
   ],
   [
     "Hybrid",
@@ -30,6 +31,7 @@ export const workModeHighlightGroups: (string | string[])[] = [
     "Osittain etänä",
     "Osittain toimistolla",
     "Muutama päivä toimistolla",
+    "LI-HYBRID"
   ],
   [
     "On-site",
@@ -42,6 +44,7 @@ export const workModeHighlightGroups: (string | string[])[] = [
     "Toimistolla",
     "Asiakkaan tiloissa",
     "Client site",
+    "LI-ONSITE"
   ],
 ];
 
