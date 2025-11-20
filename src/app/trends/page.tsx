@@ -5,7 +5,7 @@ import { Skills } from "./skill";
 import { Category, Data, QueryParams, ResponseData, Results } from "@/types";
 import { useEffect, useState, Suspense, useMemo, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import { frameworks, languages } from "@/keywords"; // minimal imports kept if needed elsewhere
+import { frameworks } from "@/keywords"; // minimal imports kept if needed elsewhere
 import { Openings } from "./openings";
 import { computeBase } from "@/compute"; // optional fallback if API doesn't send base
 import type { SlimBase } from "@/compute";
@@ -14,13 +14,18 @@ import ExtraCharts from "./extra-charts";
 
 // -----------------------------------------------------------------------------
 
+import type { QueryParams as QueryParamsType } from "@/types";
+
+// Narrow/extend QueryParams locally to include hideOld without touching compiled type expectations
+type LocalQueryParams = QueryParamsType & { hideOld?: string[] };
+
 function TrendsPageInner() {
   const [data, setData] = useState<ResponseData>({ count: 0, next: null, previous: null, results: [] });
   const [precomputedSlim, setPrecomputedSlim] = useState<SlimBase | null>(null);
   const [isLoading, setLoading] = useState(false);
   const [isLoadingJobs, setLoadingJobs] = useState(true);
   const params = useSearchParams();
-  const [queryParams, setQueryParams] = useState<QueryParams>({
+  const [queryParams, setQueryParams] = useState<LocalQueryParams>({
     languages: params.getAll("languages").map((q) => q.toLowerCase()),
     frameworks: params.getAll("frameworks").map((q) => q.toLowerCase()),
     databases: params.getAll("databases").map((q) => q.toLowerCase()),
@@ -39,6 +44,7 @@ function TrendsPageInner() {
     minDate: [params.getAll("minDate")[0]],
     maxDate: [params.getAll("maxDate")[0]],
     activeToday: params.getAll("activeToday").map((q) => q.toLowerCase()),
+    hideOld: params.getAll("hideOld").map((q) => q.toLowerCase()),
   });
 
   useEffect(() => {
@@ -201,6 +207,16 @@ function TrendsPageInner() {
       openings = openings.filter(o => isSameLocalDate(o.last_seen_at));
     }
 
+    if (queryParams.hideOld && queryParams.hideOld.includes("1")) {
+      const today = new Date();
+      const ms90 = 90 * 24 * 60 * 60 * 1000;
+      openings = openings.filter((o) => {
+        const posted = o.date_posted ? new Date(o.date_posted) : null;
+        if (!posted) return true;
+        return today.getTime() - posted.getTime() <= ms90;
+      });
+    }
+
     // Sort by date_posted, newest first
     openings = [...openings].sort((a, b) => {
       const dateA = new Date(a.date_posted).getTime();
@@ -242,13 +258,14 @@ function TrendsPageInner() {
   const updateFilter = useCallback((filter: string, value: string) => {
     const url = new URL(window.location.href);
     const params = new URLSearchParams(url.search);
-    const isSingleValue = filter === "minDate" || filter === "maxDate" || filter === "activeToday";
+    const isSingleValue = filter === "minDate" || filter === "maxDate" || filter === "activeToday" || filter === "hideOld";
     if (isSingleValue) {
-      if (filter === 'activeToday') {
-        if (params.has('activeToday')) params.delete('activeToday');
-        else params.set('activeToday', '1');
+      if (filter === "activeToday" || filter === "hideOld") {
+        if (params.has(filter)) params.delete(filter);
+        else params.set(filter, "1");
       } else {
-        if (params.get(filter) === value) params.delete(filter); else params.set(filter, value);
+        if (params.get(filter) === value) params.delete(filter);
+        else params.set(filter, value);
       }
     } else {
       const existing = params.getAll(filter);
@@ -347,7 +364,8 @@ function TrendsPageInner() {
       </p>
     );
 
-  const activeTodayOn = (queryParams.activeToday && queryParams.activeToday.includes('1'));
+  const activeTodayOn = (queryParams.activeToday && queryParams.activeToday.includes("1"));
+  const hideOldOn = (queryParams.hideOld && queryParams.hideOld.includes("1"));
 
   return (
     <div className={"max-w-7xl mx-auto px-1 md:px-6 lg:px-8"}>
@@ -376,6 +394,23 @@ function TrendsPageInner() {
                 <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform duration-300 peer-checked:translate-x-5"></div>
               </div>
               Active today only
+            </label>
+            <label
+              htmlFor="hide-old-toggle"
+              className="flex items-center gap-2 cursor-pointer select-none text-sm text-gray-300"
+            >
+              <div className="relative">
+                <input
+                  id="hide-old-toggle"
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={hideOldOn}
+                  onChange={() => updateFilter("hideOld", "1")}
+                />
+                <div className="w-10 h-5 bg-gray-600 peer-focus:ring-2 peer-focus:ring-green-400 rounded-full peer peer-checked:bg-green-500 transition-all duration-300"></div>
+                <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform duration-300 peer-checked:translate-x-5"></div>
+              </div>
+              Hide 90+ days old
             </label>
             <h3 className="text-sm text-gray-300" suppressHydrationWarning>Date {today}</h3>
             <Link href="/trends/languages" className="text-sm text-green-400 hover:underline">Languages popularity →</Link>

@@ -65,4 +65,5 @@ export type QueryParams = {
   minDate: string[];
   maxDate: string[];
   activeToday: string[]; // presence of any value => filter to last_seen today
+  hideOld: string[]; // presence of "1" => hide postings older than 90 days by date_posted
 }
