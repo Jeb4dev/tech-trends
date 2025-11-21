@@ -33,6 +33,7 @@
   },
   "devDependencies": {
     "@types/react-slider": "^1.3.6",
+    "baseline-browser-mapping": "^2.8.30",
     "prettier": "^2.8.8"
   },
   "volta": {

@@ -1,5 +1,7 @@
-import { redirect } from 'next/navigation'
-
 export default function Page() {
-  redirect('/trends')
+  return (
+    <>
+      <h1>Welcome to the Job Listings App</h1>
+    </>
+  )
 }

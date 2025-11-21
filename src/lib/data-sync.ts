@@ -1,7 +1,8 @@
 import { IMain, IDatabase } from "pg-promise";
 import pgPromise from "pg-promise";
-import { ResponseData, Results } from "@/types";
-import { getWorkingMode } from "@/lib/openai";
+import { ResponseData } from "@/types";
+import { classifyJob } from "@/lib/classifier";
+import { getWorkingMode } from "@/lib/openai"; // Added import
 
 // Ensure a single pg-promise instance and DB connection across the process
 const g = globalThis as unknown as {
@@ -20,32 +21,64 @@ if (!connection) {
 const db: IDatabase<any> = g.__db ?? pgp(connection);
 if (!g.__db) g.__db = db;
 
-const REFRESH_INTERVAL_HOURS = 6; // Fetch a few times a day
-
 export async function initializeDatabase() {
   // Create tables if they don't exist
-  await db.tx(async (t) => {
+  await db.tx(async (t: any) => {
+    // Original schema
     await t.none(`
       CREATE TABLE IF NOT EXISTS jobs (
-        id SERIAL PRIMARY KEY,
-        slug TEXT UNIQUE,
-        heading TEXT,
-        descr TEXT,
-        company_name TEXT,
-        municipality_name TEXT,
-        date_posted TEXT,
-        last_seen_at TIMESTAMPTZ,
-        work_mode TEXT
+                                        id SERIAL PRIMARY KEY,
+                                        slug TEXT UNIQUE,
+                                        heading TEXT,
+                                        descr TEXT,
+                                        company_name TEXT,
+                                        municipality_name TEXT,
+                                        date_posted TEXT,
+                                        last_seen_at TIMESTAMPTZ,
+                                        work_mode TEXT
       )
     `);
-    // Ensure new column exists if table was created earlier without it
+
+    // New structured columns
     await t.none(`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ`);
     await t.none(`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS work_mode TEXT`);
+    await t.none(`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE`);
+    await t.none(`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS salary_min NUMERIC`);
+    await t.none(`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS salary_max NUMERIC`);
+    await t.none(`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS salary_currency VARCHAR(10)`);
+    await t.none(`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS seniority VARCHAR(50)`);
+
+    // New Normalized Tables for V2
+    await t.none(`
+      CREATE TABLE IF NOT EXISTS tags (
+                                        id SERIAL PRIMARY KEY,
+                                        category VARCHAR(50) NOT NULL,
+                                        name VARCHAR(100) NOT NULL,
+                                        UNIQUE(category, name)
+      )
+    `);
+
+    await t.none(`
+      CREATE TABLE IF NOT EXISTS job_tags (
+                                            job_id INTEGER REFERENCES jobs(id) ON DELETE CASCADE,
+                                            tag_id INTEGER REFERENCES tags(id) ON DELETE CASCADE,
+                                            PRIMARY KEY (job_id, tag_id)
+      )
+    `);
+
+    await t.none(`
+      CREATE TABLE IF NOT EXISTS daily_stats (
+                                               date DATE NOT NULL,
+                                               tag_id INTEGER REFERENCES tags(id) ON DELETE CASCADE,
+                                               count INTEGER DEFAULT 0,
+                                               PRIMARY KEY (date, tag_id)
+      )
+    `);
 
     await t.none(`
       CREATE TABLE IF NOT EXISTS app_meta (
-        key TEXT PRIMARY KEY,
-        value TEXT
+                                            key TEXT PRIMARY KEY,
+                                            value TEXT
       )
     `);
   });
@@ -67,167 +100,224 @@ async function setMeta(key: string, value: string) {
   );
 }
 
-function needsRefresh(lastFetchIso: string | null) {
-  if (!lastFetchIso) return true;
-  const last = new Date(lastFetchIso).getTime();
-  if (isNaN(last)) return true;
-  const ageHours = (Date.now() - last) / (1000 * 60 * 60);
-  return ageHours >= REFRESH_INTERVAL_HOURS;
-}
+/**
+ * Core Sync Logic (New Version)
+ * - Full Scan (Daily): checks all pages, marks missing jobs as inactive.
+ * - Incremental Scan (Hourly): stops when it sees a job posted before the last scan.
+ */
+export async function syncJobs() {
+  await initializeDatabase();
+  console.log("[Sync] Starting...");
 
-async function fetchDataFromApi(existingSlugs: Set<string>) {
-  let apiUrl =
-    "https://duunitori.fi/api/v1/jobentries?format=json&page=1&search=Tieto-+ja+tietoliikennetekniikka%28ala%29";
-  const seenAt = new Date().toISOString();
-  const allJobs: Results[] = [];
+  const now = new Date();
+  const lastFullScanStr = await getMeta("last_full_scan");
+
+  // Rule: Full scan every 24h.
+  const isFullScan = !lastFullScanStr || (now.getTime() - new Date(lastFullScanStr).getTime() > 24 * 60 * 60 * 1000);
+  const fetchMode = isFullScan ? 'FULL' : 'INCREMENTAL';
+
+  console.log(`[Sync] Mode: ${fetchMode}`);
+
+  let page = 1;
+  let stop = false;
+  let processedCount = 0;
   let newCount = 0;
-  let existingCount = 0;
 
-  while (true) {
-    console.log(`Fetching ${apiUrl}`);
-    // Explicitly disable fetch cache so new data can be pulled during runtime requests
-    const response = await fetch(apiUrl, { cache: 'no-store' });
-    if (!response.ok) {
-      console.error("Upstream fetch error", response.status, await response.text());
-      break;
-    }
-    const newPageData: ResponseData = await response.json();
+  // Pre-load tags to cache
+  const tagMap = new Map<string, number>();
+  const existingTags = await db.any("SELECT id, category, name FROM tags");
+  existingTags.forEach((t: any) => tagMap.set(`${t.category}:${t.name}`, t.id));
 
-    for (const job of newPageData.results) {
-      job.last_seen_at = seenAt; // set/update timestamp for every active posting
-      if (existingSlugs.has(job.slug)) existingCount++; else newCount++;
-      // lowercase cache once
-      if (!job._headingLower) job._headingLower = job.heading.toLowerCase();
-      if (!job._descrLower) job._descrLower = job.descr.toLowerCase();
-      allJobs.push(job);
-    }
+  const getTagId = async (category: string, name: string) => {
+    const key = `${category}:${name}`;
+    if (tagMap.has(key)) return tagMap.get(key);
+    const r = await db.one(
+      "INSERT INTO tags(category, name) VALUES($1, $2) ON CONFLICT(category, name) DO UPDATE SET name=EXCLUDED.name RETURNING id",
+      [category, name]
+    );
+    tagMap.set(key, r.id);
+    return r.id;
+  };
 
-    if (!newPageData.next) break;
-    apiUrl = newPageData.next;
-  }
+  // Track slugs seen in this run for Full Scan cleanup
+  const seenSlugs = new Set<string>();
 
-  console.log(`Fetched pages: total active jobs=${allJobs.length} (new=${newCount}, existing=${existingCount})`);
-  return { jobs: allJobs, stats: { new: newCount, existing: existingCount, seenAt } };
-}
+  while (!stop) {
+    const url = `https://duunitori.fi/api/v1/jobentries?format=json&page=${page}&search=Tieto-+ja+tietoliikennetekniikka%28ala%29`;
+    console.log(`[Sync] Fetching ${url}`);
 
-async function insertNewJobData(data: Results[]) {
-  // Upsert all jobs (new + existing) to refresh last_seen_at
-  for (const job of data) {
-    try {
-      await db.none(
-        `INSERT INTO jobs (slug, heading, descr, company_name, municipality_name, date_posted, last_seen_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7)
-         ON CONFLICT (slug) DO UPDATE SET
-           heading = EXCLUDED.heading,
-           descr = EXCLUDED.descr,
-           company_name = EXCLUDED.company_name,
-           municipality_name = EXCLUDED.municipality_name,
-           date_posted = EXCLUDED.date_posted,
-           last_seen_at = EXCLUDED.last_seen_at`,
-        [
-          job.slug,
-          job.heading,
-          job.descr,
-          job.company_name,
-          job.municipality_name,
-          job.date_posted,
-          job.last_seen_at || new Date().toISOString(),
-        ]
-      );
-    } catch (e) {
-      console.log("Error upserting job data", e);
-    }
-  }
-  console.log(`Upserted (refreshed) ${data.length} active jobs`);
-}
+    const response = await fetch(url, { cache: 'no-store' });
+    if (!response.ok) break;
+    const json: ResponseData = await response.json();
 
-async function classifyMissingWorkModes() {
-  // Skip if no OpenAI key configured
-  if (!process.env.OPENAI_API_KEY) {
-    console.warn('Skipping work_mode classification: OPENAI_API_KEY not set');
-    return;
-  }
+    if (!json.results || json.results.length === 0) break;
 
-  // Fetch jobs that are missing classification
-  // noinspection SqlResolve
-  const toClassify: { id: number; heading: string; descr: string }[] = await db.any(
-    `SELECT id, heading, descr FROM jobs WHERE work_mode IS NULL`
-  );
+    for (const item of json.results) {
+      seenSlugs.add(item.slug);
 
-  if (!toClassify.length) {
-    console.log('No jobs require work_mode classification');
-    return;
-  }
+      // Determine if we should stop (Incremental mode only)
+      const datePosted = item.date_posted;
+      const existing = await db.oneOrNone("SELECT id, last_seen_at FROM jobs WHERE slug = $1", [item.slug]);
 
-  console.log(`Classifying work_mode for ${toClassify.length} jobs`);
+      if (existing) {
+        // Update timestamp
+        await db.none("UPDATE jobs SET last_seen_at = NOW(), active = TRUE WHERE id = $1", [existing.id]);
 
-  // Process sequentially to stay within rate limits; could be optimized with small concurrency if needed
-  for (const row of toClassify) {
-    try {
-      const mode = await getWorkingMode(row.descr || '', row.heading || '');
-      // noinspection SqlResolve
-      await db.none(`UPDATE jobs SET work_mode = $1 WHERE id = $2`, [mode, row.id]);
-    } catch (err) {
-      console.error(`Failed to classify work_mode for job id=${row.id}:`, err);
-      // Don't throw; continue with others
-    }
-  }
-
-  console.log('work_mode classification complete');
-}
-
-export async function fetchDatabaseData() {
-  try {
-    await initializeDatabase();
-    // Fetch existing job data from the database
-    // noinspection SqlResolve
-    return await db.any("SELECT id, slug, heading, descr, company_name, municipality_name, date_posted, last_seen_at, work_mode FROM jobs");
-  } catch (e) {
-    console.log("Error opening database", e);
-    await initializeDatabase();
-    // Fetch existing job data from the database
-    // noinspection SqlResolve
-    return await db.any("SELECT id, slug, heading, descr, company_name, municipality_name, date_posted, last_seen_at, work_mode FROM jobs");
-  }
-}
-
-export async function syncDataIfNeeded() {
-  await initializeDatabase();
-
-  const lastFetch = await getMeta("last_fetch_at");
-  const shouldRefresh = needsRefresh(lastFetch);
-  console.log(`Last fetch at: ${lastFetch} -> refresh needed: ${shouldRefresh}`);
-
-  if (shouldRefresh) {
-    try {
-      const existingJobData = await fetchDatabaseData();
-      const { jobs: activeJobs } = await fetchDataFromApi(new Set(existingJobData.map((j: any) => j.slug)));
-      await insertNewJobData(activeJobs);
-      // After refreshing active postings, classify any rows missing work_mode
-      await classifyMissingWorkModes();
-      await setMeta("last_fetch_at", new Date().toISOString());
-      console.log("Data sync completed successfully");
-
-      // Proactively invalidate cached API responses so clients get fresh data
-      try {
-        const { revalidateTag } = await import('next/cache');
-        revalidateTag('api-v1-base');
-        revalidateTag('api-v1-jobs');
-        revalidateTag('api-v1');
-        console.log('Revalidated cache tags: api-v1-base, api-v1-jobs, api-v1');
-      } catch (e) {
-        console.warn('Failed to revalidate tags (non-fatal).', e);
+        // Stop if we hit old data in incremental mode
+        if (fetchMode === 'INCREMENTAL' && lastFullScanStr) {
+          const itemDate = new Date(datePosted);
+          const cutoff = new Date(new Date(lastFullScanStr).getTime() - 48 * 60 * 60 * 1000); // 48h buffer
+          if (itemDate < cutoff) {
+            // We can stop fetching pages, but finish current page
+            stop = true;
+          }
+        }
+      } else {
+        newCount++;
+        const analysis = await classifyJob(item.heading, item.descr, item.municipality_name);
+        // Use OpenAI for work mode classification (fallback to heuristic if failure)
+        let workMode = analysis.workMode;
+        try {
+          workMode = await getWorkingMode(item.descr || '', item.heading || '') || workMode;
+        } catch (e) {
+          console.warn(`[Sync] OpenAI work mode failed for slug=${item.slug}, fallback to heuristic:`, (e as Error).message);
+        }
+        const jobRow = await db.one(
+          `INSERT INTO jobs (
+            slug, heading, descr, company_name, municipality_name, date_posted, last_seen_at,
+            work_mode, seniority, salary_min, salary_max, salary_currency, active
+          ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), $7, $8, $9, $10, $11, TRUE)
+           RETURNING id`,
+          [
+            item.slug, item.heading, item.descr, item.company_name, item.municipality_name, datePosted,
+            workMode, analysis.seniority,
+            analysis.salary?.min || null, analysis.salary?.max || null, analysis.salary?.currency || null
+          ]
+        );
+        for (const t of analysis.tags) {
+          const tId = await getTagId(t.category, t.name);
+          await db.none("INSERT INTO job_tags(job_id, tag_id) VALUES($1, $2) ON CONFLICT DO NOTHING", [jobRow.id, tId]);
+        }
       }
-    } catch (e) {
-      console.error("Data sync failed", e);
-      throw e;
+      processedCount++;
     }
-  } else {
-    // No refresh; avoid classification here to keep request paths fast and build-time stable
+
+    if (!json.next) break;
+    page++;
   }
+
+  // Cleanup: Mark jobs not seen in Full Scan as inactive
+  if (fetchMode === 'FULL') {
+    await db.none("UPDATE jobs SET active = FALSE WHERE last_seen_at < NOW() - INTERVAL '2 hours'");
+    await setMeta("last_full_scan", now.toISOString());
+  }
+
+  console.log(`[Sync] Done. Processed: ${processedCount}, New: ${newCount}`);
+  await refreshStats();
 }
 
-export async function runWorkModeBackfill() {
+async function refreshStats() {
+  // Pre-calculate daily stats for the V2 API
+  await db.tx(async (t: any) => {
+    await t.none("TRUNCATE TABLE daily_stats");
+    // Aggregate active jobs by date and tag
+    await t.none(`
+      INSERT INTO daily_stats (date, tag_id, count)
+      SELECT j.date_posted::date, jt.tag_id, COUNT(*)
+      FROM jobs j
+             JOIN job_tags jt ON j.id = jt.job_id
+      WHERE j.active = TRUE
+      GROUP BY j.date_posted::date, jt.tag_id
+    `);
+  });
+}
+
+// --- Re-Classification Logic ---
+
+/**
+ * Recalculates keywords/tags for all jobs (active and inactive).
+ * @param options.updateWorkMode - If true, overwrites DB work_mode for all jobs.
+ * If false, only fills work_mode where it is currently NULL (never set).
+ */
+export async function reclassifyJobs(options: { updateWorkMode?: boolean } = {}) {
+  const { updateWorkMode = false } = options;
   await initializeDatabase();
-  await classifyMissingWorkModes();
+  console.log(`[Admin] Re-classifying all jobs (updateWorkMode=${updateWorkMode})...`);
+
+  // Fetch all jobs including inactive and current work_mode value
+  const jobs = await db.any("SELECT id, heading, descr, municipality_name, work_mode FROM jobs");
+
+  // Pre-load tags to reduce DB hits
+  const tagMap = new Map<string, number>();
+  const existingTags = await db.any("SELECT id, category, name FROM tags");
+  existingTags.forEach((t: any) => tagMap.set(`${t.category}:${t.name}`, t.id));
+
+  const getTagId = async (category: string, name: string) => {
+    const key = `${category}:${name}`;
+    if (tagMap.has(key)) return tagMap.get(key);
+    const r = await db.one(
+      "INSERT INTO tags(category, name) VALUES($1, $2) ON CONFLICT(category, name) DO UPDATE SET name=EXCLUDED.name RETURNING id",
+      [category, name]
+    );
+    tagMap.set(key, r.id);
+    return r.id;
+  };
+
+  let updatedWorkModeCount = 0;
+
+  for (const job of jobs) {
+    const analysis = await classifyJob(job.heading || '', job.descr || '', job.municipality_name || '');
+    const shouldUpdateWorkMode = updateWorkMode || job.work_mode == null;
+    let newWorkMode: string | null = null;
+    if (shouldUpdateWorkMode) {
+      try {
+        newWorkMode = await getWorkingMode(job.descr || '', job.heading || '') || analysis.workMode;
+      } catch (e) {
+        console.warn(`[Reclassify] OpenAI work mode failed for job id=${job.id}, fallback to heuristic:`, (e as Error).message);
+        newWorkMode = analysis.workMode;
+      }
+    }
+    if (shouldUpdateWorkMode) {
+      await db.none(
+        "UPDATE jobs SET work_mode = $1, seniority = $2, salary_min = $3, salary_max = $4 WHERE id = $5",
+        [newWorkMode, analysis.seniority, analysis.salary?.min, analysis.salary?.max, job.id]
+      );
+      updatedWorkModeCount++;
+    } else {
+      await db.none(
+        "UPDATE jobs SET seniority = $1, salary_min = $2, salary_max = $3 WHERE id = $4",
+        [analysis.seniority, analysis.salary?.min, analysis.salary?.max, job.id]
+      );
+    }
+
+    // 2. Update Tags (Full replacement for accuracy based on new keywords)
+    await db.none("DELETE FROM job_tags WHERE job_id = $1", [job.id]);
+    for (const t of analysis.tags) {
+      const tId = await getTagId(t.category, t.name);
+      await db.none("INSERT INTO job_tags(job_id, tag_id) VALUES($1, $2) ON CONFLICT DO NOTHING", [job.id, tId]);
+    }
+  }
+
+  await refreshStats();
+  console.log(`[Admin] Re-classification complete. Work mode updated for ${updatedWorkModeCount} jobs.`);
+}
+
+// --- Compatibility Exports ---
+
+// Replaces old implementation with new robust sync
+export async function syncDataIfNeeded() {
+  return syncJobs();
+}
+
+// For backward compatibility with API route
+export async function runWorkModeBackfill() {
+  // Default: Don't overwrite work_mode (safe default), effectively just refreshing tags/stats
+  return reclassifyJobs({ updateWorkMode: false });
+}
+
+// Keeps API V1 working by returning the raw job rows
+export async function fetchDatabaseData() {
+  await initializeDatabase();
+  // Return all data V1 needs.
+  return await db.any("SELECT id, slug, heading, descr, company_name, municipality_name, date_posted, last_seen_at, work_mode FROM jobs");
 }
