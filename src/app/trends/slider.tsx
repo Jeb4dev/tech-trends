@@ -2,16 +2,24 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { Results } from "@/types";
 
 // Custom dual-thumb date range slider replacing react-slider
-export const Slider = (props: { min: Date; filteredData: Results[]; filterByDate: (min: Date, max: Date) => void; initialMinDate?: Date | null; initialMaxDate?: Date | null; }) => {
+export const Slider = (props: {
+  min: Date;
+  filteredData: Results[];
+  filterByDate: (min: Date, max: Date) => void;
+  initialMinDate?: Date | null;
+  initialMaxDate?: Date | null;
+}) => {
   const { min, filterByDate, initialMinDate, initialMaxDate } = props;
   const [max, setMax] = useState<Date | null>(null);
-  useEffect(() => { setMax(new Date()); }, []);
+  useEffect(() => {
+    setMax(new Date());
+  }, []);
   const totalDays = max ? Math.max(1, Math.floor((max.getTime() - min.getTime()) / (1000 * 3600 * 24))) : 1;
 
   const [range, setRange] = useState<[number, number]>([0, totalDays]);
   const commitTimer = useRef<NodeJS.Timeout | null>(null);
   const trackRef = useRef<HTMLDivElement | null>(null);
-  const [dragging, setDragging] = useState<null | 'min' | 'max'>(null);
+  const [dragging, setDragging] = useState<null | "min" | "max">(null);
 
   const toDate = useCallback((offsetDays: number) => new Date(min.getTime() + offsetDays * 24 * 3600 * 1000), [min]);
 
@@ -19,13 +27,16 @@ export const Slider = (props: { min: Date; filteredData: Results[]; filterByDate
   const pct = useCallback((day: number) => (day / totalDays) * 100, [totalDays]);
 
   // Convert pixel position to day offset
-  const posToDay = useCallback((clientX: number) => {
-    const el = trackRef.current;
-    if (!el) return 0;
-    const rect = el.getBoundingClientRect();
-    const ratio = (clientX - rect.left) / rect.width;
-    return clamp(Math.round(ratio * totalDays));
-  }, [clamp, totalDays]);
+  const posToDay = useCallback(
+    (clientX: number) => {
+      const el = trackRef.current;
+      if (!el) return 0;
+      const rect = el.getBoundingClientRect();
+      const ratio = (clientX - rect.left) / rect.width;
+      return clamp(Math.round(ratio * totalDays));
+    },
+    [clamp, totalDays],
+  );
 
   const commitRange = useCallback(() => {
     const [start, end] = range;
@@ -63,7 +74,7 @@ export const Slider = (props: { min: Date; filteredData: Results[]; filterByDate
     const move = (e: PointerEvent) => {
       const day = posToDay(e.clientX);
       setRange(([minDay, maxDay]) => {
-        if (dragging === 'min') {
+        if (dragging === "min") {
           if (day >= maxDay) return [minDay, maxDay];
           return [day, maxDay];
         } else {
@@ -77,11 +88,11 @@ export const Slider = (props: { min: Date; filteredData: Results[]; filterByDate
       setDragging(null);
       onRelease();
     };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', up, { once: true });
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up, { once: true });
     return () => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
     };
   }, [dragging, posToDay, scheduleCommit, onRelease]);
 
@@ -120,35 +131,53 @@ export const Slider = (props: { min: Date; filteredData: Results[]; filterByDate
           type="button"
           role="slider"
           aria-label="Start date"
-            aria-valuemin={0}
-            aria-valuemax={range[1]-1}
-            aria-valuenow={range[0]}
-            aria-valuetext={startLabel}
+          aria-valuemin={0}
+          aria-valuemax={range[1] - 1}
+          aria-valuenow={range[0]}
+          aria-valuetext={startLabel}
           className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-white border border-gray-500 shadow focus:outline-none focus:ring-2 focus:ring-green-500"
           style={{ left: pct(range[0]) + "%" }}
           onKeyDown={(e) => {
-            if (e.key === "ArrowLeft") { setRange(([a,b]) => [clamp(a-1), b]); scheduleCommit(); }
-            if (e.key === "ArrowRight") { setRange(([a,b]) => (a+1 < b ? [clamp(a+1), b] : [a,b])); scheduleCommit(); }
+            if (e.key === "ArrowLeft") {
+              setRange(([a, b]) => [clamp(a - 1), b]);
+              scheduleCommit();
+            }
+            if (e.key === "ArrowRight") {
+              setRange(([a, b]) => (a + 1 < b ? [clamp(a + 1), b] : [a, b]));
+              scheduleCommit();
+            }
           }}
           onKeyUp={onRelease}
-          onPointerDown={(e) => { e.preventDefault(); setDragging('min'); }}
+          onPointerDown={(e) => {
+            e.preventDefault();
+            setDragging("min");
+          }}
         />
         <button
           type="button"
           role="slider"
           aria-label="End date"
-            aria-valuemin={range[0]+1}
-            aria-valuemax={totalDays}
-            aria-valuenow={range[1]}
-            aria-valuetext={endLabel}
+          aria-valuemin={range[0] + 1}
+          aria-valuemax={totalDays}
+          aria-valuenow={range[1]}
+          aria-valuetext={endLabel}
           className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-white border border-gray-500 shadow focus:outline-none focus:ring-2 focus:ring-green-500"
           style={{ left: pct(range[1]) + "%" }}
           onKeyDown={(e) => {
-            if (e.key === "ArrowLeft") { setRange(([a,b]) => (b-1 > a ? [a, clamp(b-1)] : [a,b])); scheduleCommit(); }
-            if (e.key === "ArrowRight") { setRange(([a,b]) => [a, clamp(b+1)]); scheduleCommit(); }
+            if (e.key === "ArrowLeft") {
+              setRange(([a, b]) => (b - 1 > a ? [a, clamp(b - 1)] : [a, b]));
+              scheduleCommit();
+            }
+            if (e.key === "ArrowRight") {
+              setRange(([a, b]) => [a, clamp(b + 1)]);
+              scheduleCommit();
+            }
           }}
           onKeyUp={onRelease}
-          onPointerDown={(e) => { e.preventDefault(); setDragging('max'); }}
+          onPointerDown={(e) => {
+            e.preventDefault();
+            setDragging("max");
+          }}
         />
       </div>
       <div className="flex justify-between text-xs mt-1 text-gray-400" suppressHydrationWarning>

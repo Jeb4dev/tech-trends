@@ -18,7 +18,7 @@ export const workModeHighlightGroups: (string | string[])[] = [
     "Pysyvästi etänä",
     "(etä)",
     "(etätyö)",
-    "LI-REMOTE"
+    "LI-REMOTE",
   ],
   [
     "Hybrid",
@@ -31,7 +31,7 @@ export const workModeHighlightGroups: (string | string[])[] = [
     "Osittain etänä",
     "Osittain toimistolla",
     "Muutama päivä toimistolla",
-    "LI-HYBRID"
+    "LI-HYBRID",
   ],
   [
     "On-site",
@@ -44,7 +44,7 @@ export const workModeHighlightGroups: (string | string[])[] = [
     "Toimistolla",
     "Asiakkaan tiloissa",
     "Client site",
-    "LI-ONSITE"
+    "LI-ONSITE",
   ],
 ];
 
@@ -102,9 +102,14 @@ export function classifyWorkMode(openings: Results[]): Category[] {
     /client\s+site/i,
   ];
 
-  openings.forEach(o => {
+  openings.forEach((o) => {
     const text = (o.heading + "\n" + o.descr).toLowerCase();
-    const countMatches = (arr: RegExp[]) => arr.reduce((acc, r) => { r.lastIndex = 0; const m = text.match(r); return acc + (m ? m.length : 0); }, 0);
+    const countMatches = (arr: RegExp[]) =>
+      arr.reduce((acc, r) => {
+        r.lastIndex = 0;
+        const m = text.match(r);
+        return acc + (m ? m.length : 0);
+      }, 0);
 
     const rs = countMatches(remoteStrong);
     const r = countMatches(remoteIndicators);
@@ -113,7 +118,11 @@ export function classifyWorkMode(openings: Results[]): Category[] {
     const oi = countMatches(onsiteIndicators);
 
     let label: string;
-    if (rs > 0 && os === 0 && oi === 0 && h === 0) label = REMOTE; else if (h > 0 || ((r > 0 || rs > 0) && (oi > 0 || os > 0))) label = HYBRID; else if (os > 0 || (oi > 0 && r === 0 && rs === 0)) label = ONSITE; else if (r > 0 && (oi === 0 && os === 0)) label = REMOTE; else label = ONSITE; // fallback
+    if (rs > 0 && os === 0 && oi === 0 && h === 0) label = REMOTE;
+    else if (h > 0 || ((r > 0 || rs > 0) && (oi > 0 || os > 0))) label = HYBRID;
+    else if (os > 0 || (oi > 0 && r === 0 && rs === 0)) label = ONSITE;
+    else if (r > 0 && oi === 0 && os === 0) label = REMOTE;
+    else label = ONSITE; // fallback
 
     buckets[label].push(o);
   });
@@ -122,4 +131,3 @@ export function classifyWorkMode(openings: Results[]): Category[] {
     .filter(([, list]) => list.length > 0)
     .map(([label, list]) => ({ label, active: false, openings: list, filteredOpenings: [] }));
 }
-

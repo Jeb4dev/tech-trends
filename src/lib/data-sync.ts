@@ -6,16 +6,16 @@ import { getWorkingMode } from "@/lib/openai"; // Added import
 
 // Ensure a single pg-promise instance and DB connection across the process
 const g = globalThis as unknown as {
-  __pgp?: IMain,
-  __db?: IDatabase<any>
-}
+  __pgp?: IMain;
+  __db?: IDatabase<any>;
+};
 
 const pgp: IMain = g.__pgp ?? pgPromise();
 if (!g.__pgp) g.__pgp = pgp;
 
-const connection = process.env.POSTGRES_URL || '';
+const connection = process.env.POSTGRES_URL || "";
 if (!connection) {
-  console.warn('[data-sync] POSTGRES_URL is not set; database operations will fail');
+  console.warn("[data-sync] POSTGRES_URL is not set; database operations will fail");
 }
 // @ts-ignore - type inferred by pg-promise
 const db: IDatabase<any> = g.__db ?? pgp(connection);
@@ -96,7 +96,7 @@ async function getMeta(key: string): Promise<string | null> {
 async function setMeta(key: string, value: string) {
   await db.none(
     `INSERT INTO app_meta(key,value) VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
-    [key, value]
+    [key, value],
   );
 }
 
@@ -113,8 +113,8 @@ export async function syncJobs() {
   const lastFullScanStr = await getMeta("last_full_scan");
 
   // Rule: Full scan every 24h.
-  const isFullScan = !lastFullScanStr || (now.getTime() - new Date(lastFullScanStr).getTime() > 24 * 60 * 60 * 1000);
-  const fetchMode = isFullScan ? 'FULL' : 'INCREMENTAL';
+  const isFullScan = !lastFullScanStr || now.getTime() - new Date(lastFullScanStr).getTime() > 24 * 60 * 60 * 1000;
+  const fetchMode = isFullScan ? "FULL" : "INCREMENTAL";
 
   console.log(`[Sync] Mode: ${fetchMode}`);
 
@@ -133,7 +133,7 @@ export async function syncJobs() {
     if (tagMap.has(key)) return tagMap.get(key);
     const r = await db.one(
       "INSERT INTO tags(category, name) VALUES($1, $2) ON CONFLICT(category, name) DO UPDATE SET name=EXCLUDED.name RETURNING id",
-      [category, name]
+      [category, name],
     );
     tagMap.set(key, r.id);
     return r.id;
@@ -146,7 +146,7 @@ export async function syncJobs() {
     const url = `https://duunitori.fi/api/v1/jobentries?format=json&page=${page}&search=Tieto-+ja+tietoliikennetekniikka%28ala%29`;
     console.log(`[Sync] Fetching ${url}`);
 
-    const response = await fetch(url, { cache: 'no-store' });
+    const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) break;
     const json: ResponseData = await response.json();
 
@@ -164,7 +164,7 @@ export async function syncJobs() {
         await db.none("UPDATE jobs SET last_seen_at = NOW(), active = TRUE WHERE id = $1", [existing.id]);
 
         // Stop if we hit old data in incremental mode
-        if (fetchMode === 'INCREMENTAL' && lastFullScanStr) {
+        if (fetchMode === "INCREMENTAL" && lastFullScanStr) {
           const itemDate = new Date(datePosted);
           const cutoff = new Date(new Date(lastFullScanStr).getTime() - 48 * 60 * 60 * 1000); // 48h buffer
           if (itemDate < cutoff) {
@@ -178,9 +178,12 @@ export async function syncJobs() {
         // Use OpenAI for work mode classification (fallback to heuristic if failure)
         let workMode = analysis.workMode;
         try {
-          workMode = await getWorkingMode(item.descr || '', item.heading || '') || workMode;
+          workMode = (await getWorkingMode(item.descr || "", item.heading || "")) || workMode;
         } catch (e) {
-          console.warn(`[Sync] OpenAI work mode failed for slug=${item.slug}, fallback to heuristic:`, (e as Error).message);
+          console.warn(
+            `[Sync] OpenAI work mode failed for slug=${item.slug}, fallback to heuristic:`,
+            (e as Error).message,
+          );
         }
         const jobRow = await db.one(
           `INSERT INTO jobs (
@@ -189,10 +192,18 @@ export async function syncJobs() {
           ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), $7, $8, $9, $10, $11, TRUE)
            RETURNING id`,
           [
-            item.slug, item.heading, item.descr, item.company_name, item.municipality_name, datePosted,
-            workMode, analysis.seniority,
-            analysis.salary?.min || null, analysis.salary?.max || null, analysis.salary?.currency || null
-          ]
+            item.slug,
+            item.heading,
+            item.descr,
+            item.company_name,
+            item.municipality_name,
+            datePosted,
+            workMode,
+            analysis.seniority,
+            analysis.salary?.min || null,
+            analysis.salary?.max || null,
+            analysis.salary?.currency || null,
+          ],
         );
         for (const t of analysis.tags) {
           const tId = await getTagId(t.category, t.name);
@@ -207,7 +218,7 @@ export async function syncJobs() {
   }
 
   // Cleanup: Mark jobs not seen in Full Scan as inactive
-  if (fetchMode === 'FULL') {
+  if (fetchMode === "FULL") {
     await db.none("UPDATE jobs SET active = FALSE WHERE last_seen_at < NOW() - INTERVAL '2 hours'");
     await setMeta("last_full_scan", now.toISOString());
   }
@@ -257,7 +268,7 @@ export async function reclassifyJobs(options: { updateWorkMode?: boolean } = {})
     if (tagMap.has(key)) return tagMap.get(key);
     const r = await db.one(
       "INSERT INTO tags(category, name) VALUES($1, $2) ON CONFLICT(category, name) DO UPDATE SET name=EXCLUDED.name RETURNING id",
-      [category, name]
+      [category, name],
     );
     tagMap.set(key, r.id);
     return r.id;
@@ -266,28 +277,36 @@ export async function reclassifyJobs(options: { updateWorkMode?: boolean } = {})
   let updatedWorkModeCount = 0;
 
   for (const job of jobs) {
-    const analysis = await classifyJob(job.heading || '', job.descr || '', job.municipality_name || '');
+    const analysis = await classifyJob(job.heading || "", job.descr || "", job.municipality_name || "");
     const shouldUpdateWorkMode = updateWorkMode || job.work_mode == null;
     let newWorkMode: string | null = null;
     if (shouldUpdateWorkMode) {
       try {
-        newWorkMode = await getWorkingMode(job.descr || '', job.heading || '') || analysis.workMode;
+        newWorkMode = (await getWorkingMode(job.descr || "", job.heading || "")) || analysis.workMode;
       } catch (e) {
-        console.warn(`[Reclassify] OpenAI work mode failed for job id=${job.id}, fallback to heuristic:`, (e as Error).message);
+        console.warn(
+          `[Reclassify] OpenAI work mode failed for job id=${job.id}, fallback to heuristic:`,
+          (e as Error).message,
+        );
         newWorkMode = analysis.workMode;
       }
     }
     if (shouldUpdateWorkMode) {
-      await db.none(
-        "UPDATE jobs SET work_mode = $1, seniority = $2, salary_min = $3, salary_max = $4 WHERE id = $5",
-        [newWorkMode, analysis.seniority, analysis.salary?.min, analysis.salary?.max, job.id]
-      );
+      await db.none("UPDATE jobs SET work_mode = $1, seniority = $2, salary_min = $3, salary_max = $4 WHERE id = $5", [
+        newWorkMode,
+        analysis.seniority,
+        analysis.salary?.min,
+        analysis.salary?.max,
+        job.id,
+      ]);
       updatedWorkModeCount++;
     } else {
-      await db.none(
-        "UPDATE jobs SET seniority = $1, salary_min = $2, salary_max = $3 WHERE id = $4",
-        [analysis.seniority, analysis.salary?.min, analysis.salary?.max, job.id]
-      );
+      await db.none("UPDATE jobs SET seniority = $1, salary_min = $2, salary_max = $3 WHERE id = $4", [
+        analysis.seniority,
+        analysis.salary?.min,
+        analysis.salary?.max,
+        job.id,
+      ]);
     }
 
     // 2. Update Tags (Full replacement for accuracy based on new keywords)
@@ -319,5 +338,7 @@ export async function runWorkModeBackfill() {
 export async function fetchDatabaseData() {
   await initializeDatabase();
   // Return all data V1 needs.
-  return await db.any("SELECT id, slug, heading, descr, company_name, municipality_name, date_posted, last_seen_at, work_mode FROM jobs");
+  return await db.any(
+    "SELECT id, slug, heading, descr, company_name, municipality_name, date_posted, last_seen_at, work_mode FROM jobs",
+  );
 }

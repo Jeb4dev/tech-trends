@@ -104,4 +104,3 @@ export function colorForIndex(i: number): string {
   const hue = (i * 37) % 360; // pseudo-random spread
   return `hsl(${hue} 70% 55%)`;
 }
-

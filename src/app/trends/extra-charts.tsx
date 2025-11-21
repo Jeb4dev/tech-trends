@@ -30,7 +30,7 @@ ChartJS.register(
   BarElement,
   ChartTooltip,
   ChartLegend,
-  Filler
+  Filler,
 );
 
 function toDateOnly(str?: string | null): string | null {
@@ -38,12 +38,29 @@ function toDateOnly(str?: string | null): string | null {
   const m = str.match(/^(\d{4}-\d{2}-\d{2})/);
   return m ? m[1] : null;
 }
-function addDays(d: Date, days: number) { const x = new Date(d); x.setDate(x.getDate() + days); return x; }
-function formatYmd(d: Date) { const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), day=String(d.getDate()).padStart(2,"0"); return `${y}-${m}-${day}`; }
-function parseYmd(s: string) { const [y,m,d]=s.split("-").map(n=>parseInt(n,10)); return new Date(y,(m||1)-1,d||1); }
-const mean = (arr: number[]) => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
-const median = (arr: number[]) => { if (!arr.length) return 0; const a=[...arr].sort((a,b)=>a-b); const mid=Math.floor(a.length/2); return a.length%2? a[mid] : (a[mid-1]+a[mid])/2; };
-const AGE_LABELS = ["1–3","4–7","8–14","15–30","31–60","61–90","91+"] as const;
+function addDays(d: Date, days: number) {
+  const x = new Date(d);
+  x.setDate(x.getDate() + days);
+  return x;
+}
+function formatYmd(d: Date) {
+  const y = d.getFullYear(),
+    m = String(d.getMonth() + 1).padStart(2, "0"),
+    day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+function parseYmd(s: string) {
+  const [y, m, d] = s.split("-").map((n) => parseInt(n, 10));
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+const mean = (arr: number[]) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
+const median = (arr: number[]) => {
+  if (!arr.length) return 0;
+  const a = [...arr].sort((a, b) => a - b);
+  const mid = Math.floor(a.length / 2);
+  return a.length % 2 ? a[mid] : (a[mid - 1] + a[mid]) / 2;
+};
+const AGE_LABELS = ["1–3", "4–7", "8–14", "15–30", "31–60", "61–90", "91+"] as const;
 
 function weekStartYmd(ymd: string): string {
   const d = parseYmd(ymd);
@@ -133,7 +150,7 @@ export default function ExtraCharts({ openings }: { openings: Results[] }) {
 
       // Age in days (only for postings no longer active today)
       if (p && ls && ls < todayYmd) {
-        const diffDays = Math.round((parseYmd(ls).getTime() - parseYmd(p).getTime()) / (24*3600*1000));
+        const diffDays = Math.round((parseYmd(ls).getTime() - parseYmd(p).getTime()) / (24 * 3600 * 1000));
         const daysInclusive = Math.max(1, diffDays + 1);
         ages.push(daysInclusive);
         agesExact.push(Math.max(0, diffDays));
@@ -143,10 +160,21 @@ export default function ExtraCharts({ openings }: { openings: Results[] }) {
     if (!max) max = formatYmd(new Date());
     if (max < SERIES_MIN_START) {
       return {
-        newSeries: [], lastSeenSeries: [], workModeCounts: new Map(), topCities: [], topCompanies: [],
-        salaryMentioned, salaryMissing: openings.length - salaryMentioned,
-        salaryAvgSeries: [], salaryMedSeries: [], weekdayCounts, ageStats: { avg: 0, median: 0 }, ageHistogram: { labels: [...AGE_LABELS], counts: Array(AGE_LABELS.length).fill(0) },
-        weeklyNew: [], weeklyLast: [], weeklySalary: [],
+        newSeries: [],
+        lastSeenSeries: [],
+        workModeCounts: new Map(),
+        topCities: [],
+        topCompanies: [],
+        salaryMentioned,
+        salaryMissing: openings.length - salaryMentioned,
+        salaryAvgSeries: [],
+        salaryMedSeries: [],
+        weekdayCounts,
+        ageStats: { avg: 0, median: 0 },
+        ageHistogram: { labels: [...AGE_LABELS], counts: Array(AGE_LABELS.length).fill(0) },
+        weeklyNew: [],
+        weeklyLast: [],
+        weeklySalary: [],
       };
     }
 
@@ -204,24 +232,35 @@ export default function ExtraCharts({ openings }: { openings: Results[] }) {
     // --- work mode distribution
     const wm = classifyWorkMode(openings as any);
     const workModeCounts = new Map<string, number>();
-    wm.forEach(group => workModeCounts.set(group.label, group.openings.length));
+    wm.forEach((group) => workModeCounts.set(group.label, group.openings.length));
 
     // --- top cities / companies
     const cities = new Map<string, number>();
     const companies = new Map<string, number>();
-    openings.forEach(o => {
+    openings.forEach((o) => {
       if (o.municipality_name) cities.set(o.municipality_name, (cities.get(o.municipality_name) || 0) + 1);
       if (o.company_name) companies.set(o.company_name, (companies.get(o.company_name) || 0) + 1);
     });
-    const topCities = Array.from(cities.entries()).sort((a,b)=>b[1]-a[1]).slice(0,10);
-    const topCompanies = Array.from(companies.entries()).sort((a,b)=>b[1]-a[1]).slice(0,10);
+    const topCities = Array.from(cities.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+    const topCompanies = Array.from(companies.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
 
     // --- age stats
     const ageStats = { avg: Math.round(mean(ages)), median: Math.round(median(ages)) };
-    const bins = [ [1,3], [4,7], [8,14], [15,30], [31,60], [61,90] ] as [number,number][];
+    const bins = [
+      [1, 3],
+      [4, 7],
+      [8, 14],
+      [15, 30],
+      [31, 60],
+      [61, 90],
+    ] as [number, number][];
     const counts = Array(bins.length + 1).fill(0) as number[]; // last bin is 91+
     for (const a of ages) {
-      let b = bins.findIndex(([lo,hi]) => a >= lo && a <= hi);
+      let b = bins.findIndex(([lo, hi]) => a >= lo && a <= hi);
       if (b === -1) b = bins.length;
       counts[b]++;
     }
@@ -231,7 +270,7 @@ export default function ExtraCharts({ openings }: { openings: Results[] }) {
     };
 
     // Exact distribution 0..90 and 90+
-    const ageExactLabels = [...Array(91).keys()].map((n)=>String(n)).concat("90+");
+    const ageExactLabels = [...Array(91).keys()].map((n) => String(n)).concat("90+");
     const ageExactCounts = Array(ageExactLabels.length).fill(0) as number[];
     for (const a of agesExact) {
       const idx = a > 90 ? 91 : a; // 0..90 or 90+
@@ -239,7 +278,7 @@ export default function ExtraCharts({ openings }: { openings: Results[] }) {
     }
 
     // --- Trending computation (last 4 weeks vs previous 4 weeks)
-    const weeksForTrend = weeklyNew.map(w => w.date);
+    const weeksForTrend = weeklyNew.map((w) => w.date);
     const lastIdx = weeksForTrend.length - 1;
     const take = 4;
     const hiStart = Math.max(0, lastIdx - take + 1);
@@ -254,7 +293,7 @@ export default function ExtraCharts({ openings }: { openings: Results[] }) {
     const base = computeBase(openings);
     const labelOpenings: Record<string, Results[]> = {};
     const pushFrom = (arr: { label: string; openings: Results[] }[] | undefined) => {
-      (arr || []).forEach(c => {
+      (arr || []).forEach((c) => {
         labelOpenings[c.label] = c.openings;
       });
     };
@@ -273,21 +312,31 @@ export default function ExtraCharts({ openings }: { openings: Results[] }) {
       return cnt;
     };
 
-    const trends: TrendRow[] = Object.entries(labelOpenings).map(([label, arr]) => {
-      const last = sumWeeks(arr, hiWeeks);
-      const prev = sumWeeks(arr, loWeeks);
-      const delta = last - prev;
-      const denom = prev === 0 ? (last > 0 ? last : 1) : prev;
-      const pct = denom ? (last - prev) / denom : 0;
-      return { label, last, prev, delta, pct };
-    }).filter(t => t.last + t.prev >= 3);
+    const trends: TrendRow[] = Object.entries(labelOpenings)
+      .map(([label, arr]) => {
+        const last = sumWeeks(arr, hiWeeks);
+        const prev = sumWeeks(arr, loWeeks);
+        const delta = last - prev;
+        const denom = prev === 0 ? (last > 0 ? last : 1) : prev;
+        const pct = denom ? (last - prev) / denom : 0;
+        return { label, last, prev, delta, pct };
+      })
+      .filter((t) => t.last + t.prev >= 3);
 
-    const topUp = trends.filter(t => t.delta > 0).sort((a,b)=> b.pct - a.pct || b.delta - a.delta).slice(0,10);
-    const topDown = trends.filter(t => t.delta < 0).sort((a,b)=> a.pct - b.pct || a.delta - b.delta).slice(0,10);
+    const topUp = trends
+      .filter((t) => t.delta > 0)
+      .sort((a, b) => b.pct - a.pct || b.delta - a.delta)
+      .slice(0, 10);
+    const topDown = trends
+      .filter((t) => t.delta < 0)
+      .sort((a, b) => a.pct - b.pct || a.delta - b.delta)
+      .slice(0, 10);
 
     // Work mode trending
     const wmLabelOpenings: Record<string, Results[]> = {};
-    wm.forEach(group => { wmLabelOpenings[group.label] = group.openings; });
+    wm.forEach((group) => {
+      wmLabelOpenings[group.label] = group.openings;
+    });
     const wmTrends: TrendRow[] = Object.entries(wmLabelOpenings).map(([label, arr]) => {
       const last = sumWeeks(arr, hiWeeks);
       const prev = sumWeeks(arr, loWeeks);
@@ -323,13 +372,16 @@ export default function ExtraCharts({ openings }: { openings: Results[] }) {
   }, [openings]);
 
   const countsSubtitle = period === "weekly" ? "Counts per week since Sep 1, 2025" : "Counts per day since Sep 1, 2025";
-  const salarySubtitle = period === "weekly" ? "Weekly average and median (EUR) for postings with numeric salary" : "Daily average and median (EUR) for postings with numeric salary";
+  const salarySubtitle =
+    period === "weekly"
+      ? "Weekly average and median (EUR) for postings with numeric salary"
+      : "Daily average and median (EUR) for postings with numeric salary";
 
   const periodToggle = (
     <div className="flex items-center gap-2">
       <span className="text-xs text-gray-400">Period</span>
       <div className="inline-flex items-center gap-1">
-        {(["weekly","daily"] as const).map((p) => (
+        {(["weekly", "daily"] as const).map((p) => (
           <button
             key={p}
             type="button"
@@ -377,7 +429,9 @@ export default function ExtraCharts({ openings }: { openings: Results[] }) {
         <h3 className="text-base md:text-lg font-semibold">{title}</h3>
         {subtitle && <p className="text-xs md:text-sm text-gray-400">{subtitle}</p>}
       </div>
-      <div className="p-2 md:p-4"><div className="h-[220px] md:h-[260px] w-full">{children}</div></div>
+      <div className="p-2 md:p-4">
+        <div className="h-[220px] md:h-[260px] w-full">{children}</div>
+      </div>
     </div>
   );
 
@@ -390,38 +444,42 @@ export default function ExtraCharts({ openings }: { openings: Results[] }) {
           countsSubtitle,
           <Line
             data={{
-              labels: (period === "weekly" ? weeklyNew : newSeries).map((s:any)=>s.date),
-              datasets: [{
-                label: "New postings",
-                data: (period === "weekly" ? weeklyNew : newSeries).map((s:any)=>s.count),
-                borderColor: "#60a5fa",
-                backgroundColor: "rgba(96,165,250,0.2)",
-                fill: true,
-                tension: 0.35,
-                pointRadius: 0,
-              }],
+              labels: (period === "weekly" ? weeklyNew : newSeries).map((s: any) => s.date),
+              datasets: [
+                {
+                  label: "New postings",
+                  data: (period === "weekly" ? weeklyNew : newSeries).map((s: any) => s.count),
+                  borderColor: "#60a5fa",
+                  backgroundColor: "rgba(96,165,250,0.2)",
+                  fill: true,
+                  tension: 0.35,
+                  pointRadius: 0,
+                },
+              ],
             }}
             options={lineOptions}
-          />
+          />,
         )}
         {card(
           "Last seen",
           countsSubtitle,
           <Line
             data={{
-              labels: (period === "weekly" ? weeklyLast : lastSeenSeries).map((s:any)=>s.date),
-              datasets: [{
-                label: "Last seen",
-                data: (period === "weekly" ? weeklyLast : lastSeenSeries).map((s:any)=>s.count),
-                borderColor: "#f59e0b",
-                backgroundColor: "rgba(245,158,11,0.2)",
-                fill: true,
-                tension: 0.35,
-                pointRadius: 0,
-              }],
+              labels: (period === "weekly" ? weeklyLast : lastSeenSeries).map((s: any) => s.date),
+              datasets: [
+                {
+                  label: "Last seen",
+                  data: (period === "weekly" ? weeklyLast : lastSeenSeries).map((s: any) => s.count),
+                  borderColor: "#f59e0b",
+                  backgroundColor: "rgba(245,158,11,0.2)",
+                  fill: true,
+                  tension: 0.35,
+                  pointRadius: 0,
+                },
+              ],
             }}
             options={lineOptions}
-          />
+          />,
         )}
         {card(
           "Work mode distribution",
@@ -429,50 +487,63 @@ export default function ExtraCharts({ openings }: { openings: Results[] }) {
           <Doughnut
             data={{
               labels: Array.from(workModeCounts.keys()),
-              datasets: [{
-                label: "Postings",
-                data: Array.from(workModeCounts.values()),
-                backgroundColor: ["#34d399","#fbbf24","#60a5fa"],
-                borderColor: "#111827",
-              }],
+              datasets: [
+                {
+                  label: "Postings",
+                  data: Array.from(workModeCounts.values()),
+                  backgroundColor: ["#34d399", "#fbbf24", "#60a5fa"],
+                  borderColor: "#111827",
+                },
+              ],
             }}
             options={{
               responsive: true,
               maintainAspectRatio: false,
-              plugins: { legend: { display: true, labels: { color: "#d4d4d4" } }, tooltip: { backgroundColor: "#111827", bodyColor: "#e7e7eb", borderColor: "#374151", borderWidth: 1 } },
+              plugins: {
+                legend: { display: true, labels: { color: "#d4d4d4" } },
+                tooltip: { backgroundColor: "#111827", bodyColor: "#e7e7eb", borderColor: "#374151", borderWidth: 1 },
+              },
             }}
-          />
+          />,
         )}
         {card(
           "Salary mentioned",
           "Share of postings mentioning salary",
           <Doughnut
             data={{
-              labels: ["Salary mentioned","No salary"],
-              datasets: [{
-                label: "Postings",
-                data: [salaryMentioned, salaryMissing],
-                backgroundColor: ["#22c55e","#4b5563"],
-                borderColor: "#111827",
-              }],
+              labels: ["Salary mentioned", "No salary"],
+              datasets: [
+                {
+                  label: "Postings",
+                  data: [salaryMentioned, salaryMissing],
+                  backgroundColor: ["#22c55e", "#4b5563"],
+                  borderColor: "#111827",
+                },
+              ],
             }}
             options={{
               responsive: true,
               maintainAspectRatio: false,
-              plugins: { legend: { display: true, labels: { color: "#d4d4d4" } }, tooltip: { backgroundColor: "#111827", bodyColor: "#e7e7eb", borderColor: "#374151", borderWidth: 1 } },
+              plugins: {
+                legend: { display: true, labels: { color: "#d4d4d4" } },
+                tooltip: { backgroundColor: "#111827", bodyColor: "#e7e7eb", borderColor: "#374151", borderWidth: 1 },
+              },
             }}
-          />
+          />,
         )}
         {card(
           "Average vs median salary",
           salarySubtitle,
           <Line
             data={{
-              labels: (period === "weekly" ? weeklySalary : salaryAvgSeries).map((s:any)=>s.date),
+              labels: (period === "weekly" ? weeklySalary : salaryAvgSeries).map((s: any) => s.date),
               datasets: [
                 {
                   label: "Avg salary (€/mo)",
-                  data: (period === "weekly" ? weeklySalary.map((w:any)=>w.avg) : salaryAvgSeries.map((s:any)=>s.value)),
+                  data:
+                    period === "weekly"
+                      ? weeklySalary.map((w: any) => w.avg)
+                      : salaryAvgSeries.map((s: any) => s.value),
                   borderColor: "#22c55e",
                   backgroundColor: "rgba(34,197,94,0.2)",
                   fill: true,
@@ -481,7 +552,10 @@ export default function ExtraCharts({ openings }: { openings: Results[] }) {
                 },
                 {
                   label: "Median salary (€/mo)",
-                  data: (period === "weekly" ? weeklySalary.map((w:any)=>w.med) : salaryMedSeries.map((s:any)=>s.value)),
+                  data:
+                    period === "weekly"
+                      ? weeklySalary.map((w: any) => w.med)
+                      : salaryMedSeries.map((s: any) => s.value),
                   borderColor: "#a78bfa",
                   backgroundColor: "rgba(167,139,250,0.2)",
                   fill: true,
@@ -490,28 +564,39 @@ export default function ExtraCharts({ openings }: { openings: Results[] }) {
                 },
               ],
             }}
-            options={{ ...lineOptions, scales: { ...lineOptions.scales, y: { ...lineOptions.scales.y, suggestedMin: 0 } } }}
-          />
+            options={{
+              ...lineOptions,
+              scales: { ...lineOptions.scales, y: { ...lineOptions.scales.y, suggestedMin: 0 } },
+            }}
+          />,
         )}
         {card(
           "New postings by weekday",
           "Count of new postings (Mon–Sun)",
           <Bar
             data={{
-              labels: ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
-              datasets: [{
-                label: "New postings",
-                data: weekdayCounts,
-                backgroundColor: "rgba(96,165,250,0.6)",
-              }],
+              labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+              datasets: [
+                {
+                  label: "New postings",
+                  data: weekdayCounts,
+                  backgroundColor: "rgba(96,165,250,0.6)",
+                },
+              ],
             }}
             options={{
               responsive: true,
               maintainAspectRatio: false,
-              plugins: { legend: { display: false }, tooltip: { backgroundColor: "#111827", bodyColor: "#e7e7eb", borderColor: "#374151", borderWidth: 1 } },
-              scales: { x: { ticks: { color: "#a3a3a3" }, grid: { display: false } }, y: { beginAtZero: true, ticks: { color: "#a3a3a3" }, grid: { color: "#404040" } } },
+              plugins: {
+                legend: { display: false },
+                tooltip: { backgroundColor: "#111827", bodyColor: "#e7e7eb", borderColor: "#374151", borderWidth: 1 },
+              },
+              scales: {
+                x: { ticks: { color: "#a3a3a3" }, grid: { display: false } },
+                y: { beginAtZero: true, ticks: { color: "#a3a3a3" }, grid: { color: "#404040" } },
+              },
             }}
-          />
+          />,
         )}
         {card(
           `Posting age: avg ${ageStats.avg}d, median ${ageStats.median}d`,
@@ -519,128 +604,207 @@ export default function ExtraCharts({ openings }: { openings: Results[] }) {
           <Line
             data={{
               labels: ageExactLabels,
-              datasets: [{
-                label: "Postings",
-                data: ageExactCounts,
-                borderColor: "#9ca3af",
-                backgroundColor: "rgba(156,163,175,0.25)",
-                fill: true,
-                tension: 0.25,
-                pointRadius: 0,
-              }]}}
+              datasets: [
+                {
+                  label: "Postings",
+                  data: ageExactCounts,
+                  borderColor: "#9ca3af",
+                  backgroundColor: "rgba(156,163,175,0.25)",
+                  fill: true,
+                  tension: 0.25,
+                  pointRadius: 0,
+                },
+              ],
+            }}
             options={{
               ...lineOptions,
               scales: {
-                x: { ticks: { color: "#a3a3a3", maxRotation: 0, autoSkip: true, autoSkipPadding: 8 }, grid: { display: false } },
+                x: {
+                  ticks: { color: "#a3a3a3", maxRotation: 0, autoSkip: true, autoSkipPadding: 8 },
+                  grid: { display: false },
+                },
                 y: { beginAtZero: true, ticks: { color: "#a3a3a3" }, grid: { color: "#404040" } },
               },
               plugins: { ...lineOptions.plugins, legend: { display: false } },
             }}
-          />
+          />,
         )}
         {card(
           "Top cities",
           "Most common municipalities",
           <Bar
             data={{
-              labels: topCities.map(([n])=>n),
-              datasets: [{
-                label: "Postings",
-                data: topCities.map(([,c])=>c),
-                backgroundColor: "rgba(59,130,246,0.6)",
-              }],
+              labels: topCities.map(([n]) => n),
+              datasets: [
+                {
+                  label: "Postings",
+                  data: topCities.map(([, c]) => c),
+                  backgroundColor: "rgba(59,130,246,0.6)",
+                },
+              ],
             }}
             options={{
               responsive: true,
               maintainAspectRatio: false,
-              indexAxis: 'y' as const,
-              plugins: { legend: { display: false }, tooltip: { backgroundColor: "#111827", bodyColor: "#e7e7eb", borderColor: "#374151", borderWidth: 1 } },
-              scales: { x: { ticks: { color: "#a3a3a3" }, grid: { color: "#404040" } }, y: { ticks: { color: "#d4d4d4" }, grid: { display: false } } },
+              indexAxis: "y" as const,
+              plugins: {
+                legend: { display: false },
+                tooltip: { backgroundColor: "#111827", bodyColor: "#e7e7eb", borderColor: "#374151", borderWidth: 1 },
+              },
+              scales: {
+                x: { ticks: { color: "#a3a3a3" }, grid: { color: "#404040" } },
+                y: { ticks: { color: "#d4d4d4" }, grid: { display: false } },
+              },
             }}
-          />
+          />,
         )}
         {card(
           "Top companies",
           "Most frequent companies",
           <Bar
             data={{
-              labels: topCompanies.map(([n])=>n),
-              datasets: [{
-                label: "Postings",
-                data: topCompanies.map(([,c])=>c),
-                backgroundColor: "rgba(16,185,129,0.6)",
-              }],
+              labels: topCompanies.map(([n]) => n),
+              datasets: [
+                {
+                  label: "Postings",
+                  data: topCompanies.map(([, c]) => c),
+                  backgroundColor: "rgba(16,185,129,0.6)",
+                },
+              ],
             }}
             options={{
               responsive: true,
               maintainAspectRatio: false,
-              indexAxis: 'y' as const,
-              plugins: { legend: { display: false }, tooltip: { backgroundColor: "#111827", bodyColor: "#e7e7eb", borderColor: "#374151", borderWidth: 1 } },
-              scales: { x: { ticks: { color: "#a3a3a3" }, grid: { color: "#404040" } }, y: { ticks: { color: "#d4d4d4" }, grid: { display: false } } },
+              indexAxis: "y" as const,
+              plugins: {
+                legend: { display: false },
+                tooltip: { backgroundColor: "#111827", bodyColor: "#e7e7eb", borderColor: "#374151", borderWidth: 1 },
+              },
+              scales: {
+                x: { ticks: { color: "#a3a3a3" }, grid: { color: "#404040" } },
+                y: { ticks: { color: "#d4d4d4" }, grid: { display: false } },
+              },
             }}
-          />
+          />,
         )}
         {card(
           "Trending up (last 4w vs prev 4w)",
           "Languages & Frameworks with the strongest growth",
           <Bar
             data={{
-              labels: (trendUp || []).map(t=>t.label),
-              datasets: [{
-                label: "% change",
-                data: (trendUp || []).map(t=> Math.round(t.pct*100)),
-                backgroundColor: "rgba(34,197,94,0.6)",
-              }],
+              labels: (trendUp || []).map((t) => t.label),
+              datasets: [
+                {
+                  label: "% change",
+                  data: (trendUp || []).map((t) => Math.round(t.pct * 100)),
+                  backgroundColor: "rgba(34,197,94,0.6)",
+                },
+              ],
             }}
             options={{
               responsive: true,
               maintainAspectRatio: false,
-              indexAxis: 'y' as const,
-              plugins: { legend: { display: false }, tooltip: { backgroundColor: "#111827", bodyColor: "#e5e7eb", borderColor: "#374151", borderWidth: 1, callbacks: { label: (ctx:any) => { const t = (trendUp||[])[ctx.dataIndex]; return `${t.label}: ${Math.round(t.pct*100)}% (last ${t.last}, prev ${t.prev}, Δ ${t.delta})`; } } } },
-              scales: { x: { ticks: { color: "#a3a3a3" }, grid: { color: "#404040" } }, y: { ticks: { color: "#d4d4d4" }, grid: { display: false } } },
+              indexAxis: "y" as const,
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  backgroundColor: "#111827",
+                  bodyColor: "#e5e7eb",
+                  borderColor: "#374151",
+                  borderWidth: 1,
+                  callbacks: {
+                    label: (ctx: any) => {
+                      const t = (trendUp || [])[ctx.dataIndex];
+                      return `${t.label}: ${Math.round(t.pct * 100)}% (last ${t.last}, prev ${t.prev}, Δ ${t.delta})`;
+                    },
+                  },
+                },
+              },
+              scales: {
+                x: { ticks: { color: "#a3a3a3" }, grid: { color: "#404040" } },
+                y: { ticks: { color: "#d4d4d4" }, grid: { display: false } },
+              },
             }}
-          />
+          />,
         )}
         {card(
           "Trending down (last 4w vs prev 4w)",
           "Languages & Frameworks with biggest drop",
           <Bar
             data={{
-              labels: (trendDown || []).map(t=>t.label),
-              datasets: [{
-                label: "% change",
-                data: (trendDown || []).map(t=> Math.round(t.pct*100)),
-                backgroundColor: "rgba(239,68,68,0.6)",
-              }],
+              labels: (trendDown || []).map((t) => t.label),
+              datasets: [
+                {
+                  label: "% change",
+                  data: (trendDown || []).map((t) => Math.round(t.pct * 100)),
+                  backgroundColor: "rgba(239,68,68,0.6)",
+                },
+              ],
             }}
             options={{
               responsive: true,
               maintainAspectRatio: false,
-              indexAxis: 'y' as const,
-              plugins: { legend: { display: false }, tooltip: { backgroundColor: "#111827", bodyColor: "#e5e7eb", borderColor: "#374151", borderWidth: 1, callbacks: { label: (ctx:any) => { const t = (trendDown||[])[ctx.dataIndex]; return `${t.label}: ${Math.round(t.pct*100)}% (last ${t.last}, prev ${t.prev}, Δ ${t.delta})`; } } } },
-              scales: { x: { ticks: { color: "#a3a3a3" }, grid: { color: "#404040" } }, y: { ticks: { color: "#d4d4d4" }, grid: { display: false } } },
+              indexAxis: "y" as const,
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  backgroundColor: "#111827",
+                  bodyColor: "#e5e7eb",
+                  borderColor: "#374151",
+                  borderWidth: 1,
+                  callbacks: {
+                    label: (ctx: any) => {
+                      const t = (trendDown || [])[ctx.dataIndex];
+                      return `${t.label}: ${Math.round(t.pct * 100)}% (last ${t.last}, prev ${t.prev}, Δ ${t.delta})`;
+                    },
+                  },
+                },
+              },
+              scales: {
+                x: { ticks: { color: "#a3a3a3" }, grid: { color: "#404040" } },
+                y: { ticks: { color: "#d4d4d4" }, grid: { display: false } },
+              },
             }}
-          />
+          />,
         )}
         {card(
           "Work mode trend",
           "Change in Remote/Hybrid/On-site (last 4w vs prev 4w)",
           <Bar
             data={{
-              labels: (wmTrends || []).map(t=>t.label),
-              datasets: [{
-                label: "% change",
-                data: (wmTrends || []).map(t=> Math.round(t.pct*100)),
-                backgroundColor: ["#34d399","#fbbf24","#60a5fa"],
-              }],
+              labels: (wmTrends || []).map((t) => t.label),
+              datasets: [
+                {
+                  label: "% change",
+                  data: (wmTrends || []).map((t) => Math.round(t.pct * 100)),
+                  backgroundColor: ["#34d399", "#fbbf24", "#60a5fa"],
+                },
+              ],
             }}
             options={{
               responsive: true,
               maintainAspectRatio: false,
-              plugins: { legend: { display: false }, tooltip: { backgroundColor: "#111827", bodyColor: "#e5e7eb", borderColor: "#374151", borderWidth: 1, callbacks: { label: (ctx:any) => { const t = (wmTrends||[])[ctx.dataIndex]; return `${t.label}: ${Math.round(t.pct*100)}% (last ${t.last}, prev ${t.prev}, Δ ${t.delta})`; } } } },
-              scales: { x: { ticks: { color: "#a3a3a3" }, grid: { color: "#404040" } }, y: { ticks: { color: "#d4d4d4" }, grid: { display: false } } },
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  backgroundColor: "#111827",
+                  bodyColor: "#e5e7eb",
+                  borderColor: "#374151",
+                  borderWidth: 1,
+                  callbacks: {
+                    label: (ctx: any) => {
+                      const t = (wmTrends || [])[ctx.dataIndex];
+                      return `${t.label}: ${Math.round(t.pct * 100)}% (last ${t.last}, prev ${t.prev}, Δ ${t.delta})`;
+                    },
+                  },
+                },
+              },
+              scales: {
+                x: { ticks: { color: "#a3a3a3" }, grid: { color: "#404040" } },
+                y: { ticks: { color: "#d4d4d4" }, grid: { display: false } },
+              },
             }}
-          />
+          />,
         )}
       </div>
     </>

@@ -13,7 +13,7 @@ export interface Results {
   work_mode?: WorkMode; // AI-classified working mode when available
 }
 
-export type WorkMode = 'remote' | 'onsite' | 'hybrid' | 'unknown';
+export type WorkMode = "remote" | "onsite" | "hybrid" | "unknown";
 
 export interface ResponseData {
   count: number;
@@ -66,4 +66,4 @@ export type QueryParams = {
   maxDate: string[];
   activeToday: string[]; // presence of any value => filter to last_seen today
   hideOld: string[]; // presence of "1" => hide postings older than 90 days by date_posted
-}
+};

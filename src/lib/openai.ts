@@ -1,20 +1,20 @@
 // src/lib/openai.ts
-import 'server-only'
-import OpenAI from 'openai'
+import "server-only";
+import OpenAI from "openai";
 
 // Lazy singleton client
-let _client: OpenAI | null = null
+let _client: OpenAI | null = null;
 
 function getClient(): OpenAI {
-  if (_client) return _client
+  if (_client) return _client;
 
-  const apiKey = process.env.OPENAI_API_KEY
+  const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    throw new Error('Missing OPENAI_API_KEY in environment')
+    throw new Error("Missing OPENAI_API_KEY in environment");
   }
 
-  _client = new OpenAI({ apiKey })
-  return _client
+  _client = new OpenAI({ apiKey });
+  return _client;
 }
 
 // ---------------------------------------------
@@ -23,38 +23,35 @@ function getClient(): OpenAI {
 export async function getOpenAIResponse(
   prompt: string,
   opts?: {
-    model?: string
-    system?: string
-  }
+    model?: string;
+    system?: string;
+  },
 ): Promise<string> {
-  const client = getClient()
+  const client = getClient();
 
-  const {
-    model = 'gpt-4o-nano',
-    system = 'You are a concise assistant.',
-  } = opts ?? {}
+  const { model = "gpt-4o-nano", system = "You are a concise assistant." } = opts ?? {};
 
   try {
     const chat = await client.chat.completions.create({
       model,
       messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: prompt },
+        { role: "system", content: system },
+        { role: "user", content: prompt },
       ],
-    })
+    });
 
-    const text = chat.choices?.[0]?.message?.content?.trim() ?? ''
-    return text
+    const text = chat.choices?.[0]?.message?.content?.trim() ?? "";
+    return text;
   } catch (error: any) {
-    console.error('OpenAI API error:', error)
-    throw new Error(`OpenAI API error: ${error.message}`)
+    console.error("OpenAI API error:", error);
+    throw new Error(`OpenAI API error: ${error.message}`);
   }
 }
 
 // ---------------------------------------------
 // Specialized helper: Working Mode Classifier
 // ---------------------------------------------
-export type WorkingMode = 'remote' | 'onsite' | 'hybrid' | 'unknown'
+export type WorkingMode = "remote" | "onsite" | "hybrid" | "unknown";
 
 const SYSTEM_PROMPT = `
 You are a strict work-arrangement classifier.
@@ -74,39 +71,37 @@ Decision rules (English & Finnish signals):
 7) Default to unknown.
 
 Parse across all fields; normalize variants/misspellings. Output only the single word with no punctuation or extras.
-`.trim()
+`.trim();
 
 function truncate(s: string, max = 8000) {
-  return s.length > max ? s.slice(0, max) : s
+  return s.length > max ? s.slice(0, max) : s;
 }
 
-export async function getWorkingMode(
-  jobDescription: string,
-  jobTitle: string
-): Promise<WorkingMode> {
+export async function getWorkingMode(jobDescription: string, jobTitle: string): Promise<WorkingMode> {
   const prompt = [
-    'Classify the working mode. Answer with one word only: remote|onsite|hybrid|unknown.',    `Title: ${jobTitle ?? ''}`,
-    `Text: ${truncate(jobDescription ?? '')}`,
-  ].join('\n')
+    "Classify the working mode. Answer with one word only: remote|onsite|hybrid|unknown.",
+    `Title: ${jobTitle ?? ""}`,
+    `Text: ${truncate(jobDescription ?? "")}`,
+  ].join("\n");
 
   const response = await getOpenAIResponse(prompt, {
-    model: 'gpt-5-mini',
+    model: "gpt-5-mini",
     system: SYSTEM_PROMPT,
-  })
+  });
 
-  const cleaned = String(response).toLowerCase().trim()
+  const cleaned = String(response).toLowerCase().trim();
 
-  const validModes: WorkingMode[] = ['remote', 'onsite', 'hybrid', 'unknown']
+  const validModes: WorkingMode[] = ["remote", "onsite", "hybrid", "unknown"];
 
   // Prefer exact match
   if (validModes.includes(cleaned as WorkingMode)) {
-    return cleaned as WorkingMode
+    return cleaned as WorkingMode;
   }
 
   // Fallback: extract the first valid token if extra text slipped through
-  const match = cleaned.match(/\b(remote|onsite|hybrid|unknown)\b/)
-  console.log(`Classified work_mode: "${response}" -> "${match ? match[1] : 'unknown'}"`)
-  return (match ? (match[1] as WorkingMode) : 'unknown')
+  const match = cleaned.match(/\b(remote|onsite|hybrid|unknown)\b/);
+  console.log(`Classified work_mode: "${response}" -> "${match ? match[1] : "unknown"}"`);
+  return match ? (match[1] as WorkingMode) : "unknown";
 }
 
-export type { OpenAI }
+export type { OpenAI };

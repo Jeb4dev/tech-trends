@@ -1,6 +1,6 @@
-import { MetadataRoute } from 'next';
+import { MetadataRoute } from "next";
 
-const BASE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://koodaripula.fi').replace(/\/$/, '');
+const BASE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://koodaripula.fi").replace(/\/$/, "");
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
@@ -10,13 +10,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     {
       url: `${BASE_URL}/`,
       lastModified: now,
-      changeFrequency: 'daily',
+      changeFrequency: "daily",
       priority: 1.0,
     },
     {
       url: `${BASE_URL}/trends`,
       lastModified: now,
-      changeFrequency: 'hourly',
+      changeFrequency: "hourly",
       priority: 0.9,
     },
   ];
@@ -26,4 +26,3 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return staticEntries;
 }
-

@@ -24,7 +24,7 @@ ChartJS.register(
   ChartTooltip,
   ChartLegend,
   Filler,
-  TimeSeriesScale
+  TimeSeriesScale,
 );
 
 type TimeRange = "all" | "90d" | "30d" | "7d";
@@ -75,7 +75,7 @@ export default function LanguagesPopularityChart({
         borderColor: border,
         backgroundColor: border.replace(
           /^hsl\((\d+)\s+(\d+)%\s+(\d+)%\)$/, // to rgba-like via hsl -> hsla string
-          (m, h, s, l) => `hsl(${h} ${s}% ${l}% / 0.18)`
+          (m, h, s, l) => `hsl(${h} ${s}% ${l}% / 0.18)`,
         ),
         fill: true,
         tension: 0.35,
@@ -84,10 +84,7 @@ export default function LanguagesPopularityChart({
     });
   }, [selectedLangs, seriesByLang, filteredLabels]);
 
-  const chartData = useMemo(
-    () => ({ labels: filteredLabels, datasets }),
-    [filteredLabels, datasets]
-  );
+  const chartData = useMemo(() => ({ labels: filteredLabels, datasets }), [filteredLabels, datasets]);
 
   const options = useMemo(
     () => ({
@@ -122,7 +119,7 @@ export default function LanguagesPopularityChart({
         },
       },
     }),
-    []
+    [],
   );
 
   return (
@@ -135,7 +132,7 @@ export default function LanguagesPopularityChart({
         <div className="mt-2 sm:mt-0">
           <span className="text-xs text-gray-400 mr-2">Range</span>
           <div className="inline-flex items-center gap-1">
-            {(["90d","30d","7d","all"] as TimeRange[]).map(v => (
+            {(["90d", "30d", "7d", "all"] as TimeRange[]).map((v) => (
               <button
                 key={v}
                 type="button"

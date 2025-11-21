@@ -22,7 +22,7 @@ function matchAll(
   keywords: (string | string[])[],
   complicated: boolean = false,
   slice: number = 50,
-  title = false
+  title = false,
 ): Category[] {
   return keywords
     .map((keyword) => {
@@ -43,8 +43,8 @@ function matchAll(
       for (let i = 0; i < results.length; i++) {
         const opening = results[i];
         const text = title
-          ? (opening._headingLower || opening.heading.toLowerCase())
-          : (opening._descrLower || opening.descr.toLowerCase());
+          ? opening._headingLower || opening.heading.toLowerCase()
+          : opening._descrLower || opening.descr.toLowerCase();
         if (negativesLower.length && negativesLower.some((neg) => text.includes(neg))) continue;
         if (regex.test(text)) matched.push(opening);
       }
@@ -79,22 +79,11 @@ function groupResultsByProperty(results: Results[], property: keyof Results): Ca
         filteredOpenings: [],
       });
   });
-  return categories
-    .sort((a, b) => b.openings.length - a.openings.length)
-    .filter((c) => c.label);
+  return categories.sort((a, b) => b.openings.length - a.openings.length).filter((c) => c.label);
 }
 
 function classifySeniority(openings: Results[]): Category[] {
-  const order = [
-    "Intern",
-    "Junior",
-    "Mid-level",
-    "Senior",
-    "Lead",
-    "Director",
-    "Vice President",
-    "Chief",
-  ];
+  const order = ["Intern", "Junior", "Mid-level", "Senior", "Lead", "Director", "Vice President", "Chief"];
   const groups = seniority.map((g) => {
     const arr = Array.isArray(g) ? g : [g];
     const [label, ...syns] = arr;
@@ -110,8 +99,10 @@ function classifySeniority(openings: Results[]): Category[] {
   const roleAfterAmbiguous =
     /(lead|head|principal|staff|architect)\s+(engineer|developer|designer|artist|programmer|researcher|analyst|manager|product|security|game|data|ui|ux)/i;
   const teamLeadPattern = /(team|technical|tech)\s+lead/i;
-  const mentoringJuniorRegex = /(mentor(ing)?|coach(ing)?|guide(ing)?|support(ing)?|train(ing)?)\s+(our\s+)?junior(s)?/i;
-  const contextualHighLevelPhrase = /(report(s|ing)?\s+to|support(ing)?|assist(ing)?|work(ing)?\s+with|collaborat(e|ing)\s+with)/i;
+  const mentoringJuniorRegex =
+    /(mentor(ing)?|coach(ing)?|guide(ing)?|support(ing)?|train(ing)?)\s+(our\s+)?junior(s)?/i;
+  const contextualHighLevelPhrase =
+    /(report(s|ing)?\s+to|support(ing)?|assist(ing)?|work(ing)?\s+with|collaborat(e|ing)\s+with)/i;
   const contactSectionRegex = /(lisätietoja|yhteyshenkilö|contact|ota\s+yhteyttä|rekrytoija|rekrytointipäällikkö)/i;
 
   const resultsMap: Record<string, Category> = {};
@@ -234,7 +225,8 @@ function classifySeniority(openings: Results[]): Category[] {
       .filter(([, v]) => v > 0)
       .sort((a, b) => (b[1] !== a[1] ? b[1] - a[1] : order.indexOf(b[0]) - order.indexOf(a[0])))[0];
     if (best) {
-      if (!resultsMap[best[0]]) resultsMap[best[0]] = { label: best[0], active: false, openings: [], filteredOpenings: [] };
+      if (!resultsMap[best[0]])
+        resultsMap[best[0]] = { label: best[0], active: false, openings: [], filteredOpenings: [] };
       resultsMap[best[0]].openings.push(opening);
     }
   });

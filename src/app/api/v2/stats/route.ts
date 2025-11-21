@@ -1,10 +1,10 @@
-import { NextResponse } from 'next/server';
-import pgPromise from 'pg-promise';
+import { NextResponse } from "next/server";
+import pgPromise from "pg-promise";
 
 const pgp = pgPromise();
-const db = (globalThis as any).__db || pgp(process.env.POSTGRES_URL || '');
+const db = (globalThis as any).__db || pgp(process.env.POSTGRES_URL || "");
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 export const revalidate = 3600; // Cache CDN side for 1 hour
 
 export async function GET() {
@@ -25,13 +25,13 @@ export async function GET() {
       if (!categories[row.category]) categories[row.category] = [];
       categories[row.category].push({
         label: row.name,
-        count: parseInt(row.total, 10)
+        count: parseInt(row.total, 10),
       });
     });
 
     return NextResponse.json({ categories });
   } catch (e) {
     console.error(e);
-    return NextResponse.json({ error: 'Stats failed' }, { status: 500 });
+    return NextResponse.json({ error: "Stats failed" }, { status: 500 });
   }
 }

@@ -172,21 +172,11 @@ export default function AdvancedSearchPage() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold text-white mb-2">Advanced Job Search</h1>
-            <p className="text-gray-400 text-sm">
-              Live SQL query against structured tags.
-            </p>
+            <p className="text-gray-400 text-sm">Live SQL query against structured tags.</p>
           </div>
           <div className="flex flex-wrap gap-3 items-center">
-            <Toggle
-              label="Hide Deleted"
-              checked={hideDeleted}
-              onChange={setHideDeleted}
-            />
-            <Toggle
-              label="Hide 90+ Days Old"
-              checked={hideOld}
-              onChange={setHideOld}
-            />
+            <Toggle label="Hide Deleted" checked={hideDeleted} onChange={setHideDeleted} />
+            <Toggle label="Hide 90+ Days Old" checked={hideOld} onChange={setHideOld} />
             {activeFilterCount > 0 && (
               <button
                 onClick={clearAll}
@@ -210,7 +200,7 @@ export default function AdvancedSearchPage() {
               counts={facetCounts[cat.key] || {}}
               selected={filters[cat.key]}
               onToggle={(val) => toggleFilter(cat.key, val)}
-              limit={cat.key === 'workMode' || cat.key === 'seniority' ? undefined : 8}
+              limit={cat.key === "workMode" || cat.key === "seniority" ? undefined : 8}
             />
           ))}
         </aside>
@@ -223,7 +213,7 @@ export default function AdvancedSearchPage() {
             </h2>
             {loading && (
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-blue-500 rounded-full animate-ping"/>
+                <span className="w-2 h-2 bg-blue-500 rounded-full animate-ping" />
                 <span className="text-sm text-blue-400">Updating...</span>
               </div>
             )}
@@ -237,7 +227,9 @@ export default function AdvancedSearchPage() {
             {!loading && results.length === 0 && (
               <div className="flex flex-col items-center justify-center py-16 border-2 border-dashed border-gray-800 rounded-lg text-gray-500">
                 <p>No jobs found matching your criteria.</p>
-                <button onClick={clearAll} className="mt-4 text-blue-400 hover:underline text-sm">Clear all filters</button>
+                <button onClick={clearAll} className="mt-4 text-blue-400 hover:underline text-sm">
+                  Clear all filters
+                </button>
               </div>
             )}
           </div>
@@ -249,11 +241,16 @@ export default function AdvancedSearchPage() {
 
 // --- Subcomponents ---
 
-function Toggle({ label, checked, onChange }: { label: string, checked: boolean, onChange: (v: boolean) => void }) {
+function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <label className="flex items-center gap-2 cursor-pointer select-none bg-slate-800/50 border border-slate-700 px-3 py-1.5 rounded-full hover:border-slate-600 transition-colors">
       <div className="relative">
-        <input type="checkbox" className="sr-only peer" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+        <input
+          type="checkbox"
+          className="sr-only peer"
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+        />
         <div className="w-9 h-5 bg-slate-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600"></div>
       </div>
       <span className="text-xs font-medium text-gray-300">{label}</span>
@@ -267,7 +264,12 @@ function JobCard({ job }: { job: JobResult }) {
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
         <div className="flex-1 min-w-0">
           <h3 className="text-lg font-medium text-blue-300 group-hover:text-blue-200 truncate">
-            <a href={`https://duunitori.fi/tyopaikat/tyo/${job.slug}`} target="_blank" rel="noreferrer" className="focus:outline-none">
+            <a
+              href={`https://duunitori.fi/tyopaikat/tyo/${job.slug}`}
+              target="_blank"
+              rel="noreferrer"
+              className="focus:outline-none"
+            >
               <span className="absolute inset-0" aria-hidden="true" />
               {job.heading}
             </a>
@@ -284,24 +286,22 @@ function JobCard({ job }: { job: JobResult }) {
         </div>
 
         <div className="flex flex-col items-start sm:items-end gap-1 text-xs text-gray-500 shrink-0">
-          <time dateTime={job.date_posted}>{new Date(job.date_posted).toLocaleDateString('fi-FI')}</time>
+          <time dateTime={job.date_posted}>{new Date(job.date_posted).toLocaleDateString("fi-FI")}</time>
           {job.salary_min && (
             <span className="text-emerald-400 font-mono bg-emerald-900/20 px-1.5 py-0.5 rounded">
-              {job.salary_min} {job.salary_max && job.salary_max !== job.salary_min ? `- ${job.salary_max}` : '+'} €
+              {job.salary_min} {job.salary_max && job.salary_max !== job.salary_min ? `- ${job.salary_max}` : "+"} €
             </span>
           )}
         </div>
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2 relative z-10 pointer-events-none">
-        {job.work_mode && job.work_mode !== 'unknown' && (
-          <Badge color={job.work_mode === 'remote' ? 'green' : job.work_mode === 'hybrid' ? 'amber' : 'blue'}>
+        {job.work_mode && job.work_mode !== "unknown" && (
+          <Badge color={job.work_mode === "remote" ? "green" : job.work_mode === "hybrid" ? "amber" : "blue"}>
             {job.work_mode}
           </Badge>
         )}
-        {job.seniority && (
-          <Badge color="purple">{job.seniority}</Badge>
-        )}
+        {job.seniority && <Badge color="purple">{job.seniority}</Badge>}
       </div>
     </div>
   );
@@ -339,21 +339,30 @@ function FilterSection({ title, options, counts, selected, onToggle, limit }: Fi
           const count = counts[opt] || 0;
           return (
             <label key={opt} className="flex items-start gap-3 cursor-pointer group select-none w-full">
-              <div className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center transition-colors shrink-0 ${isActive ? "bg-green-600 border-green-600" : "border-gray-600 bg-gray-900 group-hover:border-gray-500"}`}>
+              <div
+                className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center transition-colors shrink-0 ${
+                  isActive ? "bg-green-600 border-green-600" : "border-gray-600 bg-gray-900 group-hover:border-gray-500"
+                }`}
+              >
                 {isActive && (
-                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <svg
+                    className="w-3 h-3 text-white"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={3}
+                  >
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                 )}
               </div>
-              <input
-                type="checkbox"
-                className="hidden"
-                checked={isActive}
-                onChange={() => onToggle(opt)}
-              />
+              <input type="checkbox" className="hidden" checked={isActive} onChange={() => onToggle(opt)} />
               <div className="flex justify-between w-full text-sm leading-tight">
-                <span className={`transition-colors ${isActive ? "text-white font-medium" : "text-gray-400 group-hover:text-gray-300"}`}>
+                <span
+                  className={`transition-colors ${
+                    isActive ? "text-white font-medium" : "text-gray-400 group-hover:text-gray-300"
+                  }`}
+                >
                   {opt}
                 </span>
                 <span className="text-gray-600 text-xs">{count}</span>
@@ -370,12 +379,16 @@ function FilterSection({ title, options, counts, selected, onToggle, limit }: Fi
         >
           {expanded ? (
             <>
-              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+              </svg>
               Show Less
             </>
           ) : (
             <>
-              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
               Show All ({options.length})
             </>
           )}
@@ -387,7 +400,7 @@ function FilterSection({ title, options, counts, selected, onToggle, limit }: Fi
 
 interface BadgeProps {
   children: React.ReactNode;
-  color: 'purple' | 'amber' | 'blue' | 'green';
+  color: "purple" | "amber" | "blue" | "green";
 }
 
 function Badge({ children, color }: BadgeProps) {
@@ -398,7 +411,9 @@ function Badge({ children, color }: BadgeProps) {
     green: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20",
   };
   return (
-    <span className={`px-2.5 py-0.5 rounded-md text-[11px] font-medium border uppercase tracking-wide ${colors[color]}`}>
+    <span
+      className={`px-2.5 py-0.5 rounded-md text-[11px] font-medium border uppercase tracking-wide ${colors[color]}`}
+    >
       {children}
     </span>
   );

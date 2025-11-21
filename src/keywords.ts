@@ -543,7 +543,17 @@ export const positions = [
   ["Teacher / Professor", "Teacher", "Opettaja", "Professori"],
   ["Researcher", "Tutkija"],
   ["Salesman", "Myynti", "Myyjä"],
-  ["Technical Support", "IT Support", "tukihenkilö", "Tekninen tuki", "Support Specialist", "Helpdesk", "it tuki", "it-tuki", "teknisen tuen"]
+  [
+    "Technical Support",
+    "IT Support",
+    "tukihenkilö",
+    "Tekninen tuki",
+    "Support Specialist",
+    "Helpdesk",
+    "it tuki",
+    "it-tuki",
+    "teknisen tuen",
+  ],
 ];
 
 export const seniority = [
@@ -576,7 +586,7 @@ export const seniority = [
     "Tiedonhallintajohtaja",
     "Tietoturvajohtaja",
     "Verkställande direktör",
-    "!toimitusjohtajalle"
+    "!toimitusjohtajalle",
   ],
 ];
 

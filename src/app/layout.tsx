@@ -10,7 +10,8 @@ export const metadata: Metadata = {
     default: "Tech Trends | Koodaripula",
     template: "%s | Koodaripula Tech Trends",
   },
-  description: "Live Finnish tech job market trends: languages, frameworks, cloud, DevOps, cyber security, work modes (remote / hybrid / on-site) and more.",
+  description:
+    "Live Finnish tech job market trends: languages, frameworks, cloud, DevOps, cyber security, work modes (remote / hybrid / on-site) and more.",
   applicationName: "Koodaripula Tech Trends",
   keywords: [
     "Finland jobs",

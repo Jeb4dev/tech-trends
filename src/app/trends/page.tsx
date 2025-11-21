@@ -36,7 +36,7 @@ function TrendsPageInner() {
     softSkills: params.getAll("softSkills").map((q) => q.toLowerCase()),
     positions: params.getAll("positions").map((q) => q.toLowerCase()),
     seniority: params.getAll("seniority").map((q) => q.toLowerCase()),
-    workMode: params.getAll("workMode").map(q => q.toLowerCase()),
+    workMode: params.getAll("workMode").map((q) => q.toLowerCase()),
     companies: params.getAll("companies").map((q) => q.toLowerCase()),
     locations: params.getAll("locations").map((q) => q.toLowerCase()),
     cities: params.getAll("cities").map((q) => q.toLowerCase()),
@@ -147,35 +147,42 @@ function TrendsPageInner() {
       openings: c.openings,
       filteredOpenings: c.filteredOpenings,
       active: false,
-      _baseCount: c._baseCount // Preserve _baseCount through cloning
+      _baseCount: c._baseCount, // Preserve _baseCount through cloning
     });
 
-    type CatProcess = { list: Category[] | undefined; selected: string[] | undefined; key: keyof Data | 'companies' | 'locations' };
+    type CatProcess = {
+      list: Category[] | undefined;
+      selected: string[] | undefined;
+      key: keyof Data | "companies" | "locations";
+    };
     const catConfigs: CatProcess[] = [
-      { list: categories.languages, selected: queryParams.languages, key: 'languages' },
-      { list: categories.frameworks, selected: queryParams.frameworks, key: 'frameworks' },
-      { list: categories.databases, selected: queryParams.databases, key: 'databases' },
-      { list: categories.cloud, selected: queryParams.cloud, key: 'cloud' },
-      { list: categories.devops, selected: queryParams.devops, key: 'devops' },
-      { list: categories.dataScience, selected: queryParams.dataScience, key: 'dataScience' },
-      { list: categories.cyberSecurity, selected: queryParams.cyberSecurity, key: 'cyberSecurity' },
-      { list: categories.softSkills, selected: queryParams.softSkills, key: 'softSkills' },
-      { list: categories.positions, selected: queryParams.positions, key: 'positions' },
-      { list: categories.seniority, selected: queryParams.seniority, key: 'seniority' },
-      { list: categories.workMode, selected: queryParams.workMode, key: 'workMode' },
-      { list: categories.cities, selected: queryParams.cities, key: 'cities' },
-      { list: categories.salary, selected: queryParams.salary, key: 'salary' },
-      { list: companies, selected: queryParams.companies, key: 'companies' },
-      { list: locations, selected: queryParams.locations, key: 'locations' },
+      { list: categories.languages, selected: queryParams.languages, key: "languages" },
+      { list: categories.frameworks, selected: queryParams.frameworks, key: "frameworks" },
+      { list: categories.databases, selected: queryParams.databases, key: "databases" },
+      { list: categories.cloud, selected: queryParams.cloud, key: "cloud" },
+      { list: categories.devops, selected: queryParams.devops, key: "devops" },
+      { list: categories.dataScience, selected: queryParams.dataScience, key: "dataScience" },
+      { list: categories.cyberSecurity, selected: queryParams.cyberSecurity, key: "cyberSecurity" },
+      { list: categories.softSkills, selected: queryParams.softSkills, key: "softSkills" },
+      { list: categories.positions, selected: queryParams.positions, key: "positions" },
+      { list: categories.seniority, selected: queryParams.seniority, key: "seniority" },
+      { list: categories.workMode, selected: queryParams.workMode, key: "workMode" },
+      { list: categories.cities, selected: queryParams.cities, key: "cities" },
+      { list: categories.salary, selected: queryParams.salary, key: "salary" },
+      { list: companies, selected: queryParams.companies, key: "companies" },
+      { list: locations, selected: queryParams.locations, key: "locations" },
     ];
 
     const processed: Record<string, Category[]> = {};
     const activeSets: Results[][] = [];
 
     for (const cfg of catConfigs) {
-      if (!cfg.list) { processed[cfg.key] = []; continue; }
-      const selectedLower = (cfg.selected || []).map(s => s.toLowerCase());
-      processed[cfg.key] = cfg.list.map(item => {
+      if (!cfg.list) {
+        processed[cfg.key] = [];
+        continue;
+      }
+      const selectedLower = (cfg.selected || []).map((s) => s.toLowerCase());
+      processed[cfg.key] = cfg.list.map((item) => {
         const active = selectedLower.includes(item.label.toLowerCase());
         if (active) activeSets.push(item.openings);
         return { ...clone(item), active };
@@ -184,11 +191,11 @@ function TrendsPageInner() {
 
     function intersectArrays(arrays: Results[][]): Results[] {
       if (!arrays.length) return data.results || [];
-      arrays.sort((a,b)=> a.length - b.length);
+      arrays.sort((a, b) => a.length - b.length);
       let result = arrays[0];
-      for (let i=1;i<arrays.length;i++) {
+      for (let i = 1; i < arrays.length; i++) {
         const set = new Set(arrays[i]);
-        result = result.filter(o => set.has(o));
+        result = result.filter((o) => set.has(o));
         if (!result.length) break;
       }
       return result;
@@ -198,13 +205,15 @@ function TrendsPageInner() {
 
     if (queryParams.activeToday && queryParams.activeToday.length) {
       const today = new Date();
-      const y = today.getFullYear(), m = today.getMonth(), d = today.getDate();
+      const y = today.getFullYear(),
+        m = today.getMonth(),
+        d = today.getDate();
       const isSameLocalDate = (iso?: string) => {
         if (!iso) return false;
         const dt = new Date(iso);
         return dt.getFullYear() === y && dt.getMonth() === m && dt.getDate() === d;
       };
-      openings = openings.filter(o => isSameLocalDate(o.last_seen_at));
+      openings = openings.filter((o) => isSameLocalDate(o.last_seen_at));
     }
 
     if (queryParams.hideOld && queryParams.hideOld.includes("1")) {
@@ -226,13 +235,18 @@ function TrendsPageInner() {
 
     const openingsSet = openings === data.results ? null : new Set(openings);
 
-    const attachFiltered = (list: Category[]) => list.map(item => ({
-      ...item,
-      // When jobs not loaded (data.results empty), keep filteredOpenings empty
-      // so Skills component uses _baseCount instead
-      filteredOpenings: !data.results.length ? [] : (openingsSet ? item.openings.filter(o => openingsSet.has(o)) : item.openings),
-      _baseCount: item._baseCount, // Preserve _baseCount
-    }));
+    const attachFiltered = (list: Category[]) =>
+      list.map((item) => ({
+        ...item,
+        // When jobs not loaded (data.results empty), keep filteredOpenings empty
+        // so Skills component uses _baseCount instead
+        filteredOpenings: !data.results.length
+          ? []
+          : openingsSet
+          ? item.openings.filter((o) => openingsSet.has(o))
+          : item.openings,
+        _baseCount: item._baseCount, // Preserve _baseCount
+      }));
 
     const filteredCategories: Data = {
       languages: attachFiltered(processed.languages),
@@ -252,13 +266,19 @@ function TrendsPageInner() {
 
     const filteredCompanies = attachFiltered(processed.companies);
 
-    return { filteredData: openings, filteredCategories, filteredCompanies, filteredLocations: attachFiltered(processed.locations) };
+    return {
+      filteredData: openings,
+      filteredCategories,
+      filteredCompanies,
+      filteredLocations: attachFiltered(processed.locations),
+    };
   }, [baseCategories, queryParams, data.results]);
 
   const updateFilter = useCallback((filter: string, value: string) => {
     const url = new URL(window.location.href);
     const params = new URLSearchParams(url.search);
-    const isSingleValue = filter === "minDate" || filter === "maxDate" || filter === "activeToday" || filter === "hideOld";
+    const isSingleValue =
+      filter === "minDate" || filter === "maxDate" || filter === "activeToday" || filter === "hideOld";
     if (isSingleValue) {
       if (filter === "activeToday" || filter === "hideOld") {
         if (params.has(filter)) params.delete(filter);
@@ -294,7 +314,9 @@ function TrendsPageInner() {
       <div className={"max-w-7xl mx-auto px-3 md:px-6 lg:px-8"}>
         <div>
           <div className={"flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between pt-4"}>
-            <h1 className="text-2xl md:text-3xl font-semibold">Job Listings <span className="ml-2 text-sm font-normal text-gray-500 animate-pulse">(loading)</span></h1>
+            <h1 className="text-2xl md:text-3xl font-semibold">
+              Job Listings <span className="ml-2 text-sm font-normal text-gray-500 animate-pulse">(loading)</span>
+            </h1>
             <div className="flex flex-col sm:items-end gap-1">
               <div className="h-3 w-64 md:w-80 rounded bg-gray-700/40 animate-pulse" />
               <div className="h-3 w-40 rounded bg-gray-700/40 animate-pulse" />
@@ -303,19 +325,58 @@ function TrendsPageInner() {
           </div>
 
           <div className={"mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-6"}>
-            <div><h2 className="text-sm font-semibold mb-1">Languages</h2><Skills skills={null} /></div>
-            <div><h2 className="text-sm font-semibold mb-1">Frameworks</h2><Skills skills={null} /></div>
-            <div><h2 className="text-sm font-semibold mb-1">Databases</h2><Skills skills={null} /></div>
-            <div><h2 className="text-sm font-semibold mb-1">Cloud</h2><Skills skills={null} /></div>
-            <div><h2 className="text-sm font-semibold mb-1">DevOps</h2><Skills skills={null} /></div>
-            <div><h2 className="text-sm font-semibold mb-1">Cyber Security</h2><Skills skills={null} /></div>
-            <div><h2 className="text-sm font-semibold mb-1">Data Science</h2><Skills skills={null} /></div>
-            <div><h2 className="text-sm font-semibold mb-1">Role</h2><Skills skills={null} /></div>
-            <div><h2 className="text-sm font-semibold mb-1">Seniority</h2><Skills skills={null} /></div>
-            <div><h2 className="text-sm font-semibold mb-1">Soft Skills</h2><Skills skills={null} /></div>
-            <div><h2 className="text-sm font-semibold mb-1">Companies</h2><Skills skills={null} /></div>
-            <div><h2 className="text-sm font-semibold mb-1">Location</h2><Skills skills={null} /></div>
-            <div><h2 className="text-sm font-semibold mb-1">Work Mode</h2><Skills skills={null} /></div>
+            <div>
+              <h2 className="text-sm font-semibold mb-1">Languages</h2>
+              <Skills skills={null} />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold mb-1">Frameworks</h2>
+              <Skills skills={null} />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold mb-1">Databases</h2>
+              <Skills skills={null} />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold mb-1">Cloud</h2>
+              <Skills skills={null} />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold mb-1">DevOps</h2>
+              <Skills skills={null} />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold mb-1">Cyber Security</h2>
+              <Skills skills={null} />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold mb-1">Data Science</h2>
+              <Skills skills={null} />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold mb-1">Role</h2>
+              <Skills skills={null} />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold mb-1">Seniority</h2>
+              <Skills skills={null} />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold mb-1">Soft Skills</h2>
+              <Skills skills={null} />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold mb-1">Companies</h2>
+              <Skills skills={null} />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold mb-1">Location</h2>
+              <Skills skills={null} />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold mb-1">Work Mode</h2>
+              <Skills skills={null} />
+            </div>
           </div>
         </div>
         <div className="mt-10 space-y-4">
@@ -364,15 +425,20 @@ function TrendsPageInner() {
       </p>
     );
 
-  const activeTodayOn = (queryParams.activeToday && queryParams.activeToday.includes("1"));
-  const hideOldOn = (queryParams.hideOld && queryParams.hideOld.includes("1"));
+  const activeTodayOn = queryParams.activeToday && queryParams.activeToday.includes("1");
+  const hideOldOn = queryParams.hideOld && queryParams.hideOld.includes("1");
 
   return (
     <div className={"max-w-7xl mx-auto px-1 md:px-6 lg:px-8"}>
       <div>
         <div className={"flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between pt-4"}>
           <h1 className="text-2xl md:text-3xl font-semibold">
-            Job Listings {isLoadingJobs ? <span className="ml-2 text-sm font-normal text-gray-500 animate-pulse">(loading)</span> : `(${filteredData.length})`}
+            Job Listings{" "}
+            {isLoadingJobs ? (
+              <span className="ml-2 text-sm font-normal text-gray-500 animate-pulse">(loading)</span>
+            ) : (
+              `(${filteredData.length})`
+            )}
           </h1>
           <h3 className={"text-[11px] xs:text-xs sm:text-sm md:text-base lg:text-lg line-clamp-4 text-gray-400"}>
             Source duunitori.fi/api/v1/jobentries?search=Tieto- ja tietoliikennetekniikka (ala)
@@ -388,7 +454,7 @@ function TrendsPageInner() {
                   type="checkbox"
                   className="sr-only peer"
                   checked={activeTodayOn}
-                  onChange={() => updateFilter('activeToday', '1')}
+                  onChange={() => updateFilter("activeToday", "1")}
                 />
                 <div className="w-10 h-5 bg-gray-600 peer-focus:ring-2 peer-focus:ring-green-400 rounded-full peer peer-checked:bg-green-500 transition-all duration-300"></div>
                 <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform duration-300 peer-checked:translate-x-5"></div>
@@ -412,66 +478,154 @@ function TrendsPageInner() {
               </div>
               Hide 90+ days old
             </label>
-            <h3 className="text-sm text-gray-300" suppressHydrationWarning>Date {today}</h3>
-            <Link href="/trends/languages" className="text-sm text-green-400 hover:underline">Languages popularity →</Link>
+            <h3 className="text-sm text-gray-300" suppressHydrationWarning>
+              Date {today}
+            </h3>
+            <Link href="/trends/languages" className="text-sm text-green-400 hover:underline">
+              Languages popularity →
+            </Link>
           </div>
         </div>
         <div className={"mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-6"}>
           <div>
             <h2 className="text-sm font-semibold mb-1">Languages</h2>
-            <Skills skills={filteredCategories.languages} category={"languages"} setLoading={setLoading} updateFilter={updateFilter} jobsLoaded={!isLoadingJobs} />
+            <Skills
+              skills={filteredCategories.languages}
+              category={"languages"}
+              setLoading={setLoading}
+              updateFilter={updateFilter}
+              jobsLoaded={!isLoadingJobs}
+            />
           </div>
           <div>
             <h2 className="text-sm font-semibold mb-1">Frameworks</h2>
-            <Skills skills={filteredCategories.frameworks} category={"frameworks"} setLoading={setLoading} updateFilter={updateFilter} jobsLoaded={!isLoadingJobs} />
+            <Skills
+              skills={filteredCategories.frameworks}
+              category={"frameworks"}
+              setLoading={setLoading}
+              updateFilter={updateFilter}
+              jobsLoaded={!isLoadingJobs}
+            />
           </div>
           <div>
             <h2 className="text-sm font-semibold mb-1">Databases</h2>
-            <Skills skills={filteredCategories.databases} category={"databases"} setLoading={setLoading} updateFilter={updateFilter} jobsLoaded={!isLoadingJobs} />
+            <Skills
+              skills={filteredCategories.databases}
+              category={"databases"}
+              setLoading={setLoading}
+              updateFilter={updateFilter}
+              jobsLoaded={!isLoadingJobs}
+            />
           </div>
           <div>
             <h2 className="text-sm font-semibold mb-1">Cloud</h2>
-            <Skills skills={filteredCategories.cloud} category={"cloud"} setLoading={setLoading} updateFilter={updateFilter} jobsLoaded={!isLoadingJobs} />
+            <Skills
+              skills={filteredCategories.cloud}
+              category={"cloud"}
+              setLoading={setLoading}
+              updateFilter={updateFilter}
+              jobsLoaded={!isLoadingJobs}
+            />
           </div>
           <div>
             <h2 className="text-sm font-semibold mb-1">DevOps</h2>
-            <Skills skills={filteredCategories.devops} category={"devops"} setLoading={setLoading} updateFilter={updateFilter} jobsLoaded={!isLoadingJobs} />
+            <Skills
+              skills={filteredCategories.devops}
+              category={"devops"}
+              setLoading={setLoading}
+              updateFilter={updateFilter}
+              jobsLoaded={!isLoadingJobs}
+            />
           </div>
           <div>
             <h2 className="text-sm font-semibold mb-1">Cyber Security</h2>
-            <Skills skills={filteredCategories.cyberSecurity} category={"cyberSecurity"} setLoading={setLoading} updateFilter={updateFilter} jobsLoaded={!isLoadingJobs} />
+            <Skills
+              skills={filteredCategories.cyberSecurity}
+              category={"cyberSecurity"}
+              setLoading={setLoading}
+              updateFilter={updateFilter}
+              jobsLoaded={!isLoadingJobs}
+            />
           </div>
           <div>
             <h2 className="text-sm font-semibold mb-1">Data Science</h2>
-            <Skills skills={filteredCategories.dataScience} category={"dataScience"} setLoading={setLoading} updateFilter={updateFilter} jobsLoaded={!isLoadingJobs} />
+            <Skills
+              skills={filteredCategories.dataScience}
+              category={"dataScience"}
+              setLoading={setLoading}
+              updateFilter={updateFilter}
+              jobsLoaded={!isLoadingJobs}
+            />
           </div>
           <div>
             <h2 className="text-sm font-semibold mb-1">Role</h2>
-            <Skills skills={filteredCategories.positions} category={"positions"} setLoading={setLoading} updateFilter={updateFilter} jobsLoaded={!isLoadingJobs} />
+            <Skills
+              skills={filteredCategories.positions}
+              category={"positions"}
+              setLoading={setLoading}
+              updateFilter={updateFilter}
+              jobsLoaded={!isLoadingJobs}
+            />
           </div>
           <div>
             <h2 className="text-sm font-semibold mb-1">Seniority</h2>
-            <Skills skills={filteredCategories.seniority} category={"seniority"} setLoading={setLoading} updateFilter={updateFilter} jobsLoaded={!isLoadingJobs} />
+            <Skills
+              skills={filteredCategories.seniority}
+              category={"seniority"}
+              setLoading={setLoading}
+              updateFilter={updateFilter}
+              jobsLoaded={!isLoadingJobs}
+            />
           </div>
           <div>
             <h2 className="text-sm font-semibold mb-1">Soft Skills</h2>
-            <Skills skills={filteredCategories.softSkills} category={"softSkills"} setLoading={setLoading} updateFilter={updateFilter} jobsLoaded={!isLoadingJobs} />
+            <Skills
+              skills={filteredCategories.softSkills}
+              category={"softSkills"}
+              setLoading={setLoading}
+              updateFilter={updateFilter}
+              jobsLoaded={!isLoadingJobs}
+            />
           </div>
           <div>
             <h2 className="text-sm font-semibold mb-1">Companies</h2>
-            <Skills skills={filteredCompanies} category={"companies"} setLoading={setLoading} updateFilter={updateFilter} jobsLoaded={!isLoadingJobs} />
+            <Skills
+              skills={filteredCompanies}
+              category={"companies"}
+              setLoading={setLoading}
+              updateFilter={updateFilter}
+              jobsLoaded={!isLoadingJobs}
+            />
           </div>
           <div>
             <h2 className="text-sm font-semibold mb-1">Location</h2>
-            <Skills skills={filteredCategories.cities || null} category={"cities"} setLoading={setLoading} updateFilter={updateFilter} jobsLoaded={!isLoadingJobs} />
+            <Skills
+              skills={filteredCategories.cities || null}
+              category={"cities"}
+              setLoading={setLoading}
+              updateFilter={updateFilter}
+              jobsLoaded={!isLoadingJobs}
+            />
           </div>
           <div>
             <h2 className="text-sm font-semibold mb-1">Work Mode</h2>
-            <Skills skills={filteredCategories.workMode || null} category={"workMode"} setLoading={setLoading} updateFilter={updateFilter} jobsLoaded={!isLoadingJobs} />
+            <Skills
+              skills={filteredCategories.workMode || null}
+              category={"workMode"}
+              setLoading={setLoading}
+              updateFilter={updateFilter}
+              jobsLoaded={!isLoadingJobs}
+            />
           </div>
           <div>
             <h2 className="text-sm font-semibold mb-1">Salary</h2>
-            <Skills skills={filteredCategories.salary || null} category={"salary"} setLoading={setLoading} updateFilter={updateFilter} jobsLoaded={!isLoadingJobs} />
+            <Skills
+              skills={filteredCategories.salary || null}
+              category={"salary"}
+              setLoading={setLoading}
+              updateFilter={updateFilter}
+              jobsLoaded={!isLoadingJobs}
+            />
           </div>
         </div>
       </div>
@@ -509,7 +663,9 @@ function TrendsPageInner() {
               onClick={() => setShowMoreGraphs((v) => !v)}
               className={
                 "px-3 py-1.5 text-sm rounded-md border transition-colors " +
-                (showMoreGraphs ? "border-green-500 bg-green-500/15 text-green-300 hover:bg-green-500/25" : "border-gray-600 text-gray-200 hover:bg-gray-800/60")
+                (showMoreGraphs
+                  ? "border-green-500 bg-green-500/15 text-green-300 hover:bg-green-500/25"
+                  : "border-gray-600 text-gray-200 hover:bg-gray-800/60")
               }
               aria-expanded={showMoreGraphs}
             >
@@ -529,10 +685,10 @@ function TrendsPageInner() {
         <div className={"text-gray-400 max-w-xl"}>
           <h3>How does this work?</h3>
           <p className={"py-2"}>
-            The next.js app fetches data from {" "}
+            The next.js app fetches data from{" "}
             <a href={"https://duunitori.fi/api/v1/jobentries?ohjelmointi+ja+ohjelmistokehitys+(ala)"}>duunitori.fi</a>{" "}
             public API and tries to match selected keywords from the job listing descriptions. Matching is done with
-            regex. Source code available at {" "}
+            regex. Source code available at{" "}
             <a href={"https://github.com/Jeb4dev/tech-trends"}>github.com/Jeb4dev/tech-trends</a>
           </p>
         </div>

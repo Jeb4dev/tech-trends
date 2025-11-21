@@ -39,7 +39,9 @@ export default function LanguagesPopularityPage() {
       }
     }
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const baseCategories = useMemo(() => {
@@ -98,7 +100,9 @@ export default function LanguagesPopularityPage() {
     <div className="max-w-7xl mx-auto px-3 md:px-6 lg:px-8 py-4">
       <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
         <h1 className="text-2xl md:text-3xl font-semibold">Programming languages popularity</h1>
-        <Link href="/trends" className="text-sm text-green-400 hover:underline">Back to trends</Link>
+        <Link href="/trends" className="text-sm text-green-400 hover:underline">
+          Back to trends
+        </Link>
       </div>
 
       <div className="mt-4">

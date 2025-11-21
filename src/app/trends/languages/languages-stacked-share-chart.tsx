@@ -24,7 +24,7 @@ ChartJS.register(
   ChartTooltip,
   ChartLegend,
   Filler,
-  TimeSeriesScale
+  TimeSeriesScale,
 );
 
 type TimeRange = "all" | "90d" | "30d" | "7d";
@@ -66,7 +66,10 @@ export default function LanguagesStackedShareChart({
   const stackedDatasets = useMemo(() => {
     // build share per day: count(lang)/sum(all selected)
     const countsByLang = new Map(
-      Array.from(seriesByLang.entries()).map(([label, series]) => [label, new Map(series.map((r) => [r.date, r.count]))])
+      Array.from(seriesByLang.entries()).map(([label, series]) => [
+        label,
+        new Map(series.map((r) => [r.date, r.count])),
+      ]),
     );
     const totalsByDate = new Map<string, number>();
     for (const d of filteredLabels) {
@@ -83,54 +86,68 @@ export default function LanguagesStackedShareChart({
         data,
         borderColor: color,
         backgroundColor: color.replace(
-          /^hsl\((\d+)\s+(\d+)%\s+(\d+)%\)$/, (m, h, s, l) => `hsl(${h} ${s}% ${l}% / 0.18)`
+          /^hsl\((\d+)\s+(\d+)%\s+(\d+)%\)$/,
+          (m, h, s, l) => `hsl(${h} ${s}% ${l}% / 0.18)`,
         ),
         fill: true,
         tension: 0.35,
         pointRadius: 0,
-        stack: 'share',
+        stack: "share",
       };
     });
   }, [selectedLangs, seriesByLang, filteredLabels]);
 
-  const chartData = useMemo(() => ({ labels: filteredLabels, datasets: stackedDatasets }), [filteredLabels, stackedDatasets]);
+  const chartData = useMemo(
+    () => ({ labels: filteredLabels, datasets: stackedDatasets }),
+    [filteredLabels, stackedDatasets],
+  );
 
-  const options = useMemo(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    interaction: { intersect: false, mode: "index" as const },
-    plugins: {
-      legend: { display: true, labels: { color: "#d4d4d4" } },
-      tooltip: {
-        callbacks: {
-          label: (ctx: any) => `${ctx.dataset.label}: ${ctx.formattedValue}%`,
+  const options = useMemo(
+    () => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { intersect: false, mode: "index" as const },
+      plugins: {
+        legend: { display: true, labels: { color: "#d4d4d4" } },
+        tooltip: {
+          callbacks: {
+            label: (ctx: any) => `${ctx.dataset.label}: ${ctx.formattedValue}%`,
+          },
+          enabled: true,
+          backgroundColor: "#111827",
+          titleColor: "#e5e7eb",
+          bodyColor: "#e5e7eb",
+          borderColor: "#374151",
+          borderWidth: 1,
+          displayColors: true,
         },
-        enabled: true,
-        backgroundColor: "#111827",
-        titleColor: "#e5e7eb",
-        bodyColor: "#e5e7eb",
-        borderColor: "#374151",
-        borderWidth: 1,
-        displayColors: true,
       },
-    },
-    scales: {
-      x: { ticks: { color: "#a3a3a3", maxRotation: 0, autoSkipPadding: 12 }, grid: { display: false } },
-      y: { beginAtZero: true, max: 100, ticks: { color: "#a3a3a3", callback: (v: any) => v + '%' }, grid: { color: "#404040" } },
-    },
-  }), []);
+      scales: {
+        x: { ticks: { color: "#a3a3a3", maxRotation: 0, autoSkipPadding: 12 }, grid: { display: false } },
+        y: {
+          beginAtZero: true,
+          max: 100,
+          ticks: { color: "#a3a3a3", callback: (v: any) => v + "%" },
+          grid: { color: "#404040" },
+        },
+      },
+    }),
+    [],
+  );
 
   return (
     <div className="w-full rounded-lg border border-gray-700 bg-zinc-900/40 shadow-sm">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-b border-gray-700/70">
         <div className="grid gap-1">
           <h3 className="text-base md:text-lg font-semibold">Language share over time</h3>
-          <p className="text-xs md:text-sm text-gray-400">Percentage share of daily active postings among selected languages</p>
+          <p className="text-xs md:text-sm text-gray-400">
+            Percentage share of daily active postings among selected languages
+          </p>
         </div>
         <div className="mt-2 sm:mt-0">
           <span className="text-xs text-gray-400 mr-2">Range</span>
           <div className="inline-flex items-center gap-1">
-            {(["90d","30d","7d","all"] as TimeRange[]).map(v => (
+            {(["90d", "30d", "7d", "all"] as TimeRange[]).map((v) => (
               <button
                 key={v}
                 type="button"
@@ -157,4 +174,3 @@ export default function LanguagesStackedShareChart({
     </div>
   );
 }
-

@@ -26,7 +26,7 @@ ChartJS.register(
   ChartTooltip,
   ChartLegend,
   Filler,
-  TimeSeriesScale
+  TimeSeriesScale,
 );
 
 function toDateOnly(str: string | undefined | null): string | null {
@@ -161,58 +161,69 @@ export function ActiveOpeningsAreaChart({ openings }: { openings: Results[] }) {
     };
   }, [filtered]);
 
-  const options = useMemo(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    interaction: { intersect: false, mode: "index" as const },
-    plugins: {
-      legend: { display: true, labels: { color: "#d4d4d4" } },
-      tooltip: {
-        enabled: true,
-        backgroundColor: "#111827",
-        titleColor: "#e5e7eb",
-        bodyColor: "#e5e7eb",
-        borderColor: "#374151",
-        borderWidth: 1,
-        displayColors: false,
-        callbacks: {
-          title: (items: any[]) => items[0] && new Date(items[0].label + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-        },
-      },
-    },
-    scales: {
-      x: {
-        ticks: {
-          color: "#a3a3a3",
-          maxRotation: 0,
-          autoSkipPadding: 12,
-          callback: (val: any, idx: number) => {
-            const label = (chartData.labels as string[])[idx];
-            const d = new Date(label + "T00:00:00");
-            return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const options = useMemo(
+    () => ({
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { intersect: false, mode: "index" as const },
+      plugins: {
+        legend: { display: true, labels: { color: "#d4d4d4" } },
+        tooltip: {
+          enabled: true,
+          backgroundColor: "#111827",
+          titleColor: "#e5e7eb",
+          bodyColor: "#e5e7eb",
+          borderColor: "#374151",
+          borderWidth: 1,
+          displayColors: false,
+          callbacks: {
+            title: (items: any[]) =>
+              items[0] &&
+              new Date(items[0].label + "T00:00:00").toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              }),
           },
         },
-        grid: { display: false },
       },
-      y: {
-        beginAtZero: true,
-        ticks: { color: "#a3a3a3" },
-        grid: { color: "#404040" },
+      scales: {
+        x: {
+          ticks: {
+            color: "#a3a3a3",
+            maxRotation: 0,
+            autoSkipPadding: 12,
+            callback: (val: any, idx: number) => {
+              const label = (chartData.labels as string[])[idx];
+              const d = new Date(label + "T00:00:00");
+              return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+            },
+          },
+          grid: { display: false },
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { color: "#a3a3a3" },
+          grid: { color: "#404040" },
+        },
       },
-    },
-  }), [chartData.labels]);
+    }),
+    [chartData.labels],
+  );
 
   return (
     <div className="w-full rounded-lg border border-gray-700 bg-zinc-900/40 shadow-sm">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-b border-gray-700/70">
         <div className="grid gap-1">
           <h3 className="text-base md:text-lg font-semibold">Active postings over time</h3>
-          <p className="text-xs md:text-sm text-gray-400">Count of filtered postings active between date posted and last seen</p>
+          <p className="text-xs md:text-sm text-gray-400">
+            Count of filtered postings active between date posted and last seen
+          </p>
         </div>
         <div className="mt-2 sm:mt-0">
           <span className="text-xs text-gray-400 mr-2">Range</span>
           <div className="inline-flex items-center gap-1">
-            {(["90d","30d","7d","all"] as TimeRange[]).map(v => (
+            {(["90d", "30d", "7d", "all"] as TimeRange[]).map((v) => (
               <button
                 key={v}
                 type="button"

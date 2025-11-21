@@ -1,13 +1,13 @@
-import { NextResponse } from 'next/server';
-import { reclassifyJobs } from '@/lib/data-sync';
+import { NextResponse } from "next/server";
+import { reclassifyJobs } from "@/lib/data-sync";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const auth = request.headers.get('authorization') || '';
+  const auth = request.headers.get("authorization") || "";
   const token = process.env.BACKFILL_TOKEN;
   if (!token || auth !== `Bearer ${token}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, message: "Re-classification complete" });
   } catch (e) {
-    console.error('Reclassify failed', e);
-    return NextResponse.json({ error: 'Reclassify failed' }, { status: 500 });
+    console.error("Reclassify failed", e);
+    return NextResponse.json({ error: "Reclassify failed" }, { status: 500 });
   }
 }

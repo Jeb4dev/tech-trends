@@ -1,7 +1,8 @@
 export default function Head() {
   const canonical = "https://koodaripula.fi/trends";
   const title = "Finnish Tech Job Trends (Live) | Koodaripula";
-  const description = "Live Finnish developer job market trends: languages, frameworks, cloud, DevOps, cyber security, data science, work mode (remote / hybrid / on-site).";
+  const description =
+    "Live Finnish developer job market trends: languages, frameworks, cloud, DevOps, cyber security, data science, work mode (remote / hybrid / on-site).";
   const image = "https://koodaripula.fi/og-default.png";
   const keywords = [
     "Finnish developer jobs",
@@ -53,4 +54,3 @@ export default function Head() {
     </>
   );
 }
-

@@ -5,8 +5,8 @@ node .next/standalone/server.js can serve them without 404s.
 - .next/static -> .next/standalone/.next/static
 - public        -> .next/standalone/public
 */
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
 
 function copyDir(src, dest) {
   if (!fs.existsSync(src)) return;
@@ -23,18 +23,17 @@ function copyDir(src, dest) {
 }
 
 const projectRoot = process.cwd();
-const standaloneRoot = path.join(projectRoot, '.next', 'standalone');
-const nextStaticSrc = path.join(projectRoot, '.next', 'static');
-const nextStaticDest = path.join(standaloneRoot, '.next', 'static');
-const publicSrc = path.join(projectRoot, 'public');
-const publicDest = path.join(standaloneRoot, 'public');
+const standaloneRoot = path.join(projectRoot, ".next", "standalone");
+const nextStaticSrc = path.join(projectRoot, ".next", "static");
+const nextStaticDest = path.join(standaloneRoot, ".next", "static");
+const publicSrc = path.join(projectRoot, "public");
+const publicDest = path.join(standaloneRoot, "public");
 
 try {
   copyDir(nextStaticSrc, nextStaticDest);
   copyDir(publicSrc, publicDest);
-  console.log('[postbuild] Copied static assets to standalone directory.');
+  console.log("[postbuild] Copied static assets to standalone directory.");
 } catch (e) {
-  console.error('[postbuild] Failed to prepare standalone assets:', e);
+  console.error("[postbuild] Failed to prepare standalone assets:", e);
   process.exit(1);
 }
-

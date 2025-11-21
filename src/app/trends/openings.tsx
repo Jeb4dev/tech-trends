@@ -1,6 +1,17 @@
 import { useState, useRef, useLayoutEffect, useMemo, useEffect } from "react";
 import { QueryParams, WorkMode } from "@/types";
-import { languages, frameworks, databases, cloud, devops, dataScience, cyberSecurity, softSkills, positions, seniority } from "@/keywords";
+import {
+  languages,
+  frameworks,
+  databases,
+  cloud,
+  devops,
+  dataScience,
+  cyberSecurity,
+  softSkills,
+  positions,
+  seniority,
+} from "@/keywords";
 import { classifyWorkMode, workModeHighlightGroups } from "@/workMode";
 import { extractSalaryRaw } from "@/salary";
 
@@ -39,12 +50,24 @@ function escapeHtml(str: string) {
 
 function buildDictionary(): Record<string, string[]> {
   const dict: Record<string, string[]> = {};
-  const groups = [languages, frameworks, databases, cloud, devops, dataScience, cyberSecurity, softSkills, positions, seniority, workMode];
+  const groups = [
+    languages,
+    frameworks,
+    databases,
+    cloud,
+    devops,
+    dataScience,
+    cyberSecurity,
+    softSkills,
+    positions,
+    seniority,
+    workMode,
+  ];
   for (const group of groups) {
     for (const entry of group) {
       if (Array.isArray(entry)) {
         const [label, ...syns] = entry;
-        dict[label.toLowerCase()] = [label, ...syns.filter(s => !s.startsWith("!"))];
+        dict[label.toLowerCase()] = [label, ...syns.filter((s) => !s.startsWith("!"))];
       } else {
         dict[entry.toLowerCase()] = [entry];
       }
@@ -56,10 +79,22 @@ const keywordDict = buildDictionary();
 
 function gatherActiveTerms(active?: QueryParams): string[] {
   if (!active) return [];
-  const buckets: (keyof QueryParams)[] = ["languages","frameworks","databases","cloud","devops","dataScience","cyberSecurity","softSkills","positions","seniority","workMode"];
+  const buckets: (keyof QueryParams)[] = [
+    "languages",
+    "frameworks",
+    "databases",
+    "cloud",
+    "devops",
+    "dataScience",
+    "cyberSecurity",
+    "softSkills",
+    "positions",
+    "seniority",
+    "workMode",
+  ];
   const terms: string[] = [];
   for (const bucket of buckets) {
-    const labels = active[bucket] || [] as string[];
+    const labels = active[bucket] || ([] as string[]);
     for (const label of labels) {
       const syns = keywordDict[label.toLowerCase()];
       if (syns) terms.push(...syns);
@@ -77,17 +112,20 @@ function buildHighlightRegex(activeTerms: string[]) {
 
 function highlightAndWrap(raw: string, highlightRegex: RegExp | null) {
   const text = raw.replace(/\r/g, "");
-  const hl = (s: string) => highlightRegex ? s.replace(highlightRegex, m => `<mark class='bg-amber-300 text-black rounded px-0.5'>${m}</mark>`) : s;
+  const hl = (s: string) =>
+    highlightRegex
+      ? s.replace(highlightRegex, (m) => `<mark class='bg-amber-300 text-black rounded px-0.5'>${m}</mark>`)
+      : s;
   return text
     .split(/\n+/)
-    .map(l => l.trim())
+    .map((l) => l.trim())
     .filter(Boolean)
-    .map(l => `<p class='mb-3 leading-relaxed text-gray-300'>${hl(escapeHtml(l))}</p>`)
+    .map((l) => `<p class='mb-3 leading-relaxed text-gray-300'>${hl(escapeHtml(l))}</p>`)
     .join("\n");
 }
 
 function makeSnippet(text: string) {
-  return text.slice(0, 300).replace(/\s+/g, ' ').trim();
+  return text.slice(0, 300).replace(/\s+/g, " ").trim();
 }
 
 // Deterministic date formatter to avoid timezone mismatches
@@ -102,20 +140,20 @@ function formatISOToFiDate(iso: string): string {
 // Map DB work_mode to display label and color
 function mapDbWorkMode(wm?: WorkMode): { label: string; className: string } | null {
   switch (wm) {
-    case 'remote':
-      return { label: 'Remote', className: 'text-emerald-300' };
-    case 'hybrid':
-      return { label: 'Hybrid', className: 'text-amber-300' };
-    case 'onsite':
-      return { label: 'On-site', className: 'text-blue-300' };
+    case "remote":
+      return { label: "Remote", className: "text-emerald-300" };
+    case "hybrid":
+      return { label: "Hybrid", className: "text-amber-300" };
+    case "onsite":
+      return { label: "On-site", className: "text-blue-300" };
     default:
       return null; // unknown or undefined -> do not display
   }
 }
 
 function classForHeuristicLabel(lbl?: string | null): string {
-  if (!lbl) return '';
-  return lbl === 'Remote' ? 'text-emerald-300' : lbl === 'Hybrid' ? 'text-amber-300' : 'text-blue-300';
+  if (!lbl) return "";
+  return lbl === "Remote" ? "text-emerald-300" : lbl === "Hybrid" ? "text-amber-300" : "text-blue-300";
 }
 
 // ---------------- Component ----------------
@@ -127,7 +165,7 @@ export const Openings = ({ openings, activeQuery }: TypeProps) => {
   const activeTerms = useMemo(() => {
     const base = gatherActiveTerms(activeQuery);
     // Always include work mode indicator phrases for highlighting
-    const wm = workMode.flatMap(g => Array.isArray(g) ? g : [g]);
+    const wm = workMode.flatMap((g) => (Array.isArray(g) ? g : [g]));
     return Array.from(new Set([...base, ...wm]));
   }, [activeQuery]);
   const highlightRegex = useMemo(() => buildHighlightRegex(activeTerms), [activeTerms]);
@@ -136,7 +174,7 @@ export const Openings = ({ openings, activeQuery }: TypeProps) => {
     if (!openings) return new Map<string, string>();
     const categories = classifyWorkMode(openings as any); // classifyWorkMode expects Results shape (compatible)
     const map = new Map<string, string>();
-    categories.forEach(cat => cat.openings.forEach(o => map.set(o.slug, cat.label)));
+    categories.forEach((cat) => cat.openings.forEach((o) => map.set(o.slug, cat.label)));
     return map;
   }, [openings]);
 
@@ -144,7 +182,7 @@ export const Openings = ({ openings, activeQuery }: TypeProps) => {
   const salaryMap = useMemo(() => {
     const m = new Map<string, string>();
     if (!openings) return m;
-    openings.forEach(o => {
+    openings.forEach((o) => {
       const sal = extractSalaryRaw(o.heading + "\n" + o.descr);
       if (sal) m.set(o.slug, sal.label);
     });
@@ -158,8 +196,8 @@ export const Openings = ({ openings, activeQuery }: TypeProps) => {
       return;
     }
     const newMap = new Map<string, string>();
-    opened.forEach(slug => {
-      const item = openings.find(o => o.slug === slug);
+    opened.forEach((slug) => {
+      const item = openings.find((o) => o.slug === slug);
       if (item) newMap.set(slug, highlightAndWrap(item.descr, highlightRegex));
     });
     formatCache.current = newMap;
@@ -168,13 +206,14 @@ export const Openings = ({ openings, activeQuery }: TypeProps) => {
   const handleShowMore = () => {
     if (!openings) return;
     if (showCount >= openings.length) return;
-    setShowCount(prev => Math.min(openings.length, prev + 100));
+    setShowCount((prev) => Math.min(openings.length, prev + 100));
   };
 
   const toggleOpen = (entry: OpeningEntry) => {
-    setOpened(prev => {
+    setOpened((prev) => {
       const next = new Set(prev);
-      if (next.has(entry.slug)) next.delete(entry.slug); else {
+      if (next.has(entry.slug)) next.delete(entry.slug);
+      else {
         if (!formatCache.current.has(entry.slug)) {
           formatCache.current.set(entry.slug, highlightAndWrap(entry.descr, highlightRegex));
         }
@@ -205,7 +244,7 @@ export const Openings = ({ openings, activeQuery }: TypeProps) => {
     <div className="py-6 md:py-8">
       <h1 className="pb-3 md:pb-4 text-lg md:text-xl font-semibold">Filtered Job Listings ({openings.length})</h1>
       <ul className="space-y-2 md:space-y-4">
-        {openings.slice(0, showCount).map(result => {
+        {openings.slice(0, showCount).map((result) => {
           const isOpen = opened.has(result.slug);
           let formatted = formatCache.current.get(result.slug) || "";
           if (isOpen && !formatted) {
@@ -243,7 +282,9 @@ export const Openings = ({ openings, activeQuery }: TypeProps) => {
                     {salaryMap.get(result.slug) && (
                       <>
                         <span className="opacity-50">•</span>
-                        <span className="px-1 py-0.5 rounded text-[10px] uppercase tracking-wide text-pink-300">{salaryMap.get(result.slug)}</span>
+                        <span className="px-1 py-0.5 rounded text-[10px] uppercase tracking-wide text-pink-300">
+                          {salaryMap.get(result.slug)}
+                        </span>
                       </>
                     )}
                     {showDb && (
@@ -268,7 +309,7 @@ export const Openings = ({ openings, activeQuery }: TypeProps) => {
                         </span>
                       </>
                     )}
-                   </div>
+                  </div>
                 </header>
                 <div className="flex items-start gap-3 md:gap-4 mb-1.5 md:mb-2">
                   <button
@@ -279,14 +320,22 @@ export const Openings = ({ openings, activeQuery }: TypeProps) => {
                     onClick={() => toggleOpen(result)}
                     className="text-[11px] md:text-xs inline-flex items-center gap-1 text-gray-500 hover:text-gray-200 transition-colors shrink-0 py-1 px-1.5 rounded focus:outline-none focus:ring-1 focus:ring-green-500"
                   >
-                    {isOpen ? 'Show less' : 'Show more'}
-                    <svg className={`w-3 h-3 transition-transform ${isOpen ? 'rotate-180' : 'rotate-0'}`} viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.27a.75.75 0 01.02-1.06z" /></svg>
+                    {isOpen ? "Show less" : "Show more"}
+                    <svg
+                      className={`w-3 h-3 transition-transform ${isOpen ? "rotate-180" : "rotate-0"}`}
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.27a.75.75 0 01.02-1.06z" />
+                    </svg>
                   </button>
                   {!isOpen && (
                     <p
                       className="text-[12px] md:text-sm text-gray-400 leading-snug flex-1 overflow-hidden line-clamp-4 sm:line-clamp-1"
                       title={snippet}
-                    >{snippet}</p>
+                    >
+                      {snippet}
+                    </p>
                   )}
                 </div>
                 <CollapsibleSection id={`desc-${result.slug}`} open={isOpen} html={formatted} />
@@ -301,7 +350,10 @@ export const Openings = ({ openings, activeQuery }: TypeProps) => {
           onClick={handleShowMore}
           disabled={showCount >= openings.length}
         >
-          Load more <span className="text-gray-100 font-semibold ml-1">{Math.min(showCount, openings.length)}/{openings.length}</span>
+          Load more{" "}
+          <span className="text-gray-100 font-semibold ml-1">
+            {Math.min(showCount, openings.length)}/{openings.length}
+          </span>
         </button>
       </div>
     </div>
@@ -331,12 +383,10 @@ const CollapsibleSection = ({ id, open, html }: { id: string; open: boolean; htm
   return (
     <div
       id={id}
-      style={{ maxHeight: open ? height : height, transition: 'max-height 320ms ease', overflow: 'hidden' }}
+      style={{ maxHeight: open ? height : height, transition: "max-height 320ms ease", overflow: "hidden" }}
       className="will-change-[max-height]"
     >
-      {render && (
-        <div ref={ref} className="pt-3 animate-fade-in" dangerouslySetInnerHTML={{ __html: html }} />
-      )}
+      {render && <div ref={ref} className="pt-3 animate-fade-in" dangerouslySetInnerHTML={{ __html: html }} />}
     </div>
   );
 };
