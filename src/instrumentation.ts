@@ -5,7 +5,7 @@ import "server-only";
 import { syncDataIfNeeded } from "@/lib/data-sync";
 
 let started = false;
-let timer: NodeJS.Timer | null = null;
+let timer: ReturnType<typeof setTimeout> | ReturnType<typeof setInterval> | null = null;
 
 async function safeSync(reason: string) {
   try {
@@ -39,7 +39,7 @@ export async function register() {
     // First delayed run
     void safeSync("first-interval");
     timer = setInterval(() => void safeSync("interval"), hourMs);
-  }, jitter) as unknown as NodeJS.Timer;
+  }, jitter);
 
   // Clean up on shutdown
   const cleanup = () => {
