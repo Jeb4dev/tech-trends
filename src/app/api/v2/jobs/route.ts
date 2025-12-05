@@ -1,3 +1,4 @@
+import { extractSalaryRaw } from "@/salary";
 import { NextResponse } from "next/server";
 import pgPromise from "pg-promise";
 
@@ -7,6 +8,171 @@ const db = g.__db || pgp(process.env.POSTGRES_URL || "");
 if (!g.__db) g.__db = db;
 
 export const dynamic = "force-dynamic";
+
+type DbJobRow = {
+  id: number;
+  slug: string;
+  heading: string | null;
+  descr: string | null;
+  company_name: string | null;
+  municipality_name: string | null;
+  date_posted: string | null;
+  work_mode: string | null;
+  seniority: string | null;
+  salary_min: string | number | null;
+  salary_max: string | number | null;
+  salary_currency: string | null;
+};
+
+const normalizeNumeric = (value: string | number | null): number | null => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  const parsed = typeof value === "string" ? parseFloat(value) : NaN;
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const deriveSalary = (row: DbJobRow) => {
+  const storedMin = normalizeNumeric(row.salary_min);
+  const storedMax = normalizeNumeric(row.salary_max);
+  if (storedMin || storedMax) {
+    return {
+      min: storedMin,
+      max: storedMax,
+      label: null,
+    };
+  }
+  const extracted = extractSalaryRaw(`${row.heading || ""}\n${row.descr || ""}`);
+  const min = extracted?.min ?? null;
+  const max = extracted?.max ?? null;
+  return { min, max, label: extracted?.label ?? null };
+};
+
+// Category to DB mapping
+const TAG_CATEGORIES = ["languages", "frameworks", "databases", "cloud", "devops", "dataScience", "cyberSecurity", "softSkills", "positions", "locations"];
+const COLUMN_CATEGORIES: Record<string, string> = {
+  workMode: "work_mode",
+  seniority: "seniority",
+  companies: "company_name",
+};
+
+// Parse raw query with mixed AND/OR into SQL
+function parseRawQueryToSQL(
+  rawQuery: string,
+  args: any[]
+): { sql: string; newArgs: any[] } | null {
+  if (!rawQuery.trim()) return null;
+
+  const normalized = rawQuery.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
+
+  // Tokenize: extract all category:"value" tokens with their positions and NOT prefix
+  const tokenRegex = /(NOT\s+)?(\w+):"([^"]+)"/g;
+  const tokens: Array<{
+    fullMatch: string;
+    isNot: boolean;
+    category: string;
+    value: string;
+    start: number;
+    end: number;
+  }> = [];
+
+  let match;
+  while ((match = tokenRegex.exec(normalized)) !== null) {
+    tokens.push({
+      fullMatch: match[0],
+      isNot: !!match[1],
+      category: match[2],
+      value: match[3],
+      start: match.index,
+      end: match.index + match[0].length,
+    });
+  }
+
+  if (tokens.length === 0) return null;
+
+  // Build SQL by converting each token to a SQL condition
+  // and preserving the AND/OR/() structure
+  let sql = normalized;
+  const newArgs = [...args];
+
+  // Replace tokens from end to start to preserve positions
+  const sortedTokens = [...tokens].sort((a, b) => b.start - a.start);
+
+  for (const token of sortedTokens) {
+    const condition = buildTokenCondition(token.category, token.value, token.isNot, newArgs);
+    if (condition) {
+      sql = sql.slice(0, token.start) + condition + sql.slice(token.end);
+    } else {
+      // Invalid category - replace with TRUE to not break the query
+      sql = sql.slice(0, token.start) + "TRUE" + sql.slice(token.end);
+    }
+  }
+
+  // Clean up any remaining issues
+  sql = sql
+    .replace(/\bAND\s+AND\b/gi, "AND")
+    .replace(/\bOR\s+OR\b/gi, "OR")
+    .replace(/\(\s*AND/gi, "(")
+    .replace(/\(\s*OR/gi, "(")
+    .replace(/AND\s*\)/gi, ")")
+    .replace(/OR\s*\)/gi, ")")
+    .trim();
+
+  // Remove leading/trailing operators
+  sql = sql
+    .replace(/^\s*AND\s+/i, "")
+    .replace(/^\s*OR\s+/i, "")
+    .replace(/\s+AND\s*$/i, "")
+    .replace(/\s+OR\s*$/i, "")
+    .trim();
+
+  if (!sql || sql === "TRUE") return null;
+
+  return { sql: `(${sql})`, newArgs };
+}
+
+function buildTokenCondition(
+  category: string,
+  value: string,
+  isNot: boolean,
+  args: any[]
+): string | null {
+  const lowerValue = value.toLowerCase();
+
+  // Check if it's a tag category
+  if (TAG_CATEGORIES.includes(category)) {
+    const paramIndex = args.length + 1;
+    args.push(lowerValue);
+
+    if (isNot) {
+      return `id NOT IN (
+        SELECT job_id FROM job_tags jt 
+        JOIN tags t ON jt.tag_id = t.id 
+        WHERE t.category = '${category}' AND lower(t.name) = $${paramIndex}
+      )`;
+    } else {
+      return `id IN (
+        SELECT job_id FROM job_tags jt 
+        JOIN tags t ON jt.tag_id = t.id 
+        WHERE t.category = '${category}' AND lower(t.name) = $${paramIndex}
+      )`;
+    }
+  }
+
+  // Check if it's a column category
+  const columnName = COLUMN_CATEGORIES[category];
+  if (columnName) {
+    const paramIndex = args.length + 1;
+    args.push(lowerValue);
+
+    if (isNot) {
+      return `(lower(${columnName}) != $${paramIndex} OR ${columnName} IS NULL)`;
+    } else {
+      return `lower(${columnName}) = $${paramIndex}`;
+    }
+  }
+
+  return null;
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -37,8 +203,19 @@ export async function GET(request: Request) {
   if (hideDeleted) conditions.push("active = TRUE");
   if (hideOld) conditions.push("date_posted >= NOW() - INTERVAL '90 days'");
 
-  // Helper to parse advanced params: key_in, key_ex, key_op
-  const getFilter = (key: string) => ({
+  // Check for rawQuery (complex AND/OR expressions)
+  const rawQuery = searchParams.get("rawQuery");
+  if (rawQuery) {
+    const parsed = parseRawQueryToSQL(rawQuery, args);
+    if (parsed) {
+      conditions.push(parsed.sql);
+      args.length = 0;
+      args.push(...parsed.newArgs);
+    }
+  } else {
+    // Use simple filter params if no rawQuery
+    // Helper to parse advanced params: key_in, key_ex, key_op
+    const getFilter = (key: string) => ({
     inc:
       searchParams
         .get(`${key}_in`)
@@ -133,8 +310,9 @@ export async function GET(request: Request) {
   };
 
   applyColumnFilter("work_mode", "workMode");
-  applyColumnFilter("seniority", "seniority");
-  applyColumnFilter("company_name", "companies");
+    applyColumnFilter("seniority", "seniority");
+    applyColumnFilter("company_name", "companies");
+  }
 
   const whereClause = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
 
@@ -154,7 +332,7 @@ export async function GET(request: Request) {
       db.one(`SELECT count(*) FROM jobs ${whereClause}`, args),
       db.any(
         `
-        SELECT id, slug, heading, company_name, municipality_name, date_posted, work_mode, seniority, salary_min, salary_max, salary_currency
+        SELECT id, slug, heading, descr, company_name, municipality_name, date_posted, work_mode, seniority, salary_min, salary_max, salary_currency
         FROM jobs
                ${whereClause}
         ORDER BY ${orderByClause}
@@ -195,10 +373,21 @@ export async function GET(request: Request) {
     merge(tagFacets);
     merge(colFacets);
 
+    const formattedJobs = (jobs as DbJobRow[]).map((job) => {
+      const { descr, ...rest } = job;
+      const salary = deriveSalary(job);
+      return {
+        ...rest,
+        salary_min: salary.min,
+        salary_max: salary.max,
+        salary_label: salary.label,
+      };
+    });
+
     return NextResponse.json({
       count: parseInt(countRes.count, 10),
       page,
-      results: jobs,
+      results: formattedJobs,
       facets,
     });
   } catch (e) {

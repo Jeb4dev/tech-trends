@@ -42,6 +42,7 @@ interface JobResult {
   salary_min: number | null;
   salary_max: number | null;
   salary_currency: string | null;
+  salary_label?: string | null;
   slug: string;
 }
 
@@ -124,6 +125,16 @@ const Icons = {
       />
     </svg>
   ),
+  Code: () => (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+    </svg>
+  ),
+  Edit: () => (
+    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    </svg>
+  ),
 };
 
 // Complex Filter State
@@ -143,20 +154,269 @@ const INITIAL_FILTER_STATE = (): FilterState => {
   return initial;
 };
 
+
+// -- Query String Generation & Parsing --
+
+function generateQueryString(filters: FilterState): string {
+  const parts: string[] = [];
+
+  CATEGORY_CONFIG.forEach((cat) => {
+    const state = filters[cat.key];
+    if (state.include.size === 0 && state.exclude.size === 0) return;
+
+    const categoryParts: string[] = [];
+
+    // Handle includes
+    if (state.include.size > 0) {
+      const includeItems = Array.from(state.include).map((item) => `${cat.key}:"${item}"`);
+      if (includeItems.length === 1) {
+        categoryParts.push(includeItems[0]);
+      } else {
+        const joined = includeItems.join(` ${state.operator} `);
+        categoryParts.push(`(${joined})`);
+      }
+    }
+
+    // Handle excludes
+    if (state.exclude.size > 0) {
+      const excludeItems = Array.from(state.exclude).map((item) => `NOT ${cat.key}:"${item}"`);
+      categoryParts.push(...excludeItems);
+    }
+
+    if (categoryParts.length > 0) {
+      parts.push(categoryParts.join(" AND "));
+    }
+  });
+
+  return parts.join("\nAND ");
+}
+
+// Parse query and extract filters (for simple mode compatibility)
+function parseQueryToFilters(query: string): FilterState | null {
+  try {
+    const newFilters = INITIAL_FILTER_STATE();
+
+    // Normalize line breaks and clean up
+    const normalized = query.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
+    if (!normalized) return newFilters;
+
+    // Extract all tokens: categoryKey:"value" with optional NOT prefix
+    const tokenRegex = /(NOT\s+)?(\w+):"([^"]+)"/g;
+
+    // Parse all tokens
+    let match;
+    while ((match = tokenRegex.exec(normalized)) !== null) {
+      const isNot = !!match[1];
+      const categoryKey = match[2];
+      const value = match[3];
+
+      // Check if this is a valid category
+      const catConfig = CATEGORY_CONFIG.find((c) => c.key === categoryKey);
+      if (!catConfig) continue;
+
+      if (isNot) {
+        newFilters[categoryKey].exclude.add(value);
+      } else {
+        newFilters[categoryKey].include.add(value);
+      }
+    }
+
+    return newFilters;
+  } catch (e) {
+    console.error("Failed to parse query:", e);
+    return null;
+  }
+}
+
+
+function validateQuerySyntax(query: string): { valid: boolean; error?: string } {
+  const normalized = query.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
+  if (!normalized) return { valid: true };
+
+  // Check for balanced parentheses
+  let parenCount = 0;
+  for (const char of normalized) {
+    if (char === "(") parenCount++;
+    if (char === ")") parenCount--;
+    if (parenCount < 0) return { valid: false, error: "Unbalanced parentheses" };
+  }
+  if (parenCount !== 0) return { valid: false, error: "Unbalanced parentheses" };
+
+  // Check for balanced quotes
+  const quoteCount = (normalized.match(/"/g) || []).length;
+  if (quoteCount % 2 !== 0) return { valid: false, error: "Unbalanced quotes" };
+
+  // Check that all tokens have valid category keys
+  const tokenRegex = /(NOT\s+)?(\w+):"([^"]+)"/g;
+  let match;
+  let hasValidToken = false;
+
+  while ((match = tokenRegex.exec(normalized)) !== null) {
+    const categoryKey = match[2];
+    const catConfig = CATEGORY_CONFIG.find((c) => c.key === categoryKey);
+    if (!catConfig) return { valid: false, error: `Unknown category: ${categoryKey}` };
+    hasValidToken = true;
+  }
+
+  // If there's content but no valid tokens, check if it's just whitespace/operators
+  if (normalized && !hasValidToken) {
+    // Allow just operators and parens
+    const cleanedForCheck = normalized.replace(/\b(AND|OR|NOT)\b/g, "").replace(/[()]/g, "").trim();
+    if (cleanedForCheck) return { valid: false, error: "Invalid syntax" };
+  }
+
+  return { valid: true };
+}
+
+// Convert query to API parameters - handles complex queries
+function queryToApiParams(query: string): URLSearchParams {
+  const params = new URLSearchParams();
+  const normalized = query.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
+
+  if (!normalized) return params;
+
+  // For complex queries, we send the raw query for server-side parsing
+  // The server should handle this, but for now we'll extract what we can
+
+  // Extract all tokens with their context
+  const tokenRegex = /(NOT\s+)?(\w+):"([^"]+)"/g;
+  const categoryIncludes: Record<string, string[]> = {};
+  const categoryExcludes: Record<string, string[]> = {};
+
+  let match;
+  while ((match = tokenRegex.exec(normalized)) !== null) {
+    const isNot = !!match[1];
+    const categoryKey = match[2];
+    const value = match[3];
+
+    if (isNot) {
+      if (!categoryExcludes[categoryKey]) categoryExcludes[categoryKey] = [];
+      categoryExcludes[categoryKey].push(value);
+    } else {
+      if (!categoryIncludes[categoryKey]) categoryIncludes[categoryKey] = [];
+      categoryIncludes[categoryKey].push(value);
+    }
+  }
+
+  // Set params
+  Object.entries(categoryIncludes).forEach(([key, values]) => {
+    params.set(`${key}_in`, values.join(","));
+  });
+
+  Object.entries(categoryExcludes).forEach(([key, values]) => {
+    params.set(`${key}_ex`, values.join(","));
+  });
+
+  // Send the raw query for advanced parsing on server
+  params.set("rawQuery", normalized);
+
+  return params;
+}
+
+// Update query when user clicks sidebar - tries to preserve complex structure
+function updateQueryWithToggle(
+  currentQuery: string,
+  categoryKey: string,
+  value: string,
+  nowIncluded: boolean,
+  nowExcluded: boolean
+): string {
+  const normalized = currentQuery.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
+
+  // Escape special regex characters in value
+  const escapedValue = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  // Remove existing token for this value (both include and exclude variants)
+  let updated = normalized
+    .replace(new RegExp(`\\s*AND\\s+NOT\\s+${categoryKey}:"${escapedValue}"`, 'g'), '')
+    .replace(new RegExp(`\\s*OR\\s+NOT\\s+${categoryKey}:"${escapedValue}"`, 'g'), '')
+    .replace(new RegExp(`NOT\\s+${categoryKey}:"${escapedValue}"\\s*AND\\s*`, 'g'), '')
+    .replace(new RegExp(`NOT\\s+${categoryKey}:"${escapedValue}"\\s*OR\\s*`, 'g'), '')
+    .replace(new RegExp(`NOT\\s+${categoryKey}:"${escapedValue}"`, 'g'), '')
+    .replace(new RegExp(`\\s*AND\\s+${categoryKey}:"${escapedValue}"`, 'g'), '')
+    .replace(new RegExp(`\\s*OR\\s+${categoryKey}:"${escapedValue}"`, 'g'), '')
+    .replace(new RegExp(`${categoryKey}:"${escapedValue}"\\s*AND\\s*`, 'g'), '')
+    .replace(new RegExp(`${categoryKey}:"${escapedValue}"\\s*OR\\s*`, 'g'), '')
+    .replace(new RegExp(`${categoryKey}:"${escapedValue}"`, 'g'), '');
+
+  // Clean up empty parentheses and dangling operators
+  updated = updated
+    .replace(/\(\s*\)/g, '')
+    .replace(/^\s*AND\s+/i, '')
+    .replace(/^\s*OR\s+/i, '')
+    .replace(/\s+AND\s*$/i, '')
+    .replace(/\s+OR\s*$/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Add new token if needed
+  if (nowIncluded) {
+    const token = `${categoryKey}:"${value}"`;
+    updated = updated ? `${updated} AND ${token}` : token;
+  } else if (nowExcluded) {
+    const token = `NOT ${categoryKey}:"${value}"`;
+    updated = updated ? `${updated} AND ${token}` : token;
+  }
+
+  return updated;
+}
+
 export default function AdvancedSearchPage() {
   const [results, setResults] = useState<JobResult[]>([]);
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [facetCounts, setFacetCounts] = useState<Record<string, Record<string, number>>>({});
 
-  // Filters
-  const [filters, setFilters] = useState<FilterState>(INITIAL_FILTER_STATE);
+  // Query is the source of truth - always advanced mode
+  const [queryText, setQueryText] = useState("");
+  const [queryError, setQueryError] = useState<string | null>(null);
+
+  // Additional filters
   const [hideDeleted, setHideDeleted] = useState(true);
   const [hideOld, setHideOld] = useState(true);
   const [sort, setSort] = useState("date_desc");
 
   // Mobile Menu
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+
+  // Parse query to extract filter state for sidebar display
+  const filters = useMemo(() => parseQueryToFilters(queryText) || INITIAL_FILTER_STATE(), [queryText]);
+
+  // Validate query syntax on change
+  useEffect(() => {
+    const validation = validateQuerySyntax(queryText);
+    setQueryError(validation.valid ? null : (validation.error || "Invalid syntax"));
+  }, [queryText]);
+
+  const handleQueryChange = (value: string) => {
+    setQueryText(value);
+  };
+
+  // Toggle item from sidebar - updates the query text directly
+  const toggleItem = (categoryKey: string, value: string) => {
+    const currentFilters = parseQueryToFilters(queryText) || INITIAL_FILTER_STATE();
+    const cat = currentFilters[categoryKey];
+
+    // Cycle: Include -> Exclude -> Neutral
+    if (cat.include.has(value)) {
+      cat.include.delete(value);
+      cat.exclude.add(value);
+    } else if (cat.exclude.has(value)) {
+      cat.exclude.delete(value);
+    } else {
+      cat.include.add(value);
+    }
+
+    // Regenerate query from updated filters, but preserve complex structure if possible
+    const newQuery = updateQueryWithToggle(queryText, categoryKey, value, cat.include.has(value), cat.exclude.has(value));
+    setQueryText(newQuery);
+  };
+
+  // Clear all filters
+  const clearAll = () => {
+    setQueryText("");
+    setQueryError(null);
+  };
 
   // -- Memoized Options --
   const optionsMap = useMemo(() => {
@@ -181,16 +441,12 @@ export default function AdvancedSearchPage() {
   // -- Fetch Logic --
   useEffect(() => {
     const fetchJobs = async () => {
+      // Don't fetch if there's a syntax error
+      if (queryError) return;
+
       setLoading(true);
       try {
-        const params = new URLSearchParams();
-
-        Object.entries(filters).forEach(([key, state]) => {
-          if (state.include.size > 0) params.set(`${key}_in`, Array.from(state.include).join(","));
-          if (state.exclude.size > 0) params.set(`${key}_ex`, Array.from(state.exclude).join(","));
-          if (state.operator === "AND" && state.include.size > 1) params.set(`${key}_op`, "AND");
-        });
-
+        const params = queryToApiParams(queryText);
         params.set("hideDeleted", hideDeleted.toString());
         params.set("hideOld", hideOld.toString());
         params.set("sort", sort);
@@ -212,39 +468,22 @@ export default function AdvancedSearchPage() {
 
     const timeout = setTimeout(fetchJobs, 400);
     return () => clearTimeout(timeout);
-  }, [filters, hideDeleted, hideOld, sort]);
+  }, [queryText, queryError, hideDeleted, hideOld, sort]);
 
-  // -- Handlers --
-
-  const toggleItem = (categoryKey: string, value: string) => {
-    setFilters((prev) => {
-      const cat = prev[categoryKey];
-      const next = { ...cat, include: new Set(cat.include), exclude: new Set(cat.exclude) };
-
-      // Cycle: Include -> Exclude -> Neutral
-      if (next.include.has(value)) {
-        next.include.delete(value);
-        next.exclude.add(value);
-      } else if (next.exclude.has(value)) {
-        next.exclude.delete(value);
-      } else {
-        next.include.add(value);
-      }
-      return { ...prev, [categoryKey]: next };
-    });
-  };
-
+  // Toggle operator for sidebar (modifies query string)
   const toggleOperator = (categoryKey: string) => {
-    setFilters((prev) => ({
-      ...prev,
-      [categoryKey]: {
-        ...prev[categoryKey],
-        operator: prev[categoryKey].operator === "AND" ? "OR" : "AND",
-      },
-    }));
+    // Parse current filters
+    const currentFilters = parseQueryToFilters(queryText) || INITIAL_FILTER_STATE();
+    const cat = currentFilters[categoryKey];
+
+    // Toggle operator
+    cat.operator = cat.operator === "AND" ? "OR" : "AND";
+
+    // Regenerate query with new operator
+    const newQuery = generateQueryString({...currentFilters, [categoryKey]: cat});
+    setQueryText(newQuery);
   };
 
-  const clearAll = () => setFilters(INITIAL_FILTER_STATE());
 
   const activeFilterCount = Object.values(filters).reduce((acc, c) => acc + c.include.size + c.exclude.size, 0);
 
@@ -343,31 +582,13 @@ export default function AdvancedSearchPage() {
               </div>
             </div>
 
-            {/* Active Chips */}
-            {activeFilterCount > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(filters).map(([key, state]) => (
-                  <React.Fragment key={key}>
-                    {Array.from(state.include).map((val) => (
-                      <Chip
-                        key={`${key}-inc-${val}`}
-                        label={val}
-                        type="include"
-                        onRemove={() => toggleItem(key, val)}
-                      />
-                    ))}
-                    {Array.from(state.exclude).map((val) => (
-                      <Chip
-                        key={`${key}-exc-${val}`}
-                        label={val}
-                        type="exclude"
-                        onRemove={() => toggleItem(key, val)}
-                      />
-                    ))}
-                  </React.Fragment>
-                ))}
-              </div>
-            )}
+            {/* Query Editor - Always Visible */}
+            <QueryEditor
+              queryText={queryText}
+              onQueryChange={handleQueryChange}
+              queryError={queryError}
+              isLoading={loading}
+            />
           </div>
 
           <div className="grid gap-4">
@@ -472,27 +693,6 @@ function FilterSection({ title, type, options, counts, state, onToggleItem, onTo
   );
 }
 
-function Chip({ label, type, onRemove }: { label: string; type: "include" | "exclude"; onRemove: () => void }) {
-  return (
-    <button
-      onClick={onRemove}
-      className={`
-        group flex items-center gap-2 border px-3 py-1 rounded-full text-xs font-medium transition-all
-        ${
-          type === "include"
-            ? "bg-blue-500/10 border-blue-500/20 text-blue-300 hover:border-blue-500/40 hover:text-blue-200"
-            : "bg-red-500/10 border-red-500/20 text-red-300 hover:border-red-500/40 hover:text-red-200"
-        }
-      `}
-    >
-      {type === "exclude" && <span className="text-[10px] uppercase font-bold opacity-70">NOT</span>}
-      {label}
-      <span className="opacity-50 group-hover:opacity-100">
-        <Icons.X />
-      </span>
-    </button>
-  );
-}
 
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -520,7 +720,21 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
   );
 }
 
+const formatSalaryDisplay = (job: JobResult) => {
+  if (job.salary_label) return job.salary_label;
+  if (job.salary_min) {
+    const min = (job.salary_min / 1000).toFixed(1).replace(/\.0$/, "");
+    if (job.salary_max) {
+      const max = (job.salary_max / 1000).toFixed(1).replace(/\.0$/, "");
+      return `${min}k–${max}k`;
+    }
+    return `${min}k+`;
+  }
+  return null;
+};
+
 function JobCard({ job }: { job: JobResult }) {
+  const salaryLabel = formatSalaryDisplay(job);
   return (
     <div className="group relative p-5 bg-[#1a212c] border border-white/5 rounded-xl hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-900/5 transition-all duration-200 w-full max-w-full overflow-hidden">
       <div className="flex gap-4">
@@ -538,9 +752,9 @@ function JobCard({ job }: { job: JobResult }) {
               </a>
             </h3>
             <div className="shrink-0 flex items-center gap-2">
-              {job.salary_min && (
+              {salaryLabel && (
                 <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-mono font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  {job.salary_min / 1000}k - {job.salary_max ? job.salary_max / 1000 + "k" : "+"}
+                  {salaryLabel}
                 </span>
               )}
               <span className="text-xs text-gray-500">{new Date(job.date_posted).toLocaleDateString("fi-FI")}</span>
@@ -609,3 +823,72 @@ function EmptyState({ clearAll }: { clearAll: () => void }) {
     </div>
   );
 }
+
+function QueryEditor({
+  queryText,
+  onQueryChange,
+  queryError,
+  isLoading,
+}: {
+  queryText: string;
+  onQueryChange: (text: string) => void;
+  queryError: string | null;
+  isLoading: boolean;
+}) {
+  return (
+    <div className="bg-[#1a212c] border border-white/10 rounded-xl overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-2 bg-white/5 border-b border-white/10">
+        <div className="flex items-center gap-2">
+          <Icons.Code />
+          <span className="text-sm font-medium text-gray-300">Query</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {isLoading && (
+            <span className="text-xs text-gray-500 animate-pulse">Searching...</span>
+          )}
+          {queryError && (
+            <span className="text-xs text-red-400 flex items-center gap-1">
+              <Icons.X /> {queryError}
+            </span>
+          )}
+          {!queryError && !isLoading && queryText.trim() && (
+            <span className="text-xs text-green-400">✓ Valid</span>
+          )}
+        </div>
+      </div>
+
+      <div className="p-3">
+        <textarea
+          value={queryText}
+          onChange={(e) => onQueryChange(e.target.value)}
+          placeholder={'Example:\n(languages:"Python" AND languages:"TypeScript") OR (languages:"JavaScript" AND languages:"Golang")\nNOT workMode:"onsite"'}
+          className={`w-full h-24 bg-[#0d1117] border rounded-lg p-3 font-mono text-sm text-gray-200 placeholder-gray-600 focus:outline-none resize-none transition-colors ${
+            queryError 
+              ? "border-red-500/50 focus:border-red-500" 
+              : "border-white/10 focus:border-purple-500/50"
+          }`}
+          spellCheck={false}
+        />
+
+        <details className="mt-2">
+          <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-400 select-none">
+            Syntax reference
+          </summary>
+          <div className="mt-2 text-xs text-gray-500 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 pl-2 border-l border-white/10">
+            <p><code className="text-purple-400">category:&quot;value&quot;</code> — Include</p>
+            <p><code className="text-red-400">NOT category:&quot;value&quot;</code> — Exclude</p>
+            <p><code className="text-blue-400">AND</code> / <code className="text-green-400">OR</code> — Combine</p>
+            <p><code className="text-amber-400">(a AND b) OR (c AND d)</code> — Group</p>
+            <p className="sm:col-span-2 mt-1">
+              <span className="text-gray-400">Example:</span> <code className="text-cyan-400">(languages:&quot;Python&quot; AND languages:&quot;React&quot;) OR languages:&quot;Rust&quot;</code>
+            </p>
+            <p className="sm:col-span-2 text-gray-600 mt-1">
+              Categories: languages, frameworks, databases, cloud, devops, dataScience, cyberSecurity, positions, softSkills, locations, workMode, seniority, companies
+            </p>
+          </div>
+        </details>
+      </div>
+    </div>
+  );
+}
+
