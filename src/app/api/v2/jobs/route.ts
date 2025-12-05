@@ -362,6 +362,50 @@ export async function GET(request: Request) {
       ),
     ]);
 
+    // Fetch location tags for jobs in this result set
+    const jobIds = (jobs as DbJobRow[]).map((j) => j.id);
+    let locationTagsMap: Record<number, string[]> = {};
+
+    // Countries should appear after cities in the locations list
+    const COUNTRIES = new Set([
+      "Finland", "Sweden", "Norway", "Germany", "Estonia", "Spain", "Greece",
+      "Ireland", "France", "Denmark", "Netherlands", "Belgium", "Poland",
+      "United Kingdom", "UK", "USA", "United States"
+    ]);
+
+    if (jobIds.length > 0) {
+      const locationTags = await db.any(
+        `
+        SELECT jt.job_id, t.name
+        FROM job_tags jt
+        JOIN tags t ON jt.tag_id = t.id
+        WHERE t.category = 'locations' AND jt.job_id IN ($1:csv)
+        ORDER BY jt.job_id, t.name
+        `,
+        [jobIds]
+      );
+
+      // Group locations by job_id
+      locationTags.forEach((row: { job_id: number; name: string }) => {
+        if (!locationTagsMap[row.job_id]) {
+          locationTagsMap[row.job_id] = [];
+        }
+        locationTagsMap[row.job_id].push(row.name);
+      });
+
+      // Sort each job's locations: cities first, then countries
+      for (const jobId of Object.keys(locationTagsMap)) {
+        const locs = locationTagsMap[Number(jobId)];
+        locs.sort((a, b) => {
+          const aIsCountry = COUNTRIES.has(a);
+          const bIsCountry = COUNTRIES.has(b);
+          if (aIsCountry && !bIsCountry) return 1;  // countries after cities
+          if (!aIsCountry && bIsCountry) return -1; // cities before countries
+          return a.localeCompare(b); // alphabetical within same type
+        });
+      }
+    }
+
     const facets: Record<string, Record<string, number>> = {};
     const merge = (rows: any[]) => {
       rows.forEach((row: any) => {
@@ -376,11 +420,13 @@ export async function GET(request: Request) {
     const formattedJobs = (jobs as DbJobRow[]).map((job) => {
       const { descr, ...rest } = job;
       const salary = deriveSalary(job);
+      const locations = locationTagsMap[job.id] || [];
       return {
         ...rest,
         salary_min: salary.min,
         salary_max: salary.max,
         salary_label: salary.label,
+        locations, // Array of city names from tags
       };
     });
 

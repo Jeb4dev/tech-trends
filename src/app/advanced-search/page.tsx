@@ -44,6 +44,7 @@ interface JobResult {
   salary_currency: string | null;
   salary_label?: string | null;
   slug: string;
+  locations?: string[]; // Array of city names from location tags
 }
 
 interface CategoryConfigItem {
@@ -738,17 +739,28 @@ const formatSalaryDisplay = (job: JobResult) => {
 
 function JobCard({ job }: { job: JobResult }) {
   const salaryLabel = formatSalaryDisplay(job);
+
+  // Determine locations to display
+  // Use locations array from tags if available, otherwise fall back to municipality_name
+  const locations = job.locations && job.locations.length > 0
+    ? job.locations
+    : (job.municipality_name ? [job.municipality_name] : []);
+
+  const primaryLocation = locations[0];
+  const additionalCount = locations.length - 1;
+  const hasMultipleLocations = additionalCount > 0;
+
   return (
-    <div className="group relative p-5 bg-[#1a212c] border border-white/5 rounded-xl hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-900/5 transition-all duration-200 w-full max-w-full overflow-hidden">
-      <div className="flex gap-4">
-        <div className="flex-1 min-w-0">
+    <div className="group relative p-5 bg-[#1a212c] border border-white/5 rounded-xl hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-900/5 transition-all duration-200 w-full overflow-hidden">
+      <div className="flex gap-4 min-w-0">
+        <div className="flex-1 min-w-0 overflow-hidden">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-1">
-            <h3 className="flex-1 min-w-0 text-lg font-semibold text-gray-100 group-hover:text-blue-400 transition-colors truncate">
+            <h3 className="flex-1 min-w-0 text-lg font-semibold text-gray-100 group-hover:text-blue-400 transition-colors">
               <a
                 href={`https://duunitori.fi/tyopaikat/tyo/${job.slug}`}
                 target="_blank"
                 rel="noreferrer"
-                className="focus:outline-none"
+                className="focus:outline-none block truncate"
               >
                 <span className="absolute inset-0" aria-hidden="true" />
                 {job.heading}
@@ -760,16 +772,25 @@ function JobCard({ job }: { job: JobResult }) {
                   {salaryLabel}
                 </span>
               )}
-              <span className="text-xs text-gray-500">{new Date(job.date_posted).toLocaleDateString("fi-FI")}</span>
+              <span className="text-xs text-gray-500 whitespace-nowrap">{new Date(job.date_posted).toLocaleDateString("fi-FI")}</span>
             </div>
           </div>
-          <p className="text-sm text-gray-400 mb-3 flex items-center gap-2">
-            <span className="font-medium text-gray-300">{job.company_name}</span>
-            {job.municipality_name && (
+          <p className="text-sm text-gray-400 mb-3 flex items-center gap-2 overflow-hidden">
+            <span className="font-medium text-gray-300 truncate">{job.company_name}</span>
+            {primaryLocation && (
               <>
-                <span className="w-1 h-1 rounded-full bg-gray-600" />
-                <span className="flex items-center gap-1">
-                  <Icons.MapPin /> {job.municipality_name}
+                <span className="w-1 h-1 rounded-full bg-gray-600 shrink-0" />
+                <span className="relative z-10 flex items-center gap-1 shrink-0">
+                  <Icons.MapPin />
+                  <span>{primaryLocation}</span>
+                  {hasMultipleLocations && (
+                    <span
+                      className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20 cursor-help"
+                      title={locations.join(", ")}
+                    >
+                      +{additionalCount}
+                    </span>
+                  )}
                 </span>
               </>
             )}
