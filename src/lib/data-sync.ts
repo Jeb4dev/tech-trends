@@ -112,8 +112,11 @@ export async function syncJobs() {
   const now = new Date();
   const lastFullScanStr = await getMeta("last_full_scan");
 
-  // Rule: Full scan every 24h.
-  const isFullScan = !lastFullScanStr || now.getTime() - new Date(lastFullScanStr).getTime() > 24 * 60 * 60 * 1000;
+  // Rule: Full scan if first sync of the day (UTC) or no previous full scan.
+  // This ensures "active today" is properly defined by touching all jobs at least once per day.
+  const todayUtc = now.toISOString().slice(0, 10); // "YYYY-MM-DD"
+  const lastFullScanDate = lastFullScanStr ? new Date(lastFullScanStr).toISOString().slice(0, 10) : null;
+  const isFullScan = !lastFullScanDate || lastFullScanDate !== todayUtc;
   const fetchMode = isFullScan ? "FULL" : "INCREMENTAL";
 
   console.log(`[Sync] Mode: ${fetchMode}`);

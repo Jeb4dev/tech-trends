@@ -725,6 +725,9 @@ const formatSalaryDisplay = (job: JobResult) => {
   if (job.salary_min) {
     const min = (job.salary_min / 1000).toFixed(1).replace(/\.0$/, "");
     if (job.salary_max) {
+      if (job.salary_min === job.salary_max) {
+        return `${min}k`;
+      }
       const max = (job.salary_max / 1000).toFixed(1).replace(/\.0$/, "");
       return `${min}k–${max}k`;
     }
