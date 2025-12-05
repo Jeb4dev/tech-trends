@@ -22,7 +22,6 @@ function matchAll(
   keywords: (string | string[])[],
   complicated: boolean = false,
   slice: number = 50,
-  title = false,
 ): Category[] {
   return keywords
     .map((keyword) => {
@@ -42,11 +41,11 @@ function matchAll(
       const matched: Results[] = [];
       for (let i = 0; i < results.length; i++) {
         const opening = results[i];
-        const text = title
-          ? opening._headingLower || opening.heading.toLowerCase()
-          : opening._descrLower || opening.descr.toLowerCase();
-        if (negativesLower.length && negativesLower.some((neg) => text.includes(neg))) continue;
-        if (regex.test(text)) matched.push(opening);
+        // IMPORTANT: Search BOTH heading AND description
+        // Job headings often contain critical info like "React Developer", "Python Engineer"
+        const fullText = opening._fullLower || (opening.heading + "\n" + opening.descr).toLowerCase();
+        if (negativesLower.length && negativesLower.some((neg) => fullText.includes(neg))) continue;
+        if (regex.test(fullText)) matched.push(opening);
       }
 
       if (!matched.length) return null;

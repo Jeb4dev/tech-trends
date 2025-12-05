@@ -10,6 +10,7 @@ export interface Results {
   // Cached lowercase variants to avoid recomputing repeatedly during filtering
   _headingLower?: string;
   _descrLower?: string;
+  _fullLower?: string; // heading + description combined (lowercase)
   work_mode?: WorkMode; // AI-classified working mode when available
 }
 
