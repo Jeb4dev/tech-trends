@@ -91,7 +91,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     },
   };
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning className="dark">
       <head>
         <script defer data-domain="koodaripula.fi" src="https://analytics.bittive.com/js/script.js"></script>
         <script
