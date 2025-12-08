@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import type { Results } from "@/types";
 import {
   Chart as ChartJS,
@@ -71,7 +71,13 @@ function weekStartYmd(ymd: string): string {
   return formatYmd(dd);
 }
 
-export default function ExtraCharts({ openings }: { openings: Results[] }) {
+export default function ExtraCharts({ openings, onLoadedAction }: { openings: Results[]; onLoadedAction?: () => void }) {
+  // Notify parent once mounted to clear loading state
+  useEffect(() => {
+    onLoadedAction?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [period, setPeriod] = useState<"daily" | "weekly">("weekly");
   const {
     newSeries,
@@ -85,7 +91,6 @@ export default function ExtraCharts({ openings }: { openings: Results[] }) {
     salaryMedSeries,
     weekdayCounts,
     ageStats,
-    ageHistogram,
     weeklyNew,
     weeklyLast,
     weeklySalary,
@@ -171,7 +176,6 @@ export default function ExtraCharts({ openings }: { openings: Results[] }) {
         salaryMedSeries: [],
         weekdayCounts,
         ageStats: { avg: 0, median: 0 },
-        ageHistogram: { labels: [...AGE_LABELS], counts: Array(AGE_LABELS.length).fill(0) },
         weeklyNew: [],
         weeklyLast: [],
         weeklySalary: [],
@@ -264,10 +268,6 @@ export default function ExtraCharts({ openings }: { openings: Results[] }) {
       if (b === -1) b = bins.length;
       counts[b]++;
     }
-    const ageHistogram = {
-      labels: [...AGE_LABELS],
-      counts,
-    };
 
     // Exact distribution 0..90 and 90+
     const ageExactLabels = [...Array(91).keys()].map((n) => String(n)).concat("90+");
@@ -358,7 +358,6 @@ export default function ExtraCharts({ openings }: { openings: Results[] }) {
       salaryMedSeries,
       weekdayCounts,
       ageStats,
-      ageHistogram,
       weeklyNew,
       weeklyLast,
       weeklySalary,
@@ -369,7 +368,7 @@ export default function ExtraCharts({ openings }: { openings: Results[] }) {
       trendWeeks: { current: hiWeeks, previous: loWeeks },
       wmTrends,
     };
-  }, [openings]);
+  }, [openings, period]);
 
   const countsSubtitle = period === "weekly" ? "Counts per week since Sep 1, 2025" : "Counts per day since Sep 1, 2025";
   const salarySubtitle =

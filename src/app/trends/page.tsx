@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Skills } from "./skill";
-import { Category, Data, QueryParams, ResponseData, Results } from "@/types";
+import { Category, Data, ResponseData, Results } from "@/types";
 import { useEffect, useState, Suspense, useMemo, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { frameworks } from "@/keywords"; // minimal imports kept if needed elsewhere
@@ -10,7 +10,7 @@ import { Openings } from "./openings";
 import { computeBase } from "@/compute"; // optional fallback if API doesn't send base
 import type { SlimBase } from "@/compute";
 import ActiveOpeningsAreaChart from "./active-area-chart";
-import ExtraCharts from "./extra-charts";
+import dynamic from "next/dynamic";
 
 // -----------------------------------------------------------------------------
 
@@ -19,11 +19,16 @@ import type { QueryParams as QueryParamsType } from "@/types";
 // Narrow/extend QueryParams locally to include hideOld without touching compiled type expectations
 type LocalQueryParams = QueryParamsType & { hideOld?: string[] };
 
+// Replace direct import with dynamic lazy import for ExtraCharts
+const ExtraChartsLazy = dynamic(() => import("./extra-charts"), { ssr: false });
+
 function TrendsPageInner() {
   const [data, setData] = useState<ResponseData>({ count: 0, next: null, previous: null, results: [] });
   const [precomputedSlim, setPrecomputedSlim] = useState<SlimBase | null>(null);
   const [isLoading, setLoading] = useState(false);
   const [isLoadingJobs, setLoadingJobs] = useState(true);
+  const [showMoreGraphs, setShowMoreGraphs] = useState(false);
+  const [isLoadingCharts, setIsLoadingCharts] = useState(false);
   const params = useSearchParams();
   const [queryParams, setQueryParams] = useState<LocalQueryParams>({
     languages: params.getAll("languages").map((q) => q.toLowerCase()),
@@ -307,7 +312,14 @@ function TrendsPageInner() {
     setToday(new Date().toLocaleDateString("fi-FI"));
   }, []);
 
-  const [showMoreGraphs, setShowMoreGraphs] = useState(false);
+  // Toggle handler to set loading before lazy mount
+  const toggleCharts = () => {
+    setShowMoreGraphs((prev) => {
+      const next = !prev;
+      if (next) setIsLoadingCharts(true);
+      return next;
+    });
+  };
 
   if (isLoading)
     return (
@@ -660,21 +672,33 @@ function TrendsPageInner() {
           <div className="mt-4 flex items-center justify-end">
             <button
               type="button"
-              onClick={() => setShowMoreGraphs((v) => !v)}
+              onClick={toggleCharts}
               className={
                 "px-3 py-1.5 text-sm rounded-md border transition-colors " +
                 (showMoreGraphs
                   ? "border-green-500 bg-green-500/15 text-green-300 hover:bg-green-500/25"
-                  : "border-gray-600 text-gray-200 hover:bg-gray-800/60")
+                  : "border-gray-600 text-gray-200 " + (isLoadingCharts ? "opacity-60 cursor-not-allowed" : "hover:bg-gray-800/60"))
               }
               aria-expanded={showMoreGraphs}
+              disabled={isLoadingCharts}
             >
-              {showMoreGraphs ? "Hide more graphs" : "Show more graphs"}
+              {isLoadingCharts ? "Loading graphs…" : showMoreGraphs ? "Hide more graphs" : "Show more graphs"}
             </button>
           </div>
           {showMoreGraphs && (
             <div className="mt-4">
-              <ExtraCharts openings={filteredData as Results[]} />
+              {/* Show a lightweight placeholder while charts bundle loads */}
+              {isLoadingCharts && (
+                <div className="w-full rounded-lg border border-gray-700 bg-zinc-900/40 p-4">
+                  <div className="h-4 w-40 bg-gray-700/40 rounded mb-3 animate-pulse" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <div key={i} className="h-[220px] rounded-md border border-gray-700 bg-gray-800/40 animate-pulse" />
+                    ))}
+                  </div>
+                </div>
+              )}
+              <ExtraChartsLazy openings={filteredData as Results[]} onLoadedAction={() => setIsLoadingCharts(false)} />
             </div>
           )}
           <Openings openings={filteredData} activeQuery={queryParams} />
