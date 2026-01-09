@@ -557,7 +557,7 @@ export const positions = [
 ];
 
 export const seniority = [
-  ["Intern", "Trainee", "Harjoittelija", "harjoittelu", "digistar", "kesätyö", "kesäharjoittelija", "praktikant"],
+  ["Intern", "Trainee", "Harjoittelija", "harjoittelu", "digistar", "kesätyö", "kesätyöntekijä", "kesäharjoittelija", "praktikant", "Summer employee"],
   ["Junior", "Juniori", "entry", "entry-level", "!senior", "!seniori"],
   ["Mid-level", "Mid", "Regular", "Intermediate", "Medior"],
   ["Senior", "Seniori", "Kokenut"],
