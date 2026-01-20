@@ -49,12 +49,10 @@ export function extractSalaryRaw(text: string): ExtractedSalary | null {
   const cleaned = text.replace(/[\u2013\u2014]/g, "-").replace(/€/g, "€");
   const lowered = cleaned.toLowerCase();
   const lines = cleaned.split(/\n+/).filter(Boolean);
-  const currencyToken = /(€|e\/kk|euroa?\b|\beur\b|euros?\b|per month|\/month|monthly|kuukausi|kuukausipalkka|palkka|salary|lön|månadslön|pay\b|gross\s+salary|base\s+pay)/i;
-
+  const currencyToken = /(€|e\/kk|euroa?\b|\beur\b|per month|\/month|monthly|kuukausipalkka|salary|lön|månadslön|pay\b|gross\s+salary|base\s+pay)/i;
   // Patterns to exclude: company stats, budgets, revenue, yearly amounts, large scale numbers
   // Be more specific with "annual" to not exclude "annual bonus" mentions
-  const excludePattern = /(miljardia?|miljoner|million|billion|miljoonaa?|budget|revenue|liikevaihto|omsättning|yearly|vuodessa|vuosittain|per år|årlig|\/year|\/vuosi|työntekijä|anställd|employee|liiketoimintayksikk|investoint|omaisuud|sertifikaatt|referr|per\s+hour|\/\s*h\b|tunti|hourly)/i;
-  // Pattern for annual + amount (not annual bonus)
+  const excludePattern = /(miljardia?|miljoner|million|billion|miljoonaa?|budget|revenue|liikevaihto|omsättning|yearly|vuodessa|vuosittain|per år|årlig|\/year|\/vuosi|työntekijä|anställd|employee|liiketoimintayksikk|investoint|omaisuud|sertifikaatt|referr|per\s+hour|\/\s*h\b|tunti|hourly|iso\s?\d+|standardi?|vaatimus|vaatimukset)/i;  // Pattern for annual + amount (not annual bonus)
   const annualAmountPattern = /annual\s+(?:salary|revenue|budget|income|turnover)/i;
   // Scale words that indicate non-salary amounts
   const scalePattern = /\b\d+[.,]?\d*\s*(miljardia?|miljoner|million|billion|miljoonaa?)\b/i;
@@ -68,6 +66,7 @@ export function extractSalaryRaw(text: string): ExtractedSalary | null {
     if (!currencyToken.test(low)) return false;
     // Exclude lines with budget/revenue/yearly context
     if (excludePattern.test(low)) return false;
+    if (/\biso\s?(\d{4,5})\b/i.test(low)) return false;
     // Exclude lines with "annual salary/revenue/budget" pattern
     if (annualAmountPattern.test(low)) return false;
     // Exclude lines with scale numbers (millions, billions)
