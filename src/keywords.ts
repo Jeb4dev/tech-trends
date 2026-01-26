@@ -370,6 +370,9 @@ export const dataScience = [
   ["Artificial Intelligence", "Tekoäly"],
   // Libraries / platforms
   ["scikit-learn", "sklearn"],
+  "Pytorch",
+  ["TensorFlow", "Tensor Flow", "Tensor-Flow"],
+  "Keras",
   "XGBoost",
   "LightGBM",
   "CatBoost",
