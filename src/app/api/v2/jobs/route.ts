@@ -48,7 +48,18 @@ const deriveSalary = (row: DbJobRow) => {
 };
 
 // Category to DB mapping
-const TAG_CATEGORIES = ["languages", "frameworks", "databases", "cloud", "devops", "dataScience", "cyberSecurity", "softSkills", "positions", "locations"];
+const TAG_CATEGORIES = [
+  "languages",
+  "frameworks",
+  "databases",
+  "cloud",
+  "devops",
+  "dataScience",
+  "cyberSecurity",
+  "softSkills",
+  "positions",
+  "locations",
+];
 const COLUMN_CATEGORIES: Record<string, string> = {
   workMode: "work_mode",
   seniority: "seniority",
@@ -56,10 +67,7 @@ const COLUMN_CATEGORIES: Record<string, string> = {
 };
 
 // Parse raw query with mixed AND/OR into SQL
-function parseRawQueryToSQL(
-  rawQuery: string,
-  args: any[]
-): { sql: string; newArgs: any[] } | null {
+function parseRawQueryToSQL(rawQuery: string, args: any[]): { sql: string; newArgs: any[] } | null {
   if (!rawQuery.trim()) return null;
 
   const normalized = rawQuery.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
@@ -130,12 +138,7 @@ function parseRawQueryToSQL(
   return { sql: `(${sql})`, newArgs };
 }
 
-function buildTokenCondition(
-  category: string,
-  value: string,
-  isNot: boolean,
-  args: any[]
-): string | null {
+function buildTokenCondition(category: string, value: string, isNot: boolean, args: any[]): string | null {
   const lowerValue = value.toLowerCase();
 
   // Check if it's a tag category
@@ -216,44 +219,44 @@ export async function GET(request: Request) {
     // Use simple filter params if no rawQuery
     // Helper to parse advanced params: key_in, key_ex, key_op
     const getFilter = (key: string) => ({
-    inc:
-      searchParams
-        .get(`${key}_in`)
-        ?.split(",")
-        .filter(Boolean)
-        .map((s) => s.trim().toLowerCase()) || [],
-    exc:
-      searchParams
-        .get(`${key}_ex`)
-        ?.split(",")
-        .filter(Boolean)
-        .map((s) => s.trim().toLowerCase()) || [],
-    op: searchParams.get(`${key}_op`) === "AND" ? "AND" : "OR",
-  });
+      inc:
+        searchParams
+          .get(`${key}_in`)
+          ?.split(",")
+          .filter(Boolean)
+          .map((s) => s.trim().toLowerCase()) || [],
+      exc:
+        searchParams
+          .get(`${key}_ex`)
+          ?.split(",")
+          .filter(Boolean)
+          .map((s) => s.trim().toLowerCase()) || [],
+      op: searchParams.get(`${key}_op`) === "AND" ? "AND" : "OR",
+    });
 
-  // 1. Tag Filters (Languages, Frameworks, etc.)
-  // Supports: OR (Match Any), AND (Match All), NOT (Exclude)
-  const applyTagFilter = (category: string, key: string) => {
-    const { inc, exc, op } = getFilter(key);
+    // 1. Tag Filters (Languages, Frameworks, etc.)
+    // Supports: OR (Match Any), AND (Match All), NOT (Exclude)
+    const applyTagFilter = (category: string, key: string) => {
+      const { inc, exc, op } = getFilter(key);
 
-    // Inclusion Logic
-    if (inc.length > 0) {
-      if (op === "OR") {
-        // Match Any
-        const placeholders = inc.map((_, i) => `$${args.length + i + 1}`).join(",");
-        conditions.push(`
+      // Inclusion Logic
+      if (inc.length > 0) {
+        if (op === "OR") {
+          // Match Any
+          const placeholders = inc.map((_, i) => `$${args.length + i + 1}`).join(",");
+          conditions.push(`
           id IN (
             SELECT job_id FROM job_tags jt 
             JOIN tags t ON jt.tag_id = t.id 
             WHERE t.category = '${category}' AND lower(t.name) IN (${placeholders})
           )
         `);
-        args.push(...inc);
-      } else {
-        // Match All (AND)
-        // Ensure the job has *all* the selected tags from this category
-        const placeholders = inc.map((_, i) => `$${args.length + i + 1}`).join(",");
-        conditions.push(`
+          args.push(...inc);
+        } else {
+          // Match All (AND)
+          // Ensure the job has *all* the selected tags from this category
+          const placeholders = inc.map((_, i) => `$${args.length + i + 1}`).join(",");
+          conditions.push(`
           id IN (
             SELECT job_id FROM job_tags jt 
             JOIN tags t ON jt.tag_id = t.id 
@@ -262,54 +265,54 @@ export async function GET(request: Request) {
             HAVING COUNT(DISTINCT lower(t.name)) = ${inc.length}
           )
         `);
-        args.push(...inc);
+          args.push(...inc);
+        }
       }
-    }
 
-    // Exclusion Logic (NOT)
-    if (exc.length > 0) {
-      const placeholders = exc.map((_, i) => `$${args.length + i + 1}`).join(",");
-      conditions.push(`
+      // Exclusion Logic (NOT)
+      if (exc.length > 0) {
+        const placeholders = exc.map((_, i) => `$${args.length + i + 1}`).join(",");
+        conditions.push(`
         id NOT IN (
           SELECT job_id FROM job_tags jt 
           JOIN tags t ON jt.tag_id = t.id 
           WHERE t.category = '${category}' AND lower(t.name) IN (${placeholders})
         )
       `);
-      args.push(...exc);
-    }
-  };
+        args.push(...exc);
+      }
+    };
 
-  applyTagFilter("languages", "languages");
-  applyTagFilter("frameworks", "frameworks");
-  applyTagFilter("databases", "databases");
-  applyTagFilter("cloud", "cloud");
-  applyTagFilter("devops", "devops");
-  applyTagFilter("dataScience", "dataScience");
-  applyTagFilter("cyberSecurity", "cyberSecurity");
-  applyTagFilter("softSkills", "softSkills");
-  applyTagFilter("positions", "positions");
-  applyTagFilter("locations", "locations");
+    applyTagFilter("languages", "languages");
+    applyTagFilter("frameworks", "frameworks");
+    applyTagFilter("databases", "databases");
+    applyTagFilter("cloud", "cloud");
+    applyTagFilter("devops", "devops");
+    applyTagFilter("dataScience", "dataScience");
+    applyTagFilter("cyberSecurity", "cyberSecurity");
+    applyTagFilter("softSkills", "softSkills");
+    applyTagFilter("positions", "positions");
+    applyTagFilter("locations", "locations");
 
-  // 2. Column Filters (WorkMode, Seniority, Companies)
-  // Supports: OR (Match Any), NOT (Exclude). "AND" is logically impossible for single-value columns.
-  const applyColumnFilter = (colName: string, key: string) => {
-    const { inc, exc } = getFilter(key);
+    // 2. Column Filters (WorkMode, Seniority, Companies)
+    // Supports: OR (Match Any), NOT (Exclude). "AND" is logically impossible for single-value columns.
+    const applyColumnFilter = (colName: string, key: string) => {
+      const { inc, exc } = getFilter(key);
 
-    if (inc.length > 0) {
-      const p = inc.map((_, i) => `$${args.length + i + 1}`).join(",");
-      conditions.push(`lower(${colName}) IN (${p})`);
-      args.push(...inc);
-    }
+      if (inc.length > 0) {
+        const p = inc.map((_, i) => `$${args.length + i + 1}`).join(",");
+        conditions.push(`lower(${colName}) IN (${p})`);
+        args.push(...inc);
+      }
 
-    if (exc.length > 0) {
-      const p = exc.map((_, i) => `$${args.length + i + 1}`).join(",");
-      conditions.push(`(lower(${colName}) NOT IN (${p}) OR ${colName} IS NULL)`);
-      args.push(...exc);
-    }
-  };
+      if (exc.length > 0) {
+        const p = exc.map((_, i) => `$${args.length + i + 1}`).join(",");
+        conditions.push(`(lower(${colName}) NOT IN (${p}) OR ${colName} IS NULL)`);
+        args.push(...exc);
+      }
+    };
 
-  applyColumnFilter("work_mode", "workMode");
+    applyColumnFilter("work_mode", "workMode");
     applyColumnFilter("seniority", "seniority");
     applyColumnFilter("company_name", "companies");
   }
@@ -368,9 +371,23 @@ export async function GET(request: Request) {
 
     // Countries should appear after cities in the locations list
     const COUNTRIES = new Set([
-      "Finland", "Sweden", "Norway", "Germany", "Estonia", "Spain", "Greece",
-      "Ireland", "France", "Denmark", "Netherlands", "Belgium", "Poland",
-      "United Kingdom", "UK", "USA", "United States"
+      "Finland",
+      "Sweden",
+      "Norway",
+      "Germany",
+      "Estonia",
+      "Spain",
+      "Greece",
+      "Ireland",
+      "France",
+      "Denmark",
+      "Netherlands",
+      "Belgium",
+      "Poland",
+      "United Kingdom",
+      "UK",
+      "USA",
+      "United States",
     ]);
 
     if (jobIds.length > 0) {
@@ -382,7 +399,7 @@ export async function GET(request: Request) {
         WHERE t.category = 'locations' AND jt.job_id IN ($1:csv)
         ORDER BY jt.job_id, t.name
         `,
-        [jobIds]
+        [jobIds],
       );
 
       // Group locations by job_id
@@ -399,7 +416,7 @@ export async function GET(request: Request) {
         locs.sort((a, b) => {
           const aIsCountry = COUNTRIES.has(a);
           const bIsCountry = COUNTRIES.has(b);
-          if (aIsCountry && !bIsCountry) return 1;  // countries after cities
+          if (aIsCountry && !bIsCountry) return 1; // countries after cities
           if (!aIsCountry && bIsCountry) return -1; // cities before countries
           return a.localeCompare(b); // alphabetical within same type
         });

@@ -39,7 +39,7 @@ export const tagMatchers: TagMatcher[] = Object.entries(Keywords).flatMap(([cate
 export function matchTags(
   heading: string,
   description: string,
-  municipality?: string
+  municipality?: string,
 ): { category: string; name: string }[] {
   const fullText = `${heading}\n${description}\n${municipality || ""}`;
   const fullLower = fullText.toLowerCase();
@@ -86,4 +86,3 @@ export function matchTags(
 
   return tags;
 }
-

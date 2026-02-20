@@ -33,11 +33,7 @@ import { extractSalary } from "./salary";
  * @param municipality - Optional municipality/location field
  * @returns Complete job classification with tags, seniority, work mode, and salary
  */
-export async function classifyJob(
-  title: string,
-  desc: string,
-  municipality?: string
-): Promise<JobClassification> {
+export async function classifyJob(title: string, desc: string, municipality?: string): Promise<JobClassification> {
   const heading = title || "";
   const description = desc || "";
   const fullText = `${heading}\n${description}`;
@@ -64,4 +60,3 @@ export async function classifyJob(
     seniority,
   };
 }
-

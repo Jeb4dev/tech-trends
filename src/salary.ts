@@ -49,10 +49,12 @@ export function extractSalaryRaw(text: string): ExtractedSalary | null {
   const cleaned = text.replace(/[\u2013\u2014]/g, "-").replace(/€/g, "€");
   const lowered = cleaned.toLowerCase();
   const lines = cleaned.split(/\n+/).filter(Boolean);
-  const currencyToken = /(€|e\/kk|euroa?\b|\beur\b|per month|\/month|monthly|kuukausipalkka|salary|lön|månadslön|pay\b|gross\s+salary|base\s+pay)/i;
+  const currencyToken =
+    /(€|e\/kk|euroa?\b|\beur\b|per month|\/month|monthly|kuukausipalkka|salary|lön|månadslön|pay\b|gross\s+salary|base\s+pay)/i;
   // Patterns to exclude: company stats, budgets, revenue, yearly amounts, large scale numbers
   // Be more specific with "annual" to not exclude "annual bonus" mentions
-  const excludePattern = /(miljardia?|miljoner|million|billion|miljoonaa?|budget|revenue|liikevaihto|omsättning|yearly|vuodessa|vuosittain|per år|årlig|\/year|\/vuosi|työntekijä|anställd|employee|liiketoimintayksikk|investoint|omaisuud|sertifikaatt|referr|per\s+hour|\/\s*h\b|tunti|hourly|iso\s?\d+|standardi?|vaatimus|vaatimukset)/i;  // Pattern for annual + amount (not annual bonus)
+  const excludePattern =
+    /(miljardia?|miljoner|million|billion|miljoonaa?|budget|revenue|liikevaihto|omsättning|yearly|vuodessa|vuosittain|per år|årlig|\/year|\/vuosi|työntekijä|anställd|employee|liiketoimintayksikk|investoint|omaisuud|sertifikaatt|referr|per\s+hour|\/\s*h\b|tunti|hourly|iso\s?\d+|standardi?|vaatimus|vaatimukset)/i; // Pattern for annual + amount (not annual bonus)
   const annualAmountPattern = /annual\s+(?:salary|revenue|budget|income|turnover)/i;
   // Scale words that indicate non-salary amounts
   const scalePattern = /\b\d+[.,]?\d*\s*(miljardia?|miljoner|million|billion|miljoonaa?)\b/i;
@@ -100,22 +102,22 @@ export function extractSalaryRaw(text: string): ExtractedSalary | null {
   // Word-based range patterns: "between X and Y", "X to Y", "X eurosta Y euroon"
   const betweenPattern = new RegExp(
     `between\\s+(${numberOrK})\\s+and\\s+(${numberOrK})\\s*(?:€|eur\\b|euroa?\\b|euros?\\b)`,
-    "i"
+    "i",
   );
-  const toPattern = new RegExp(
-    `(${numberOrK})\\s+to\\s+(${numberOrK})\\s*(?:€|eur\\b|euroa?\\b|euros?\\b)`,
-    "i"
+  const toPattern = new RegExp(`(${numberOrK})\\s+to\\s+(${numberOrK})\\s*(?:€|eur\\b|euroa?\\b|euros?\\b)`, "i");
+  const finnishFromToPattern = new RegExp(`(${numberCore})\\s*eurosta\\s+(${numberCore})\\s*euroon`, "i");
+  const singlePattern = new RegExp(
+    `${numberWithCur}(?:\\s*(?:€|e\\b|eur\\b|euroa?\\b|euros?\\b))?(?:\\s*${monthlyQualifier})`,
+    "i",
   );
-  const finnishFromToPattern = new RegExp(
-    `(${numberCore})\\s*eurosta\\s+(${numberCore})\\s*euroon`,
-    "i"
-  );
-  const singlePattern = new RegExp(`${numberWithCur}(?:\\s*(?:€|e\\b|eur\\b|euroa?\\b|euros?\\b))?(?:\\s*${monthlyQualifier})`, "i");
   const looseRangeRegex = new RegExp(`${numberWithCur}\\s*[–-]\\s*${numberWithCur}`, "i");
   const singleLooseNumber = new RegExp(numberWithCur, "i");
   // Pattern for "starting from X €" or "from X €" style (qualifier before number)
   // Also handles Finnish "alkaen X€/kk" format
-  const startingFromPattern = new RegExp(`(?:starting\\s+from|from|alkaen|lähtien)\\s+(${numberCore})\\s*(?:€|e\\b|eur\\b|euroa\\b|e/kk|€/kk)`, "i");
+  const startingFromPattern = new RegExp(
+    `(?:starting\\s+from|from|alkaen|lähtien)\\s+(${numberCore})\\s*(?:€|e\\b|eur\\b|euroa\\b|e/kk|€/kk)`,
+    "i",
+  );
   // Pattern for interrupted text like "5 502,36 (vaatitaso 13) euroa/kk"
   const interruptedPattern = new RegExp(`(${numberCore})\\s*\\([^)]+\\)\\s*(?:euroa?|eur)(?:/kk|/kuukausi)?`, "i");
 
@@ -123,12 +125,12 @@ export function extractSalaryRaw(text: string): ExtractedSalary | null {
   // Must check before range detection to avoid picking up the bonus range
   const basePlusBonusPattern = new RegExp(
     `(${numberCore})\\s*€\\s*\\+\\s*(?:${numberCore}\\s*[–-]\\s*${numberCore}\\s*€.*)?(?:bonus|tulos|tulospalkkio|provision|provisio)`,
-    "i"
+    "i",
   );
   // Also match "pohjapalkka X € + provisio" pattern
   const baseSalaryProvisionPattern = new RegExp(
     `(?:pohjapalkka|peruspalkka|base\\s*(?:salary|pay))\\s+(${numberCore})\\s*€`,
-    "i"
+    "i",
   );
   for (const line of salaryLines) {
     // Check for provision/bonus pattern first
@@ -258,7 +260,11 @@ export function extractSalaryRaw(text: string): ExtractedSalary | null {
   }
   // Pass 4: single number plain context
   for (const line of salaryLines) {
-    if (/(kuukausipalkka|monthly salary|palkka|salary|lön|månadslön|pay\b|tehtäväkohtainen|palkanosa|tasopalkka|peruspalkka|gross)/i.test(line)) {
+    if (
+      /(kuukausipalkka|monthly salary|palkka|salary|lön|månadslön|pay\b|tehtäväkohtainen|palkanosa|tasopalkka|peruspalkka|gross)/i.test(
+        line,
+      )
+    ) {
       const sl = singleLooseNumber.exec(line);
       if (sl) {
         const n = toNumber(sl[1]);

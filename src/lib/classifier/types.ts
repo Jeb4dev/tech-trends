@@ -31,4 +31,3 @@ export interface SeniorityMeta {
 
 // Category-specific matching strategies
 export type MatchStrategy = "complicated" | "simple" | "word-boundary";
-

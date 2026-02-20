@@ -560,7 +560,18 @@ export const positions = [
 ];
 
 export const seniority = [
-  ["Intern", "Trainee", "Harjoittelija", "harjoittelu", "digistar", "kesätyö", "kesätyöntekijä", "kesäharjoittelija", "praktikant", "Summer employee"],
+  [
+    "Intern",
+    "Trainee",
+    "Harjoittelija",
+    "harjoittelu",
+    "digistar",
+    "kesätyö",
+    "kesätyöntekijä",
+    "kesäharjoittelija",
+    "praktikant",
+    "Summer employee",
+  ],
   ["Junior", "Juniori", "entry", "entry-level", "!senior", "!seniori"],
   ["Mid-level", "Mid", "Regular", "Intermediate", "Medior"],
   ["Senior", "Seniori", "Kokenut"],
@@ -581,7 +592,16 @@ export const seniority = [
     "Principal Engineer",
     "!johtaja",
   ],
-  ["Director", "Executive", "Johtaja", "Päällikkö", "Osastopäällikkö", "Yksikönpäällikkö", "direktör", "!toimitusjohtaja"],
+  [
+    "Director",
+    "Executive",
+    "Johtaja",
+    "Päällikkö",
+    "Osastopäällikkö",
+    "Yksikönpäällikkö",
+    "direktör",
+    "!toimitusjohtaja",
+  ],
   ["Vice President", "VP", "Varatoimitusjohtaja"],
   [
     "Chief",

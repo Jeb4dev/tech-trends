@@ -248,8 +248,8 @@ function TrendsPageInner() {
         filteredOpenings: !data.results.length
           ? []
           : openingsSet
-          ? item.openings.filter((o) => openingsSet.has(o))
-          : item.openings,
+            ? item.openings.filter((o) => openingsSet.has(o))
+            : item.openings,
         _baseCount: item._baseCount, // Preserve _baseCount
       }));
 
@@ -677,7 +677,8 @@ function TrendsPageInner() {
                 "px-3 py-1.5 text-sm rounded-md border transition-colors " +
                 (showMoreGraphs
                   ? "border-green-500 bg-green-500/15 text-green-300 hover:bg-green-500/25"
-                  : "border-gray-600 text-gray-200 " + (isLoadingCharts ? "opacity-60 cursor-not-allowed" : "hover:bg-gray-800/60"))
+                  : "border-gray-600 text-gray-200 " +
+                    (isLoadingCharts ? "opacity-60 cursor-not-allowed" : "hover:bg-gray-800/60"))
               }
               aria-expanded={showMoreGraphs}
               disabled={isLoadingCharts}
@@ -693,7 +694,10 @@ function TrendsPageInner() {
                   <div className="h-4 w-40 bg-gray-700/40 rounded mb-3 animate-pulse" />
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {Array.from({ length: 6 }).map((_, i) => (
-                      <div key={i} className="h-[220px] rounded-md border border-gray-700 bg-gray-800/40 animate-pulse" />
+                      <div
+                        key={i}
+                        className="h-[220px] rounded-md border border-gray-700 bg-gray-800/40 animate-pulse"
+                      />
                     ))}
                   </div>
                 </div>

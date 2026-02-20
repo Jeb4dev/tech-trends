@@ -22,8 +22,8 @@ export const Skills = ({ skills, category, updateFilter, setLoading, jobsLoaded 
     if (!skills) return null;
     // Sort by filteredOpenings if jobs are loaded, otherwise by _baseCount
     return [...skills].sort((a, b) => {
-      const countA = jobsLoaded ? a.filteredOpenings.length : a._baseCount ?? 0;
-      const countB = jobsLoaded ? b.filteredOpenings.length : b._baseCount ?? 0;
+      const countA = jobsLoaded ? a.filteredOpenings.length : (a._baseCount ?? 0);
+      const countB = jobsLoaded ? b.filteredOpenings.length : (b._baseCount ?? 0);
       return countB - countA;
     });
   }, [skills, jobsLoaded]);
@@ -60,7 +60,7 @@ export const Skills = ({ skills, category, updateFilter, setLoading, jobsLoaded 
 
   const visible = showAll
     ? sorted.filter((s) => {
-        const count = jobsLoaded ? s.filteredOpenings.length : s._baseCount ?? 0;
+        const count = jobsLoaded ? s.filteredOpenings.length : (s._baseCount ?? 0);
         return count > 0;
       })
     : sorted.slice(0, COLLAPSED_COUNT);
@@ -71,7 +71,7 @@ export const Skills = ({ skills, category, updateFilter, setLoading, jobsLoaded 
         <ul ref={contentRef} className="relative">
           {visible.map((skill) => {
             // Use filteredOpenings count when jobs are loaded; otherwise use _baseCount from base stats
-            const displayCount = jobsLoaded ? skill.filteredOpenings.length : skill._baseCount ?? 0;
+            const displayCount = jobsLoaded ? skill.filteredOpenings.length : (skill._baseCount ?? 0);
             return (
               <li
                 className={`flex flex-row cursor-pointer select-none py-0.5 ${

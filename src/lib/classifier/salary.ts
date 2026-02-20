@@ -32,4 +32,3 @@ export function extractSalary(text: string): SalaryInfo | undefined {
 
   return undefined;
 }
-

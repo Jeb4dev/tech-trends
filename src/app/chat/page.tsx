@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  Conversation,
-  ConversationContent,
-  ConversationScrollButton,
-} from "@/components/ai-elements/conversation";
+import { Conversation, ConversationContent, ConversationScrollButton } from "@/components/ai-elements/conversation";
 import {
   Message,
   MessageContent,
@@ -43,15 +39,10 @@ import {
   DatabaseIcon,
   TerminalIcon,
   CheckCircle2Icon,
-  BrainCircuitIcon
+  BrainCircuitIcon,
 } from "lucide-react";
 import { Loader } from "@/components/ai-elements/loader";
-import {
-  Source,
-  Sources,
-  SourcesContent,
-  SourcesTrigger,
-} from "@/components/ai-elements/sources";
+import { Source, Sources, SourcesContent, SourcesTrigger } from "@/components/ai-elements/sources";
 
 const models = [
   { name: "GPT-5", value: "gpt-5" },
@@ -79,7 +70,7 @@ export default function ChatBot() {
       },
       {
         body: { model, webSearch },
-      }
+      },
     );
     setInput("");
   };
@@ -87,37 +78,30 @@ export default function ChatBot() {
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-6 relative size-full h-screen">
       <div className="flex flex-col h-full bg-card shadow-sm rounded-xl border border-border overflow-hidden">
-
         {/* Chat Area */}
         <Conversation className="h-full">
           <ConversationContent className="p-4 md:p-6 space-y-6">
-
             {messages.map((message) => (
               <div key={message.id} className="w-full">
-
                 {/* 1. Sources */}
-                {message.role === "assistant" &&
-                  message.parts?.some((part) => part.type === "source-url") && (
-                    <div className="mb-2 ml-1">
-                      <Sources>
-                        <SourcesTrigger
-                          count={message.parts.filter((p) => p.type === "source-url").length}
-                        />
-                        {message.parts
-                          .filter((part) => part.type === "source-url")
-                          .map((part: any, i) => (
-                            <SourcesContent key={`${message.id}-source-${i}`}>
-                              <Source href={part.url} title={part.url} />
-                            </SourcesContent>
-                          ))}
-                      </Sources>
-                    </div>
-                  )}
+                {message.role === "assistant" && message.parts?.some((part) => part.type === "source-url") && (
+                  <div className="mb-2 ml-1">
+                    <Sources>
+                      <SourcesTrigger count={message.parts.filter((p) => p.type === "source-url").length} />
+                      {message.parts
+                        .filter((part) => part.type === "source-url")
+                        .map((part: any, i) => (
+                          <SourcesContent key={`${message.id}-source-${i}`}>
+                            <Source href={part.url} title={part.url} />
+                          </SourcesContent>
+                        ))}
+                    </Sources>
+                  </div>
+                )}
 
                 {/* 2. Message Parts (Strictly using .parts) */}
                 {message.parts?.map((part: any, i) => {
                   switch (part.type) {
-
                     // --- TEXT ---
                     case "text":
                       return (
@@ -125,20 +109,16 @@ export default function ChatBot() {
                           <MessageContent>
                             <MessageResponse>{part.text}</MessageResponse>
                           </MessageContent>
-                          {message.role === "assistant" &&
-                            i === message.parts.length - 1 && (
-                              <MessageActions>
-                                <MessageAction onClick={() => regenerate()} label="Retry">
-                                  <RefreshCcwIcon className="size-3" />
-                                </MessageAction>
-                                <MessageAction
-                                  onClick={() => navigator.clipboard.writeText(part.text)}
-                                  label="Copy"
-                                >
-                                  <CopyIcon className="size-3" />
-                                </MessageAction>
-                              </MessageActions>
-                            )}
+                          {message.role === "assistant" && i === message.parts.length - 1 && (
+                            <MessageActions>
+                              <MessageAction onClick={() => regenerate()} label="Retry">
+                                <RefreshCcwIcon className="size-3" />
+                              </MessageAction>
+                              <MessageAction onClick={() => navigator.clipboard.writeText(part.text)} label="Copy">
+                                <CopyIcon className="size-3" />
+                              </MessageAction>
+                            </MessageActions>
+                          )}
                         </Message>
                       );
 
@@ -152,9 +132,7 @@ export default function ChatBot() {
                             <BrainCircuitIcon className="size-3" />
                             <span>Reasoning Process</span>
                           </div>
-                          <div className="text-sm text-muted-foreground italic">
-                            {part.text}
-                          </div>
+                          <div className="text-sm text-muted-foreground italic">{part.text}</div>
                         </div>
                       );
 
@@ -164,7 +142,9 @@ export default function ChatBot() {
                       return (
                         <div key={`${message.id}-${i}`} className="flex items-center gap-4 my-4 opacity-30 px-2">
                           <div className="h-px bg-border flex-1" />
-                          <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Step</span>
+                          <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
+                            Step
+                          </span>
                           <div className="h-px bg-border flex-1" />
                         </div>
                       );
@@ -172,30 +152,36 @@ export default function ChatBot() {
                     // --- TOOL INVOCATION (Fixed for v5: 'tool-toolName') ---
                     // V5 parts use specific types like 'tool-queryDatabase'
                     default: {
-                      if (part.type.startsWith('tool-')) {
-                        const toolName = part.type.replace('tool-', '');
+                      if (part.type.startsWith("tool-")) {
+                        const toolName = part.type.replace("tool-", "");
                         // In v5, arguments are in 'input', not 'args'
                         const query = (part.input as any)?.query;
-                        const isError = part.state === 'result' && !!part.result?.error;
-                        const isComplete = part.state === 'result' || part.state === 'output-available'; // v5 state check
+                        const isError = part.state === "result" && !!part.result?.error;
+                        const isComplete = part.state === "result" || part.state === "output-available"; // v5 state check
 
                         return (
                           <div key={`${message.id}-${i}`} className="my-2 ml-2">
-                            <div className={`
+                            <div
+                              className={`
                                inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-xs border font-medium transition-colors
-                               ${isError
-                              ? 'bg-red-50 border-red-200 text-red-700'
-                              : isComplete
-                                ? 'bg-secondary border-border text-foreground'
-                                : 'bg-blue-50 border-blue-100 text-blue-700 animate-pulse'}
-                             `}>
-                              {isError ? <TerminalIcon className="size-3.5" /> :
-                                isComplete ? <CheckCircle2Icon className="size-3.5" /> :
-                                  <DatabaseIcon className="size-3.5" />}
+                               ${
+                                 isError
+                                   ? "bg-red-50 border-red-200 text-red-700"
+                                   : isComplete
+                                     ? "bg-secondary border-border text-foreground"
+                                     : "bg-blue-50 border-blue-100 text-blue-700 animate-pulse"
+                               }
+                             `}
+                            >
+                              {isError ? (
+                                <TerminalIcon className="size-3.5" />
+                              ) : isComplete ? (
+                                <CheckCircle2Icon className="size-3.5" />
+                              ) : (
+                                <DatabaseIcon className="size-3.5" />
+                              )}
 
-                              <span>
-                                 {toolName === 'queryDatabase' ? 'Running SQL...' : `Using ${toolName}`}
-                               </span>
+                              <span>{toolName === "queryDatabase" ? "Running SQL..." : `Using ${toolName}`}</span>
                             </div>
 
                             {/* Show the SQL Query if available */}
@@ -226,7 +212,6 @@ export default function ChatBot() {
                 <Loader />
               </div>
             )}
-
           </ConversationContent>
           <ConversationScrollButton />
         </Conversation>

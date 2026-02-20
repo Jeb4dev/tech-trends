@@ -15,8 +15,16 @@ const HIGH_LEVEL_TITLES = new Set(["Lead", "Director", "Vice President", "Chief"
 
 // Ambiguous terms that need context validation before counting toward Lead/Director
 const AMBIGUOUS_HIGH = new Set([
-  "lead", "head", "principal", "staff", "architect",
-  "johtaja", "johtava", "päällikkö", "arkkitehti", "vetäjä"
+  "lead",
+  "head",
+  "principal",
+  "staff",
+  "architect",
+  "johtaja",
+  "johtava",
+  "päällikkö",
+  "arkkitehti",
+  "vetäjä",
 ]);
 
 // ============================================================================
@@ -24,34 +32,43 @@ const AMBIGUOUS_HIGH = new Set([
 // ============================================================================
 
 // Pattern to validate ambiguous terms are followed by a role (Lead Engineer, etc.)
-const ROLE_AFTER_AMBIGUOUS = /(lead|head|principal|staff|architect|johtava|johtaja)\s+(engineer|developer|designer|artist|programmer|researcher|analyst|manager|product|security|game|data|ui|ux|kehittäjä|suunnittelija|ohjelmoija)/i;
+const ROLE_AFTER_AMBIGUOUS =
+  /(lead|head|principal|staff|architect|johtava|johtaja)\s+(engineer|developer|designer|artist|programmer|researcher|analyst|manager|product|security|game|data|ui|ux|kehittäjä|suunnittelija|ohjelmoija)/i;
 const TEAM_LEAD_PATTERN = /(team|technical|tech|tiimin?)\s+(lead|vetäjä|johtaja)/i;
 
 // Mentoring juniors suggests senior-level position
-const MENTORING_JUNIOR_REGEX = /(mentor(ing)?|coach(ing)?|guide(ing)?|support(ing)?|train(ing)?|opasta|kouluta)\s+(our\s+|meidän\s+)?junior(s|eja|eita)?/i;
+const MENTORING_JUNIOR_REGEX =
+  /(mentor(ing)?|coach(ing)?|guide(ing)?|support(ing)?|train(ing)?|opasta|kouluta)\s+(our\s+|meidän\s+)?junior(s|eja|eita)?/i;
 
 // High-level terms appearing in "reports to" context
-const CONTEXTUAL_HIGH_LEVEL = /(report(s|ing)?\s+to|support(ing)?|assist(ing)?|work(ing)?\s+with|collaborat(e|ing)\s+with|raportoi(t|daan)?|työskentel(et|ee)\s+(yhdessä|kanssa))/i;
+const CONTEXTUAL_HIGH_LEVEL =
+  /(report(s|ing)?\s+to|support(ing)?|assist(ing)?|work(ing)?\s+with|collaborat(e|ing)\s+with|raportoi(t|daan)?|työskentel(et|ee)\s+(yhdessä|kanssa))/i;
 
 // Contact section indicators (to filter out CEO mentions in contact info)
-const CONTACT_SECTION_REGEX = /(lisätietoja|yhteyshenkilö|contact|ota\s+yhteyttä|rekrytoija|rekrytointipäällikkö|haastattelija)/i;
+const CONTACT_SECTION_REGEX =
+  /(lisätietoja|yhteyshenkilö|contact|ota\s+yhteyttä|rekrytoija|rekrytointipäällikkö|haastattelija)/i;
 
 // Years of experience extraction
 const YEARS_EXPERIENCE_REGEX = /\b(\d{1,2})\+?\s*(?:years?|yrs?|vuotta|vuoden|v\.?|år)\b/i;
 
 // Chief-level title detection
-const CHIEF_REGEX = /(toimitusjohtaja|verkställande\s+direktör|chief|c-level|cio|ciso|cto|cfo|ceo|teknologiajohtaja|tiedonhallintajohtaja|tietoturvajohtaja)/gi;
+const CHIEF_REGEX =
+  /(toimitusjohtaja|verkställande\s+direktör|chief|c-level|cio|ciso|cto|cfo|ceo|teknologiajohtaja|tiedonhallintajohtaja|tietoturvajohtaja)/gi;
 
 // Experience level indicators
-const EXTENSIVE_EXPERIENCE_REGEX = /(extensive|proven|solid|deep|broad|significant|considerable|vankka|laaja|merkittävä)\s+(track\s+record|experience|background|kokemus|tausta)/i;
-const GROWTH_OPPORTUNITY_REGEX = /(grow(th)?|develop(ment)?|learn(ing)?|kasvu|kehit(tymis|ys)|oppimis)\s*(opportunity|potential|path|mahdollisuus|polku)?/i;
+const EXTENSIVE_EXPERIENCE_REGEX =
+  /(extensive|proven|solid|deep|broad|significant|considerable|vankka|laaja|merkittävä)\s+(track\s+record|experience|background|kokemus|tausta)/i;
+const GROWTH_OPPORTUNITY_REGEX =
+  /(grow(th)?|develop(ment)?|learn(ing)?|kasvu|kehit(tymis|ys)|oppimis)\s*(opportunity|potential|path|mahdollisuus|polku)?/i;
 const STUDENT_PATTERN = /(student|opiskelija|studerande|graduate|vastavalmistunut|recent\s+graduate|opiskeli)/i;
 const FIRST_JOB_PATTERN = /(first\s+job|ensimmäinen\s+työpaikka|career\s+start|aloittava|aloitteleva|uran\s+alku)/i;
 const EXPERT_PATTERN = /\b(expert|asiantuntija|specialist|guru|evangelist|osaaja)\b/i;
 
 // Compound title patterns for high-confidence matches
-const COMPOUND_DIRECTOR_PATTERN = /(toimitusjohtaja|teknologiajohtaja|tietoturvajohtaja|myyntijohtaja|talousjohtaja|henkilöstöjohtaja|kehitysjohtaja|markkinointijohtaja|it[- ]johtaja|chief\s+\w+\s+officer)/i;
-const COMPOUND_LEAD_PATTERN = /(tiimin?\s*vetäjä|team\s*lead|tech\s*lead|development\s*lead|project\s*lead|kehitystiimin?\s*vetäjä)/i;
+const COMPOUND_DIRECTOR_PATTERN =
+  /(toimitusjohtaja|teknologiajohtaja|tietoturvajohtaja|myyntijohtaja|talousjohtaja|henkilöstöjohtaja|kehitysjohtaja|markkinointijohtaja|it[- ]johtaja|chief\s+\w+\s+officer)/i;
+const COMPOUND_LEAD_PATTERN =
+  /(tiimin?\s*vetäjä|team\s*lead|tech\s*lead|development\s*lead|project\s*lead|kehitystiimin?\s*vetäjä)/i;
 
 // ============================================================================
 // SENIORITY GROUPS (from keywords.ts)
@@ -120,10 +137,11 @@ export function classifySeniority(title: string, desc: string): string {
       if (titleMatches) {
         // Validate ambiguous terms in title
         if (AMBIGUOUS_HIGH.has(syn)) {
-          const isValidInTitle = ROLE_AFTER_AMBIGUOUS.test(titleLower) ||
-                                  TEAM_LEAD_PATTERN.test(titleLower) ||
-                                  COMPOUND_LEAD_PATTERN.test(titleLower) ||
-                                  COMPOUND_DIRECTOR_PATTERN.test(titleLower);
+          const isValidInTitle =
+            ROLE_AFTER_AMBIGUOUS.test(titleLower) ||
+            TEAM_LEAD_PATTERN.test(titleLower) ||
+            COMPOUND_LEAD_PATTERN.test(titleLower) ||
+            COMPOUND_DIRECTOR_PATTERN.test(titleLower);
           if (!isValidInTitle) continue;
         }
         titleHits += titleMatches.length;
@@ -286,4 +304,3 @@ export function classifySeniority(title: string, desc: string): string {
 
   return best ? best[0] : "Mid-level";
 }
-

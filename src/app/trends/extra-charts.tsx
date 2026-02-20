@@ -71,7 +71,13 @@ function weekStartYmd(ymd: string): string {
   return formatYmd(dd);
 }
 
-export default function ExtraCharts({ openings, onLoadedAction }: { openings: Results[]; onLoadedAction?: () => void }) {
+export default function ExtraCharts({
+  openings,
+  onLoadedAction,
+}: {
+  openings: Results[];
+  onLoadedAction?: () => void;
+}) {
   // Notify parent once mounted to clear loading state
   useEffect(() => {
     onLoadedAction?.();

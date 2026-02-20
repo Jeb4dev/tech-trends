@@ -164,12 +164,12 @@ export default function LanguagesTrendingBars({ languages, selected }: { languag
                 {v === "all"
                   ? "All"
                   : v === "1y"
-                  ? "1 year"
-                  : v === "90d"
-                  ? "90 days"
-                  : v === "30d"
-                  ? "30 days"
-                  : "7 days"}
+                    ? "1 year"
+                    : v === "90d"
+                      ? "90 days"
+                      : v === "30d"
+                        ? "30 days"
+                        : "7 days"}
               </button>
             ))}
           </div>

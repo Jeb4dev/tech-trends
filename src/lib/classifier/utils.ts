@@ -47,4 +47,3 @@ export const CATEGORY_STRATEGIES: Record<string, MatchStrategy> = {
   location: "word-boundary",
   seniority: "word-boundary",
 };
-

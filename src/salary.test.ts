@@ -451,7 +451,7 @@ const trickyCases: TestCase[] = [
     input: "Palkka 3000 eurosta 4000 euroon",
     expected: { label: "3000–4000€", min: 3000, max: 4000 },
     description: "Finnish 'from X to Y' using cases",
-  }
+  },
 ];
 
 // ============================================================================

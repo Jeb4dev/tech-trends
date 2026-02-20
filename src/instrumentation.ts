@@ -50,6 +50,8 @@ export async function register() {
       timer = null;
     }
   };
-  process.on("SIGTERM", cleanup);
-  process.on("SIGINT", cleanup);
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    process.on("SIGTERM", cleanup);
+    process.on("SIGINT", cleanup);
+  }
 }

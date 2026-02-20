@@ -133,7 +133,11 @@ const Icons = {
   ),
   Edit: () => (
     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+      />
     </svg>
   ),
 };
@@ -154,7 +158,6 @@ const INITIAL_FILTER_STATE = (): FilterState => {
   });
   return initial;
 };
-
 
 // -- Query String Generation & Parsing --
 
@@ -229,7 +232,6 @@ function parseQueryToFilters(query: string): FilterState | null {
   }
 }
 
-
 function validateQuerySyntax(query: string): { valid: boolean; error?: string } {
   const normalized = query.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
   if (!normalized) return { valid: true };
@@ -262,7 +264,10 @@ function validateQuerySyntax(query: string): { valid: boolean; error?: string } 
   // If there's content but no valid tokens, check if it's just whitespace/operators
   if (normalized && !hasValidToken) {
     // Allow just operators and parens
-    const cleanedForCheck = normalized.replace(/\b(AND|OR|NOT)\b/g, "").replace(/[()]/g, "").trim();
+    const cleanedForCheck = normalized
+      .replace(/\b(AND|OR|NOT)\b/g, "")
+      .replace(/[()]/g, "")
+      .trim();
     if (cleanedForCheck) return { valid: false, error: "Invalid syntax" };
   }
 
@@ -320,34 +325,34 @@ function updateQueryWithToggle(
   categoryKey: string,
   value: string,
   nowIncluded: boolean,
-  nowExcluded: boolean
+  nowExcluded: boolean,
 ): string {
   const normalized = currentQuery.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
 
   // Escape special regex characters in value
-  const escapedValue = value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const escapedValue = value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
   // Remove existing token for this value (both include and exclude variants)
   let updated = normalized
-    .replace(new RegExp(`\\s*AND\\s+NOT\\s+${categoryKey}:"${escapedValue}"`, 'g'), '')
-    .replace(new RegExp(`\\s*OR\\s+NOT\\s+${categoryKey}:"${escapedValue}"`, 'g'), '')
-    .replace(new RegExp(`NOT\\s+${categoryKey}:"${escapedValue}"\\s*AND\\s*`, 'g'), '')
-    .replace(new RegExp(`NOT\\s+${categoryKey}:"${escapedValue}"\\s*OR\\s*`, 'g'), '')
-    .replace(new RegExp(`NOT\\s+${categoryKey}:"${escapedValue}"`, 'g'), '')
-    .replace(new RegExp(`\\s*AND\\s+${categoryKey}:"${escapedValue}"`, 'g'), '')
-    .replace(new RegExp(`\\s*OR\\s+${categoryKey}:"${escapedValue}"`, 'g'), '')
-    .replace(new RegExp(`${categoryKey}:"${escapedValue}"\\s*AND\\s*`, 'g'), '')
-    .replace(new RegExp(`${categoryKey}:"${escapedValue}"\\s*OR\\s*`, 'g'), '')
-    .replace(new RegExp(`${categoryKey}:"${escapedValue}"`, 'g'), '');
+    .replace(new RegExp(`\\s*AND\\s+NOT\\s+${categoryKey}:"${escapedValue}"`, "g"), "")
+    .replace(new RegExp(`\\s*OR\\s+NOT\\s+${categoryKey}:"${escapedValue}"`, "g"), "")
+    .replace(new RegExp(`NOT\\s+${categoryKey}:"${escapedValue}"\\s*AND\\s*`, "g"), "")
+    .replace(new RegExp(`NOT\\s+${categoryKey}:"${escapedValue}"\\s*OR\\s*`, "g"), "")
+    .replace(new RegExp(`NOT\\s+${categoryKey}:"${escapedValue}"`, "g"), "")
+    .replace(new RegExp(`\\s*AND\\s+${categoryKey}:"${escapedValue}"`, "g"), "")
+    .replace(new RegExp(`\\s*OR\\s+${categoryKey}:"${escapedValue}"`, "g"), "")
+    .replace(new RegExp(`${categoryKey}:"${escapedValue}"\\s*AND\\s*`, "g"), "")
+    .replace(new RegExp(`${categoryKey}:"${escapedValue}"\\s*OR\\s*`, "g"), "")
+    .replace(new RegExp(`${categoryKey}:"${escapedValue}"`, "g"), "");
 
   // Clean up empty parentheses and dangling operators
   updated = updated
-    .replace(/\(\s*\)/g, '')
-    .replace(/^\s*AND\s+/i, '')
-    .replace(/^\s*OR\s+/i, '')
-    .replace(/\s+AND\s*$/i, '')
-    .replace(/\s+OR\s*$/i, '')
-    .replace(/\s+/g, ' ')
+    .replace(/\(\s*\)/g, "")
+    .replace(/^\s*AND\s+/i, "")
+    .replace(/^\s*OR\s+/i, "")
+    .replace(/\s+AND\s*$/i, "")
+    .replace(/\s+OR\s*$/i, "")
+    .replace(/\s+/g, " ")
     .trim();
 
   // Add new token if needed
@@ -386,7 +391,7 @@ export default function AdvancedSearchPage() {
   // Validate query syntax on change
   useEffect(() => {
     const validation = validateQuerySyntax(queryText);
-    setQueryError(validation.valid ? null : (validation.error || "Invalid syntax"));
+    setQueryError(validation.valid ? null : validation.error || "Invalid syntax");
   }, [queryText]);
 
   const handleQueryChange = (value: string) => {
@@ -409,7 +414,13 @@ export default function AdvancedSearchPage() {
     }
 
     // Regenerate query from updated filters, but preserve complex structure if possible
-    const newQuery = updateQueryWithToggle(queryText, categoryKey, value, cat.include.has(value), cat.exclude.has(value));
+    const newQuery = updateQueryWithToggle(
+      queryText,
+      categoryKey,
+      value,
+      cat.include.has(value),
+      cat.exclude.has(value),
+    );
     setQueryText(newQuery);
   };
 
@@ -481,10 +492,9 @@ export default function AdvancedSearchPage() {
     cat.operator = cat.operator === "AND" ? "OR" : "AND";
 
     // Regenerate query with new operator
-    const newQuery = generateQueryString({...currentFilters, [categoryKey]: cat});
+    const newQuery = generateQueryString({ ...currentFilters, [categoryKey]: cat });
     setQueryText(newQuery);
   };
-
 
   const activeFilterCount = Object.values(filters).reduce((acc, c) => acc + c.include.size + c.exclude.size, 0);
 
@@ -652,8 +662,8 @@ function FilterSection({ title, type, options, counts, state, onToggleItem, onTo
                   isInc
                     ? "bg-blue-500/10 text-blue-100"
                     : isExc
-                    ? "bg-red-500/10 text-red-100"
-                    : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
+                      ? "bg-red-500/10 text-red-100"
+                      : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
                 }
               `}
             >
@@ -665,8 +675,8 @@ function FilterSection({ title, type, options, counts, state, onToggleItem, onTo
                     isInc
                       ? "bg-blue-500 border-blue-500"
                       : isExc
-                      ? "bg-red-500 border-red-500"
-                      : "border-gray-600 group-hover:border-gray-400"
+                        ? "bg-red-500 border-red-500"
+                        : "border-gray-600 group-hover:border-gray-400"
                   }
                 `}
                 >
@@ -693,7 +703,6 @@ function FilterSection({ title, type, options, counts, state, onToggleItem, onTo
     </div>
   );
 }
-
 
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -742,9 +751,8 @@ function JobCard({ job }: { job: JobResult }) {
 
   // Determine locations to display
   // Use locations array from tags if available, otherwise fall back to municipality_name
-  const locations = job.locations && job.locations.length > 0
-    ? job.locations
-    : (job.municipality_name ? [job.municipality_name] : []);
+  const locations =
+    job.locations && job.locations.length > 0 ? job.locations : job.municipality_name ? [job.municipality_name] : [];
 
   const primaryLocation = locations[0];
   const additionalCount = locations.length - 1;
@@ -772,7 +780,9 @@ function JobCard({ job }: { job: JobResult }) {
                   {salaryLabel}
                 </span>
               )}
-              <span className="text-xs text-gray-500 whitespace-nowrap">{new Date(job.date_posted).toLocaleDateString("fi-FI")}</span>
+              <span className="text-xs text-gray-500 whitespace-nowrap">
+                {new Date(job.date_posted).toLocaleDateString("fi-FI")}
+              </span>
             </div>
           </div>
           <p className="text-sm text-gray-400 mb-3 flex items-center gap-2 overflow-hidden">
@@ -867,17 +877,13 @@ function QueryEditor({
           <span className="text-sm font-medium text-gray-300">Query</span>
         </div>
         <div className="flex items-center gap-2">
-          {isLoading && (
-            <span className="text-xs text-gray-500 animate-pulse">Searching...</span>
-          )}
+          {isLoading && <span className="text-xs text-gray-500 animate-pulse">Searching...</span>}
           {queryError && (
             <span className="text-xs text-red-400 flex items-center gap-1">
               <Icons.X /> {queryError}
             </span>
           )}
-          {!queryError && !isLoading && queryText.trim() && (
-            <span className="text-xs text-green-400">✓ Valid</span>
-          )}
+          {!queryError && !isLoading && queryText.trim() && <span className="text-xs text-green-400">✓ Valid</span>}
         </div>
       </div>
 
@@ -885,11 +891,11 @@ function QueryEditor({
         <textarea
           value={queryText}
           onChange={(e) => onQueryChange(e.target.value)}
-          placeholder={'Example:\n(languages:"Python" AND languages:"TypeScript") OR (languages:"JavaScript" AND languages:"Golang")\nNOT workMode:"onsite"'}
+          placeholder={
+            'Example:\n(languages:"Python" AND languages:"TypeScript") OR (languages:"JavaScript" AND languages:"Golang")\nNOT workMode:"onsite"'
+          }
           className={`w-full h-24 bg-[#0d1117] border rounded-lg p-3 font-mono text-sm text-gray-200 placeholder-gray-600 focus:outline-none resize-none transition-colors ${
-            queryError 
-              ? "border-red-500/50 focus:border-red-500" 
-              : "border-white/10 focus:border-purple-500/50"
+            queryError ? "border-red-500/50 focus:border-red-500" : "border-white/10 focus:border-purple-500/50"
           }`}
           spellCheck={false}
         />
@@ -899,15 +905,27 @@ function QueryEditor({
             Syntax reference
           </summary>
           <div className="mt-2 text-xs text-gray-500 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 pl-2 border-l border-white/10">
-            <p><code className="text-purple-400">category:&quot;value&quot;</code> — Include</p>
-            <p><code className="text-red-400">NOT category:&quot;value&quot;</code> — Exclude</p>
-            <p><code className="text-blue-400">AND</code> / <code className="text-green-400">OR</code> — Combine</p>
-            <p><code className="text-amber-400">(a AND b) OR (c AND d)</code> — Group</p>
+            <p>
+              <code className="text-purple-400">category:&quot;value&quot;</code> — Include
+            </p>
+            <p>
+              <code className="text-red-400">NOT category:&quot;value&quot;</code> — Exclude
+            </p>
+            <p>
+              <code className="text-blue-400">AND</code> / <code className="text-green-400">OR</code> — Combine
+            </p>
+            <p>
+              <code className="text-amber-400">(a AND b) OR (c AND d)</code> — Group
+            </p>
             <p className="sm:col-span-2 mt-1">
-              <span className="text-gray-400">Example:</span> <code className="text-cyan-400">(languages:&quot;Python&quot; AND languages:&quot;React&quot;) OR languages:&quot;Rust&quot;</code>
+              <span className="text-gray-400">Example:</span>{" "}
+              <code className="text-cyan-400">
+                (languages:&quot;Python&quot; AND languages:&quot;React&quot;) OR languages:&quot;Rust&quot;
+              </code>
             </p>
             <p className="sm:col-span-2 text-gray-600 mt-1">
-              Categories: languages, frameworks, databases, cloud, devops, dataScience, cyberSecurity, positions, softSkills, locations, workMode, seniority, companies
+              Categories: languages, frameworks, databases, cloud, devops, dataScience, cyberSecurity, positions,
+              softSkills, locations, workMode, seniority, companies
             </p>
           </div>
         </details>
@@ -915,4 +933,3 @@ function QueryEditor({
     </div>
   );
 }
-
