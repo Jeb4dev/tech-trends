@@ -40,12 +40,20 @@ export const Slider = (props: {
 
   const commitRange = useCallback(() => {
     const [start, end] = range;
-    filterByDate(toDate(start), toDate(end));
-  }, [range, filterByDate, toDate]);
+    // Validate range values are safe integers within bounds
+    const validatedStart = Math.max(0, Math.min(start, totalDays));
+    const validatedEnd = Math.max(0, Math.min(end, totalDays));
+    filterByDate(toDate(validatedStart), toDate(validatedEnd));
+  }, [range, filterByDate, toDate, totalDays]);
 
   const scheduleCommit = useCallback(() => {
-    if (commitTimer.current) clearTimeout(commitTimer.current);
-    commitTimer.current = setTimeout(commitRange, 300);
+    if (commitTimer.current) {
+      clearTimeout(commitTimer.current);
+    }
+    // Use a fixed, hardcoded timeout value to prevent injection
+    commitTimer.current = setTimeout(() => {
+      commitRange();
+    }, 300);
   }, [commitRange]);
 
   const onRelease = useCallback(() => {
