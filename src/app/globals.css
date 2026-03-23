@@ -8,32 +8,8 @@
   --background-image-gradient-conic: conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops));
 }
 
-h1 {
-  @apply text-4xl font-bold py-2;
-}
-
-h2 {
-  @apply text-3xl py-2 underline;
-}
-
-h3 {
-  @apply text-2xl;
-}
-
-h4 {
-  @apply text-xl;
-}
-
-h5 {
-  @apply text-lg;
-}
-
 body {
   @apply text-gray-200;
-}
-
-a {
-  @apply text-blue-500 hover:text-blue-700;
 }
 
 details[open] summary::before {

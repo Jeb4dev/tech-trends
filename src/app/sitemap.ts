@@ -1,11 +1,12 @@
 import { MetadataRoute } from "next";
+import { getAllCategories } from "@/lib/categories";
 
 const BASE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://koodaripula.fi").replace(/\/$/, "");
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
+  const categories = getAllCategories();
 
-  // Static routes in the app
   const staticEntries: MetadataRoute.Sitemap = [
     {
       url: `${BASE_URL}/`,
@@ -19,10 +20,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "hourly",
       priority: 0.9,
     },
+    {
+      url: `${BASE_URL}/advanced-search`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
+      url: `${BASE_URL}/about`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.5,
+    },
   ];
 
-  // Optionally, attempt to pull data-driven URLs (none for now since there are no per-job pages)
-  // If later you add dynamic pages, you can append them here.
+  const categoryEntries: MetadataRoute.Sitemap = categories.map((c) => ({
+    url: `${BASE_URL}/trends/${c.slug}`,
+    lastModified: now,
+    changeFrequency: "daily",
+    priority: 0.8,
+  }));
 
-  return staticEntries;
+  // TODO: Add dynamic keyword detail pages when /trends/[category]/[keyword] is implemented
+  // Query tags table for all keywords and generate entries
+
+  return [...staticEntries, ...categoryEntries];
 }

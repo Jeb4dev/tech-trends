@@ -1,6 +1,8 @@
 import "./globals.css";
 import { Inter } from "next/font/google";
 import type { Metadata, Viewport } from "next";
+import SiteNav from "@/components/SiteNav";
+import SiteFooter from "@/components/SiteFooter";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -100,7 +102,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
       </head>
-      <body className={`${inter.className} bg-slate-800 container mx-auto p-4`}>{children}</body>
+      <body className={`${inter.className} bg-slate-800 min-h-screen flex flex-col`}>
+        <SiteNav />
+        <main className="flex-1 container mx-auto p-4">{children}</main>
+        <SiteFooter />
+      </body>
     </html>
   );
 }

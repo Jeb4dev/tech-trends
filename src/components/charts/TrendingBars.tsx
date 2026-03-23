@@ -19,29 +19,35 @@ type TimeRange = "all" | "1y" | "90d" | "30d" | "7d";
 
 type TrendStat = {
   label: string;
-  delta: number; // current avg - previous avg (daily active postings)
-  pct: number; // relative change, 1.0 = +100%
+  delta: number;
+  pct: number;
   avgCurr: number;
   avgPrev: number;
 };
 
-export default function LanguagesTrendingBars({ languages, selected }: { languages: Category[]; selected: string[] }) {
+interface TrendingBarsProps {
+  items: Category[];
+  selected: string[];
+  categoryLabel: string;
+}
+
+export default function TrendingBars({ items, selected, categoryLabel }: TrendingBarsProps) {
   const [timeRange, setTimeRange] = useState<TimeRange>("30d");
 
-  const selectedLangs = useMemo(() => {
+  const selectedItems = useMemo(() => {
     const sel = new Set(selected.map((s) => s.toLowerCase()));
-    return languages.filter((l) => sel.has(l.label.toLowerCase()));
-  }, [languages, selected]);
+    return items.filter((l) => sel.has(l.label.toLowerCase()));
+  }, [items, selected]);
 
-  const seriesByLang = useMemo(() => {
+  const seriesByItem = useMemo(() => {
     const map = new Map<string, { date: string; count: number }[]>();
-    for (const lang of selectedLangs) {
-      map.set(lang.label, buildSeries(lang.openings));
+    for (const item of selectedItems) {
+      map.set(item.label, buildSeries(item.openings));
     }
     return map;
-  }, [selectedLangs]);
+  }, [selectedItems]);
 
-  const allLabels = useMemo(() => buildUnionLabels(seriesByLang), [seriesByLang]);
+  const allLabels = useMemo(() => buildUnionLabels(seriesByItem), [seriesByItem]);
 
   const stats: TrendStat[] = useMemo(() => {
     if (!allLabels.length) return [];
@@ -65,8 +71,8 @@ export default function LanguagesTrendingBars({ languages, selected }: { languag
     const toMap = (series: { date: string; count: number }[]) => new Map(series.map((r) => [r.date, r.count] as const));
 
     const out: TrendStat[] = [];
-    for (const lang of selectedLangs) {
-      const s = seriesByLang.get(lang.label) || [];
+    for (const item of selectedItems) {
+      const s = seriesByItem.get(item.label) || [];
       const m = toMap(s);
       const sumCurr = currWindow.reduce((acc, d) => acc + (m.get(d) || 0), 0);
       const sumPrev = prevWindow.reduce((acc, d) => acc + (m.get(d) || 0), 0);
@@ -74,12 +80,11 @@ export default function LanguagesTrendingBars({ languages, selected }: { languag
       const avgPrev = prevWindow.length ? sumPrev / prevWindow.length : 0;
       const delta = avgCurr - avgPrev;
       const pct = avgPrev > 0 ? delta / avgPrev : avgCurr > 0 ? 1 : 0;
-      out.push({ label: lang.label, delta, pct, avgCurr, avgPrev });
+      out.push({ label: item.label, delta, pct, avgCurr, avgPrev });
     }
-    // Sort by delta descending
     out.sort((a, b) => b.delta - a.delta);
     return out;
-  }, [selectedLangs, seriesByLang, allLabels, timeRange]);
+  }, [selectedItems, seriesByItem, allLabels, timeRange]);
 
   const labels = useMemo(() => stats.map((s) => s.label), [stats]);
   const values = useMemo(() => stats.map((s) => Number(s.delta.toFixed(2))), [stats]);
@@ -129,7 +134,6 @@ export default function LanguagesTrendingBars({ languages, selected }: { languag
         x: {
           ticks: { color: "#a3a3a3" },
           grid: { color: "#404040" },
-          zeroLineColor: "#6b7280",
         },
         y: { ticks: { color: "#a3a3a3" }, grid: { display: false } },
       },
@@ -141,7 +145,7 @@ export default function LanguagesTrendingBars({ languages, selected }: { languag
     <div className="w-full rounded-lg border border-gray-700 bg-zinc-900/40 shadow-sm">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-b border-gray-700/70">
         <div className="grid gap-1">
-          <h3 className="text-base md:text-lg font-semibold">Trending languages (up/down)</h3>
+          <h3 className="text-base md:text-lg font-semibold">Trending {categoryLabel.toLowerCase()} (up/down)</h3>
           <p className="text-xs md:text-sm text-gray-400">Change in average daily postings vs previous window</p>
         </div>
         <div className="mt-2 sm:mt-0">
@@ -160,7 +164,6 @@ export default function LanguagesTrendingBars({ languages, selected }: { languag
                 }
                 aria-pressed={timeRange === v}
               >
-                - {v === "7d" ? "7 days" : v === "30d" ? "30 days" : "90 days"}+{" "}
                 {v === "all"
                   ? "All"
                   : v === "1y"
@@ -180,7 +183,7 @@ export default function LanguagesTrendingBars({ languages, selected }: { languag
           {labels.length ? (
             <Bar data={data} options={options} />
           ) : (
-            <div className="text-sm text-gray-400 px-2 py-4">No data available for the selected languages.</div>
+            <div className="text-sm text-gray-400 px-2 py-4">No data available for the selected items.</div>
           )}
         </div>
       </div>

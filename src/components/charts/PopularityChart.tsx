@@ -29,29 +29,29 @@ ChartJS.register(
 
 type TimeRange = "all" | "90d" | "30d" | "7d";
 
-export default function LanguagesPopularityChart({
-  languages,
-  selected,
-}: {
-  languages: Category[];
+interface PopularityChartProps {
+  items: Category[];
   selected: string[];
-}) {
+  categoryLabel: string;
+}
+
+export default function PopularityChart({ items, selected, categoryLabel }: PopularityChartProps) {
   const [timeRange, setTimeRange] = useState<TimeRange>("90d");
 
-  const selectedLangs = useMemo(() => {
+  const selectedItems = useMemo(() => {
     const sel = new Set(selected.map((s) => s.toLowerCase()));
-    return languages.filter((l) => sel.has(l.label.toLowerCase()));
-  }, [languages, selected]);
+    return items.filter((l) => sel.has(l.label.toLowerCase()));
+  }, [items, selected]);
 
-  const seriesByLang = useMemo(() => {
+  const seriesByItem = useMemo(() => {
     const map = new Map<string, { date: string; count: number }[]>();
-    for (const lang of selectedLangs) {
-      map.set(lang.label, buildSeries(lang.openings));
+    for (const item of selectedItems) {
+      map.set(item.label, buildSeries(item.openings));
     }
     return map;
-  }, [selectedLangs]);
+  }, [selectedItems]);
 
-  const fullLabels = useMemo(() => buildUnionLabels(seriesByLang), [seriesByLang]);
+  const fullLabels = useMemo(() => buildUnionLabels(seriesByItem), [seriesByItem]);
 
   const filteredLabels = useMemo(() => {
     if (!fullLabels.length) return fullLabels;
@@ -65,24 +65,24 @@ export default function LanguagesPopularityChart({
   }, [fullLabels, timeRange]);
 
   const datasets = useMemo(() => {
-    return selectedLangs.map((lang, idx) => {
-      const series = seriesByLang.get(lang.label) || [];
+    return selectedItems.map((item, idx) => {
+      const series = seriesByItem.get(item.label) || [];
       const dataByDate = new Map(series.map((r) => [r.date, r.count] as const));
       const border = colorForIndex(idx);
       return {
-        label: lang.label,
+        label: item.label,
         data: filteredLabels.map((d) => dataByDate.get(d) || 0),
         borderColor: border,
         backgroundColor: border.replace(
-          /^hsl\((\d+)\s+(\d+)%\s+(\d+)%\)$/, // to rgba-like via hsl -> hsla string
-          (m, h, s, l) => `hsl(${h} ${s}% ${l}% / 0.18)`,
+          /^hsl\((\d+)\s+(\d+)%\s+(\d+)%\)$/,
+          (_m, h, s, l) => `hsl(${h} ${s}% ${l}% / 0.18)`,
         ),
         fill: true,
         tension: 0.35,
         pointRadius: 0,
       };
     });
-  }, [selectedLangs, seriesByLang, filteredLabels]);
+  }, [selectedItems, seriesByItem, filteredLabels]);
 
   const chartData = useMemo(() => ({ labels: filteredLabels, datasets }), [filteredLabels, datasets]);
 
@@ -105,11 +105,7 @@ export default function LanguagesPopularityChart({
       },
       scales: {
         x: {
-          ticks: {
-            color: "#a3a3a3",
-            maxRotation: 0,
-            autoSkipPadding: 12,
-          },
+          ticks: { color: "#a3a3a3", maxRotation: 0, autoSkipPadding: 12 },
           grid: { display: false },
         },
         y: {
@@ -126,8 +122,8 @@ export default function LanguagesPopularityChart({
     <div className="w-full rounded-lg border border-gray-700 bg-zinc-900/40 shadow-sm">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-b border-gray-700/70">
         <div className="grid gap-1">
-          <h3 className="text-base md:text-lg font-semibold">Language popularity over time</h3>
-          <p className="text-xs md:text-sm text-gray-400">Daily active postings mentioning the language</p>
+          <h3 className="text-base md:text-lg font-semibold">{categoryLabel} popularity over time</h3>
+          <p className="text-xs md:text-sm text-gray-400">Daily active postings mentioning the item</p>
         </div>
         <div className="mt-2 sm:mt-0">
           <span className="text-xs text-gray-400 mr-2">Range</span>

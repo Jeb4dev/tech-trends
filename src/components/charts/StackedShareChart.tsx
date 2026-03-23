@@ -29,29 +29,29 @@ ChartJS.register(
 
 type TimeRange = "all" | "90d" | "30d" | "7d";
 
-export default function LanguagesStackedShareChart({
-  languages,
-  selected,
-}: {
-  languages: Category[];
+interface StackedShareChartProps {
+  items: Category[];
   selected: string[];
-}) {
+  categoryLabel: string;
+}
+
+export default function StackedShareChart({ items, selected, categoryLabel }: StackedShareChartProps) {
   const [timeRange, setTimeRange] = useState<TimeRange>("90d");
 
-  const selectedLangs = useMemo(() => {
+  const selectedItems = useMemo(() => {
     const sel = new Set(selected.map((s) => s.toLowerCase()));
-    return languages.filter((l) => sel.has(l.label.toLowerCase()));
-  }, [languages, selected]);
+    return items.filter((l) => sel.has(l.label.toLowerCase()));
+  }, [items, selected]);
 
-  const seriesByLang = useMemo(() => {
+  const seriesByItem = useMemo(() => {
     const map = new Map<string, { date: string; count: number }[]>();
-    for (const lang of selectedLangs) {
-      map.set(lang.label, buildSeries(lang.openings));
+    for (const item of selectedItems) {
+      map.set(item.label, buildSeries(item.openings));
     }
     return map;
-  }, [selectedLangs]);
+  }, [selectedItems]);
 
-  const fullLabels = useMemo(() => buildUnionLabels(seriesByLang), [seriesByLang]);
+  const fullLabels = useMemo(() => buildUnionLabels(seriesByItem), [seriesByItem]);
   const filteredLabels = useMemo(() => {
     if (!fullLabels.length) return fullLabels;
     if (timeRange === "all") return fullLabels;
@@ -64,9 +64,8 @@ export default function LanguagesStackedShareChart({
   }, [fullLabels, timeRange]);
 
   const stackedDatasets = useMemo(() => {
-    // build share per day: count(lang)/sum(all selected)
-    const countsByLang = new Map(
-      Array.from(seriesByLang.entries()).map(([label, series]) => [
+    const countsByItem = new Map(
+      Array.from(seriesByItem.entries()).map(([label, series]) => [
         label,
         new Map(series.map((r) => [r.date, r.count])),
       ]),
@@ -74,20 +73,20 @@ export default function LanguagesStackedShareChart({
     const totalsByDate = new Map<string, number>();
     for (const d of filteredLabels) {
       let total = 0;
-      for (const [, m] of countsByLang) total += m.get(d) || 0;
-      totalsByDate.set(d, total || 1); // avoid division by zero
+      for (const [, m] of countsByItem) total += m.get(d) || 0;
+      totalsByDate.set(d, total || 1);
     }
-    return selectedLangs.map((lang, idx) => {
+    return selectedItems.map((item, idx) => {
       const color = colorForIndex(idx);
-      const m = countsByLang.get(lang.label) || new Map<string, number>();
+      const m = countsByItem.get(item.label) || new Map<string, number>();
       const data = filteredLabels.map((d) => ((m.get(d) || 0) / (totalsByDate.get(d) || 1)) * 100);
       return {
-        label: lang.label,
+        label: item.label,
         data,
         borderColor: color,
         backgroundColor: color.replace(
           /^hsl\((\d+)\s+(\d+)%\s+(\d+)%\)$/,
-          (m, h, s, l) => `hsl(${h} ${s}% ${l}% / 0.18)`,
+          (_m, h, s, l) => `hsl(${h} ${s}% ${l}% / 0.18)`,
         ),
         fill: true,
         tension: 0.35,
@@ -95,7 +94,7 @@ export default function LanguagesStackedShareChart({
         stack: "share",
       };
     });
-  }, [selectedLangs, seriesByLang, filteredLabels]);
+  }, [selectedItems, seriesByItem, filteredLabels]);
 
   const chartData = useMemo(
     () => ({ labels: filteredLabels, datasets: stackedDatasets }),
@@ -139,9 +138,9 @@ export default function LanguagesStackedShareChart({
     <div className="w-full rounded-lg border border-gray-700 bg-zinc-900/40 shadow-sm">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-b border-gray-700/70">
         <div className="grid gap-1">
-          <h3 className="text-base md:text-lg font-semibold">Language share over time</h3>
+          <h3 className="text-base md:text-lg font-semibold">{categoryLabel} share over time</h3>
           <p className="text-xs md:text-sm text-gray-400">
-            Percentage share of daily active postings among selected languages
+            Percentage share of daily active postings among selected items
           </p>
         </div>
         <div className="mt-2 sm:mt-0">

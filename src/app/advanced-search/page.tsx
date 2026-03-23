@@ -581,7 +581,7 @@ export default function AdvancedSearchPage() {
   return (
     <div className="min-h-screen">
       {/* Header - full width, fixed */}
-      <header className="fixed top-0 left-0 right-0 z-40 border-b border-white/5 bg-[#0d1117]/80 backdrop-blur-xl">
+      <header className="fixed top-14 left-0 right-0 z-40 border-b border-white/5 bg-[#0d1117]/80 backdrop-blur-xl">
         <div className="max-w-[1400px] mx-auto px-3 sm:px-4 h-14 flex items-center justify-between">
           <h1 className="!text-base !py-0 font-bold text-white tracking-tight">Advanced Search</h1>
           <div className="flex items-center gap-2">
@@ -611,8 +611,8 @@ export default function AdvancedSearchPage() {
         {/* Sidebar - mobile: slide-over from left, desktop: sticky */}
         <aside
           className={`
-          fixed top-0 left-0 bottom-0 z-50 w-[min(320px,85vw)] bg-[#0d1117] border-r border-white/5 overflow-y-auto transition-transform duration-300 ease-in-out
-          xl:translate-x-0 xl:static xl:z-0 xl:w-auto xl:bg-transparent xl:border-r-0 xl:col-span-3 xl:block xl:h-[calc(100vh-4.5rem)] xl:overflow-y-auto xl:sticky xl:top-[3.5rem]
+          fixed top-14 left-0 bottom-0 z-50 w-[min(320px,85vw)] bg-[#0d1117] border-r border-white/5 overflow-y-auto transition-transform duration-300 ease-in-out
+          xl:translate-x-0 xl:static xl:z-0 xl:w-auto xl:bg-transparent xl:border-r-0 xl:col-span-3 xl:block xl:h-[calc(100vh-7rem)] xl:overflow-y-auto xl:sticky xl:top-[7rem]
           scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10
           ${showMobileFilters ? "translate-x-0" : "-translate-x-full"}
         `}

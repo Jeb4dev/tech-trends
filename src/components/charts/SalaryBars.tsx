@@ -16,10 +16,10 @@ import { extractSalaryRaw } from "@/salary";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ChartTooltip, ChartLegend);
 
-type LangSalaryStat = {
+type SalaryStat = {
   label: string;
-  avg: number; // average estimated monthly €
-  count: number; // postings with parsed salary
+  avg: number;
+  count: number;
 };
 
 function estimatePostingMonthly(text: string): number | null {
@@ -31,25 +31,30 @@ function estimatePostingMonthly(text: string): number | null {
   return null;
 }
 
-export default function LanguagesSalaryBars({ languages, selected }: { languages: Category[]; selected: string[] }) {
-  const sel = useMemo(() => new Set(selected.map((s) => s.toLowerCase())), [selected]);
-  const chosen = useMemo(() => languages.filter((l) => sel.has(l.label.toLowerCase())), [languages, sel]);
+interface SalaryBarsProps {
+  items: Category[];
+  selected: string[];
+  categoryLabel: string;
+}
 
-  const stats: LangSalaryStat[] = useMemo(() => {
-    const out: LangSalaryStat[] = [];
-    for (const lang of chosen) {
+export default function SalaryBars({ items, selected, categoryLabel }: SalaryBarsProps) {
+  const sel = useMemo(() => new Set(selected.map((s) => s.toLowerCase())), [selected]);
+  const chosen = useMemo(() => items.filter((l) => sel.has(l.label.toLowerCase())), [items, sel]);
+
+  const stats: SalaryStat[] = useMemo(() => {
+    const out: SalaryStat[] = [];
+    for (const item of chosen) {
       let sum = 0;
       let n = 0;
-      for (const o of lang.openings) {
+      for (const o of item.openings) {
         const val = estimatePostingMonthly((o.heading || "") + "\n" + (o.descr || ""));
         if (val != null) {
           sum += val;
           n++;
         }
       }
-      if (n > 0) out.push({ label: lang.label, avg: sum / n, count: n });
+      if (n > 0) out.push({ label: item.label, avg: sum / n, count: n });
     }
-    // Sort by descending average
     out.sort((a, b) => b.avg - a.avg);
     return out;
   }, [chosen]);
@@ -66,7 +71,7 @@ export default function LanguagesSalaryBars({ languages, selected }: { languages
           label: "Avg monthly salary (estimated, €)",
           data: dataValues,
           backgroundColor: labels.map((_, i) =>
-            colorForIndex(i).replace(/hsl\((\d+)\s+(\d+)%\s+(\d+)%\)/, (m, h, s, l) => `hsl(${h} ${s}% ${l}% / 0.35)`),
+            colorForIndex(i).replace(/hsl\((\d+)\s+(\d+)%\s+(\d+)%\)/, (_m, h, s, l) => `hsl(${h} ${s}% ${l}% / 0.35)`),
           ),
           borderColor: labels.map((_, i) => colorForIndex(i)),
           borderWidth: 1,
@@ -112,7 +117,7 @@ export default function LanguagesSalaryBars({ languages, selected }: { languages
   return (
     <div className="w-full rounded-lg border border-gray-700 bg-zinc-900/40 shadow-sm">
       <div className="px-4 py-3 border-b border-gray-700/70">
-        <h3 className="text-base md:text-lg font-semibold">Highest paying languages (avg monthly €)</h3>
+        <h3 className="text-base md:text-lg font-semibold">Highest paying {categoryLabel.toLowerCase()} (avg monthly €)</h3>
         <p className="text-xs text-gray-400 mt-1">Includes only postings where a monthly salary figure was detected.</p>
       </div>
       <div className="p-2 md:p-4">
@@ -121,7 +126,7 @@ export default function LanguagesSalaryBars({ languages, selected }: { languages
             <Bar data={data} options={options} />
           ) : (
             <div className="text-sm text-gray-400 px-2 py-4">
-              No salary information detected for the selected languages.
+              No salary information detected for the selected items.
             </div>
           )}
         </div>

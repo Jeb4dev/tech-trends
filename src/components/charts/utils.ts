@@ -82,10 +82,10 @@ export function buildSeries(openings: Results[]): { date: string; count: number 
   return series;
 }
 
-export function buildUnionLabels(seriesByLang: Map<string, { date: string; count: number }[]>): string[] {
+export function buildUnionLabels(seriesByItem: Map<string, { date: string; count: number }[]>): string[] {
   let min: string | null = null;
   let max: string | null = null;
-  for (const s of seriesByLang.values()) {
+  for (const s of seriesByItem.values()) {
     if (!s.length) continue;
     const smin = s[0].date;
     const smax = s[s.length - 1].date;
