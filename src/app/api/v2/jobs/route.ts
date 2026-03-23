@@ -22,6 +22,7 @@ type DbJobRow = {
   salary_min: string | number | null;
   salary_max: string | number | null;
   salary_currency: string | null;
+  ai_classified_at: string | null;
 };
 
 const normalizeNumeric = (value: string | number | null): number | null => {
@@ -335,7 +336,7 @@ export async function GET(request: Request) {
       db.one(`SELECT count(*) FROM jobs ${whereClause}`, args),
       db.any(
         `
-        SELECT id, slug, heading, descr, company_name, municipality_name, date_posted, work_mode, seniority, salary_min, salary_max, salary_currency
+        SELECT id, slug, heading, descr, company_name, municipality_name, date_posted, work_mode, seniority, salary_min, salary_max, salary_currency, ai_classified_at
         FROM jobs
                ${whereClause}
         ORDER BY ${orderByClause}

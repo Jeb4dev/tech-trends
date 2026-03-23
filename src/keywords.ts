@@ -482,7 +482,7 @@ export const softSkills = [
   ["Feedback", "palautetta", "palaute", "palautteen"],
 ];
 
-export const positions = [
+export const roles = [
   ["Full Stack", "Full-Stack", "Fullstack"],
   ["Front End", "Front-End", "Frontend", "frontti"],
   ["Back End", "Back-End", "Backend", "bäkkäri"],
@@ -558,6 +558,9 @@ export const positions = [
     "teknisen tuen",
   ],
 ];
+
+// Backward compatibility alias for database which uses "positions"
+export const positions = roles;
 
 export const seniority = [
   [

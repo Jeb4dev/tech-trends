@@ -95,6 +95,22 @@ export async function initializeDatabase() {
         last_notified_at TIMESTAMPTZ
       )
     `);
+
+    // AI keyword detection results (Gemini full AI classification)
+    await t.none(`
+      CREATE TABLE IF NOT EXISTS ai_job_tags (
+        id SERIAL PRIMARY KEY,
+        job_id INTEGER REFERENCES jobs(id) ON DELETE CASCADE,
+        category VARCHAR(50) NOT NULL,
+        keyword VARCHAR(200) NOT NULL,
+        origin TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await t.none(`CREATE INDEX IF NOT EXISTS idx_ai_job_tags_job_id ON ai_job_tags(job_id)`);
+
+    // Track which jobs have been AI-classified
+    await t.none(`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS ai_classified_at TIMESTAMPTZ`);
   });
 }
 

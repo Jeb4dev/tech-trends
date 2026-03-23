@@ -11,7 +11,7 @@ import {
   dataScience,
   cyberSecurity,
   softSkills,
-  positions,
+  roles,
   seniority,
   location,
 } from "@/keywords";
@@ -46,6 +46,28 @@ interface JobResult {
   salary_label?: string | null;
   slug: string;
   locations?: string[];
+  ai_classified_at?: string | null;
+}
+
+interface AiTag {
+  category: string;
+  keyword: string;
+  origin?: string;
+}
+
+interface ComparisonData {
+  jobId: number;
+  heading: string;
+  company_name: string;
+  ai_classified_at: string | null;
+  manual: {
+    tags: { category: string; keyword: string }[];
+    seniority: string | null;
+    workMode: string | null;
+  };
+  ai: {
+    tags: AiTag[];
+  };
 }
 
 interface CategoryConfigItem {
@@ -54,6 +76,7 @@ interface CategoryConfigItem {
   type: "tag" | "column";
   options?: string[];
   source?: (string | string[])[];
+  dbCategory?: string; // Override database category name (e.g., "roles" -> "positions")
 }
 
 const CATEGORY_CONFIG: CategoryConfigItem[] = [
@@ -67,7 +90,7 @@ const CATEGORY_CONFIG: CategoryConfigItem[] = [
   { key: "devops", title: "DevOps", type: "tag", source: devops },
   { key: "cyberSecurity", title: "Cyber Security", type: "tag", source: cyberSecurity },
   { key: "dataScience", title: "Data Science", type: "tag", source: dataScience },
-  { key: "positions", title: "Role / Position", type: "tag", source: positions },
+  { key: "roles", title: "Role / Position", type: "tag", source: roles, dbCategory: "positions" },
   { key: "softSkills", title: "Soft Skills", type: "tag", source: softSkills },
   { key: "locations", title: "Locations", type: "tag", source: location },
 ];
@@ -144,6 +167,11 @@ const Icons = {
         strokeLinejoin="round"
         d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
       />
+    </svg>
+  ),
+  Sparkle: () => (
+    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
     </svg>
   ),
 };
@@ -363,6 +391,58 @@ export default function AdvancedSearchPage() {
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
 
+  // AI classification state
+  const [aiClassifying, setAiClassifying] = useState<number | null>(null);
+  const [comparisonData, setComparisonData] = useState<ComparisonData | null>(null);
+  const [comparisonLoading, setComparisonLoading] = useState(false);
+
+  const triggerAiClassify = async (jobId: number) => {
+    setAiClassifying(jobId);
+    try {
+      const res = await fetch("/api/admin/ai-classify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        if (res.status === 409) {
+          // Already classified, just open comparison
+          await openComparison(jobId);
+          return;
+        }
+        throw new Error(data.error || "AI classification failed");
+      }
+      // Update the job in results to reflect it's been classified
+      setResults((prev) =>
+        prev.map((j) => (j.id === jobId ? { ...j, ai_classified_at: new Date().toISOString() } : j)),
+      );
+      // Open comparison view
+      await openComparison(jobId);
+    } catch (e: any) {
+      console.error("AI classify error:", e);
+      alert(e.message || "AI classification failed");
+    } finally {
+      setAiClassifying(null);
+    }
+  };
+
+  const openComparison = async (jobId: number) => {
+    setComparisonLoading(true);
+    setComparisonData(null);
+    try {
+      const res = await fetch(`/api/v2/jobs/${jobId}/ai-tags`);
+      if (!res.ok) throw new Error("Failed to fetch comparison data");
+      const data = await res.json();
+      setComparisonData(data);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to load comparison data");
+    } finally {
+      setComparisonLoading(false);
+    }
+  };
+
   const filters = useMemo(() => parseQueryToFilters(queryText) || INITIAL_FILTER_STATE(), [queryText]);
 
   const subscribeCriteria = useMemo(() => {
@@ -376,7 +456,7 @@ export default function AdvancedSearchPage() {
       dataScience_in: toArray(filters["dataScience"]?.include),
       cyberSecurity_in: toArray(filters["cyberSecurity"]?.include),
       softSkills_in: toArray(filters["softSkills"]?.include),
-      positions_in: toArray(filters["positions"]?.include),
+      positions_in: toArray(filters["roles"]?.include), // "roles" in UI maps to "positions_in" for database
       locations_in: toArray(filters["locations"]?.include),
       workMode_in: toArray(filters["workMode"]?.include),
       seniority_in: toArray(filters["seniority"]?.include),
@@ -635,13 +715,30 @@ export default function AdvancedSearchPage() {
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => <JobSkeleton key={i} />)
             ) : results.length > 0 ? (
-              results.map((job) => <JobCard key={job.id} job={job} />)
+              results.map((job) => (
+                <JobCard
+                  key={job.id}
+                  job={job}
+                  onAiClassify={triggerAiClassify}
+                  onViewComparison={openComparison}
+                  aiClassifying={aiClassifying}
+                />
+              ))
             ) : (
               <EmptyState clearAll={clearAll} />
             )}
           </div>
         </main>
       </div>
+
+      {/* AI Comparison Modal */}
+      {(comparisonData || comparisonLoading) && (
+        <AiComparisonModal
+          data={comparisonData}
+          loading={comparisonLoading}
+          onClose={() => setComparisonData(null)}
+        />
+      )}
 
       <SubscribeModal
         open={showSubscribeModal}
@@ -777,7 +874,17 @@ const formatSalaryDisplay = (job: JobResult) => {
   return null;
 };
 
-function JobCard({ job }: { job: JobResult }) {
+function JobCard({
+  job,
+  onAiClassify,
+  onViewComparison,
+  aiClassifying,
+}: {
+  job: JobResult;
+  onAiClassify: (id: number) => void;
+  onViewComparison: (id: number) => void;
+  aiClassifying: number | null;
+}) {
   const salaryLabel = formatSalaryDisplay(job);
 
   const locations =
@@ -834,13 +941,52 @@ function JobCard({ job }: { job: JobResult }) {
               </>
             )}
           </p>
-          <div className="flex flex-wrap gap-1.5 relative z-10 pointer-events-none">
-            {job.work_mode && job.work_mode !== "unknown" && (
-              <Badge color={job.work_mode === "remote" ? "green" : job.work_mode === "hybrid" ? "amber" : "blue"}>
-                {job.work_mode}
-              </Badge>
-            )}
-            {job.seniority && <Badge color="purple">{job.seniority}</Badge>}
+          <div className="flex flex-wrap gap-1.5 items-center">
+            <div className="flex flex-wrap gap-1.5 pointer-events-none">
+              {job.work_mode && job.work_mode !== "unknown" && (
+                <Badge color={job.work_mode === "remote" ? "green" : job.work_mode === "hybrid" ? "amber" : "blue"}>
+                  {job.work_mode}
+                </Badge>
+              )}
+              {job.seniority && <Badge color="purple">{job.seniority}</Badge>}
+            </div>
+            <div className="relative z-10 ml-auto">
+              {job.ai_classified_at ? (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onViewComparison(job.id);
+                  }}
+                  className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded-md bg-violet-500/10 text-violet-300 border border-violet-500/20 hover:bg-violet-500/20 transition-colors"
+                  title="View AI vs Manual keyword comparison"
+                >
+                  <Icons.Sparkle /> Compare
+                </button>
+              ) : (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onAiClassify(job.id);
+                  }}
+                  disabled={aiClassifying === job.id}
+                  className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium rounded-md bg-amber-500/10 text-amber-300 border border-amber-500/20 hover:bg-amber-500/20 transition-colors disabled:opacity-50 disabled:cursor-wait"
+                  title="Run AI keyword detection with Gemini"
+                >
+                  {aiClassifying === job.id ? (
+                    <>
+                      <span className="w-3 h-3 border-2 border-amber-400/30 border-t-amber-400 rounded-full animate-spin" />
+                      Classifying...
+                    </>
+                  ) : (
+                    <>
+                      <Icons.Sparkle /> AI Detect
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -957,6 +1103,239 @@ function QueryEditor({
           </div>
         </details>
       </div>
+    </div>
+  );
+}
+
+// -- AI Comparison Modal --
+
+const COMPARISON_CATEGORIES = [
+  { key: "languages", label: "Languages" },
+  { key: "frameworks", label: "Frameworks" },
+  { key: "databases", label: "Databases" },
+  { key: "cloud", label: "Cloud" },
+  { key: "devops", label: "DevOps", aiKey: "devOps" },
+  { key: "cyberSecurity", label: "Cyber Security" },
+  { key: "dataScience", label: "Data Science" },
+  { key: "roles", label: "Roles", aiKey: "roles", dbCategory: "positions" },
+  { key: "softSkills", label: "Soft Skills" },
+  { key: "locations", label: "Locations" },
+  { key: "seniority", label: "Seniority" },
+  { key: "workMode", label: "Work Mode" },
+  { key: "salary", label: "Salary" },
+];
+
+function AiComparisonModal({
+  data,
+  loading,
+  onClose,
+}: {
+  data: ComparisonData | null;
+  loading: boolean;
+  onClose: () => void;
+}) {
+  if (!loading && !data) return null;
+
+  const manualByCategory: Record<string, string[]> = {};
+  const aiByCategory: Record<string, AiTag[]> = {};
+
+  if (data) {
+    // Group manual tags
+    for (const tag of data.manual.tags) {
+      if (!manualByCategory[tag.category]) manualByCategory[tag.category] = [];
+      manualByCategory[tag.category].push(tag.keyword);
+    }
+    // Add seniority and workMode from job columns
+    if (data.manual.seniority) {
+      manualByCategory["seniority"] = [data.manual.seniority];
+    }
+    if (data.manual.workMode) {
+      manualByCategory["workMode"] = [data.manual.workMode];
+    }
+
+    // Group AI tags
+    for (const tag of data.ai.tags) {
+      // Map DB category back to comparison key
+      const cat = tag.category;
+      if (!aiByCategory[cat]) aiByCategory[cat] = [];
+      aiByCategory[cat].push(tag);
+    }
+  }
+
+  // Compute stats
+  let totalManual = 0;
+  let totalAi = 0;
+  let matchCount = 0;
+  let aiOnlyCount = 0;
+  let manualOnlyCount = 0;
+
+  if (data) {
+    for (const cat of COMPARISON_CATEGORIES) {
+      const manualKws = new Set((manualByCategory[cat.key] || []).map((k) => k.toLowerCase()));
+      const aiKws = new Set((aiByCategory[cat.aiKey || cat.key] || []).map((t) => t.keyword.toLowerCase()));
+      totalManual += manualKws.size;
+      totalAi += aiKws.size;
+      for (const k of aiKws) {
+        if (manualKws.has(k)) matchCount++;
+        else aiOnlyCount++;
+      }
+      for (const k of manualKws) {
+        if (!aiKws.has(k)) manualOnlyCount++;
+      }
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-10 px-4">
+      <div className="fixed inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-[#0d1117] border border-white/10 rounded-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 shrink-0">
+          <div>
+            <h2 className="text-lg font-bold text-white !text-lg !py-0">AI vs Manual Keyword Comparison</h2>
+            {data && (
+              <p className="text-sm text-gray-400 mt-0.5">{data.heading} — {data.company_name}</p>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+          >
+            <Icons.XLarge />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="overflow-y-auto flex-1 p-6">
+          {loading ? (
+            <div className="flex items-center justify-center py-20">
+              <span className="w-6 h-6 border-2 border-violet-400/30 border-t-violet-400 rounded-full animate-spin" />
+              <span className="ml-3 text-gray-400">Loading comparison...</span>
+            </div>
+          ) : data && !data.ai_classified_at ? (
+            <div className="text-center py-20 text-gray-500">
+              <p>This job has not been AI-classified yet.</p>
+            </div>
+          ) : data ? (
+            <>
+              {/* Summary Stats */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+                <StatCard label="Manual Keywords" value={totalManual} color="blue" />
+                <StatCard label="AI Keywords" value={totalAi} color="violet" />
+                <StatCard label="Matching" value={matchCount} color="green" />
+                <StatCard label="AI Only" value={aiOnlyCount} color="amber" />
+              </div>
+
+              {/* Category-by-category comparison */}
+              <div className="space-y-4">
+                {COMPARISON_CATEGORIES.map((cat) => {
+                  const manualKws = manualByCategory[cat.key] || [];
+                  const aiTags = aiByCategory[cat.aiKey || cat.key] || [];
+                  if (manualKws.length === 0 && aiTags.length === 0) return null;
+
+                  const manualSet = new Set(manualKws.map((k) => k.toLowerCase()));
+                  const aiSet = new Set(aiTags.map((t) => t.keyword.toLowerCase()));
+
+                  return (
+                    <div key={cat.key} className="bg-white/[0.03] border border-white/5 rounded-xl p-4">
+                      <h3 className="text-sm font-semibold text-gray-300 mb-3 !text-sm !py-0">{cat.label}</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Manual column */}
+                        <div>
+                          <p className="text-[11px] font-medium text-blue-400 uppercase tracking-wider mb-2">Manual / Heuristic</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {manualKws.length === 0 ? (
+                              <span className="text-xs text-gray-600 italic">None detected</span>
+                            ) : (
+                              manualKws.map((kw) => (
+                                <span
+                                  key={kw}
+                                  className={`px-2 py-0.5 rounded text-xs font-medium border ${
+                                    aiSet.has(kw.toLowerCase())
+                                      ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/20"
+                                      : "bg-blue-500/10 text-blue-300 border-blue-500/20"
+                                  }`}
+                                >
+                                  {kw}
+                                  {!aiSet.has(kw.toLowerCase()) && (
+                                    <span className="ml-1 text-[10px] opacity-60">manual only</span>
+                                  )}
+                                </span>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                        {/* AI column */}
+                        <div>
+                          <p className="text-[11px] font-medium text-violet-400 uppercase tracking-wider mb-2">AI (Gemini)</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {aiTags.length === 0 ? (
+                              <span className="text-xs text-gray-600 italic">None detected</span>
+                            ) : (
+                              aiTags.map((tag) => (
+                                <span
+                                  key={tag.keyword}
+                                  className={`group relative px-2 py-0.5 rounded text-xs font-medium border cursor-help ${
+                                    manualSet.has(tag.keyword.toLowerCase())
+                                      ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/20"
+                                      : "bg-amber-500/10 text-amber-300 border-amber-500/20"
+                                  }`}
+                                  title={tag.origin || ""}
+                                >
+                                  {tag.keyword}
+                                  {!manualSet.has(tag.keyword.toLowerCase()) && (
+                                    <span className="ml-1 text-[10px] opacity-60">AI only</span>
+                                  )}
+                                  {tag.origin && (
+                                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 border border-white/10 text-gray-300 text-xs rounded-lg shadow-xl max-w-xs whitespace-normal hidden group-hover:block z-10">
+                                      {tag.origin}
+                                    </span>
+                                  )}
+                                </span>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Legend */}
+              <div className="mt-6 flex flex-wrap gap-4 text-xs text-gray-500">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded bg-emerald-500/20 border border-emerald-500/30" />
+                  Both agree
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded bg-blue-500/20 border border-blue-500/30" />
+                  Manual only
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded bg-amber-500/20 border border-amber-500/30" />
+                  AI only (hover for origin)
+                </span>
+              </div>
+            </>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ label, value, color }: { label: string; value: number; color: "blue" | "violet" | "green" | "amber" }) {
+  const styles = {
+    blue: "bg-blue-500/10 border-blue-500/20 text-blue-300",
+    violet: "bg-violet-500/10 border-violet-500/20 text-violet-300",
+    green: "bg-emerald-500/10 border-emerald-500/20 text-emerald-300",
+    amber: "bg-amber-500/10 border-amber-500/20 text-amber-300",
+  };
+  return (
+    <div className={`rounded-xl border p-3 text-center ${styles[color]}`}>
+      <p className="text-2xl font-bold">{value}</p>
+      <p className="text-[11px] opacity-70 mt-0.5">{label}</p>
     </div>
   );
 }
