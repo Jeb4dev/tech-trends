@@ -1,5 +1,6 @@
 import { MetadataRoute } from "next";
-import { getAllCategories } from "@/lib/categories";
+import { getAllCategories, slugifyKeyword } from "@/lib/categories";
+import { getAllKeywordSlugs } from "@/lib/queries";
 
 const BASE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://koodaripula.fi").replace(/\/$/, "");
 
@@ -41,8 +42,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
-  // TODO: Add dynamic keyword detail pages when /trends/[category]/[keyword] is implemented
-  // Query tags table for all keywords and generate entries
+  // Dynamic keyword detail pages
+  const keyByCategory = new Map(categories.map((c) => [c.key, c.slug]));
+  let keywordEntries: MetadataRoute.Sitemap = [];
+  try {
+    const slugs = await getAllKeywordSlugs();
+    keywordEntries = slugs
+      .map((s) => {
+        const catSlug = keyByCategory.get(s.category);
+        if (!catSlug) return null;
+        return {
+          url: `${BASE_URL}/trends/${catSlug}/${slugifyKeyword(s.name)}`,
+          lastModified: now,
+          changeFrequency: "daily" as const,
+          priority: 0.7,
+        };
+      })
+      .filter((e): e is NonNullable<typeof e> => e !== null);
+  } catch {
+    // DB unavailable at build time — skip keyword entries
+  }
 
-  return [...staticEntries, ...categoryEntries];
+  return [...staticEntries, ...categoryEntries, ...keywordEntries];
 }

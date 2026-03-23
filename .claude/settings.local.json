@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx next:*)",
+      "Bash(pnpm add:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node -e \"const { Type } = require\\(''@google/genai''\\); console.log\\(''Type.STRING:'', Type.STRING\\); console.log\\(''OK''\\)\")",
+      "Bash(node -e \"const { ThinkingLevel } = require\\(''@google/genai''\\); console.log\\(''ThinkingLevel.LOW:'', ThinkingLevel.LOW\\); console.log\\(''OK''\\)\")",
+      "Bash(xargs grep:*)",
+      "Bash(tasklist)",
+      "Bash(find /c/Users/jespe/WebstormProjects/tech-trends -type f \\\\\\(-name *.sql -o -name *.prisma -o -name schema.* \\\\\\))",
+      "Bash(find /c/Users/jespe/WebstormProjects/tech-trends -path */prisma/* -o -path */.migrations/*)"
+    ]
+  }
+}

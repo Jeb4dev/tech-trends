@@ -11,8 +11,8 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^3.0.47",
-    "@ai-sdk/react": "^3.0.136",
+    "@ai-sdk/openai": "^3.0.48",
+    "@ai-sdk/react": "^3.0.139",
     "@google/genai": "^1.46.0",
     "@radix-ui/react-collapsible": "^1.1.12",
     "@radix-ui/react-dialog": "^1.1.15",
@@ -31,7 +31,7 @@
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@xyflow/react": "^12.10.1",
-    "ai": "^6.0.134",
+    "ai": "^6.0.137",
     "autoprefixer": "10.4.24",
     "chart.js": "^4.5.1",
     "class-variance-authority": "^0.7.1",

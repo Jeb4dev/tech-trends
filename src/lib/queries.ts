@@ -145,3 +145,215 @@ export async function getCategoryStats(): Promise<CategoryStat[]> {
     topKeywords: kwByCategory.get(t.category) || [],
   }));
 }
+
+// ── Keyword detail page queries ──────────────────────────────────────
+
+export interface TagRow {
+  id: number;
+  category: string;
+  name: string;
+}
+
+export async function getTagByKeyword(category: string, name: string): Promise<TagRow | null> {
+  return db.oneOrNone<TagRow>(
+    `SELECT id, category, name FROM tags WHERE category = $1 AND LOWER(name) = LOWER($2)`,
+    [category, name],
+  );
+}
+
+export interface TrendDataPoint {
+  date: string;
+  count: number;
+}
+
+export async function getKeywordTrendData(tagId: number, days: number = 90): Promise<TrendDataPoint[]> {
+  const rows = await db.any<{ date: string; count: string }>(
+    `SELECT date::text, count FROM daily_stats
+     WHERE tag_id = $1 AND date > CURRENT_DATE - $2
+     ORDER BY date ASC`,
+    [tagId, days],
+  );
+  return rows.map((r) => ({ date: r.date, count: parseInt(r.count, 10) }));
+}
+
+export async function getKeywordActiveJobCount(tagId: number): Promise<number> {
+  const row = await db.one<{ cnt: string }>(
+    `SELECT COUNT(DISTINCT jt.job_id) as cnt
+     FROM job_tags jt JOIN jobs j ON jt.job_id = j.id
+     WHERE jt.tag_id = $1 AND j.active = TRUE`,
+    [tagId],
+  );
+  return parseInt(row.cnt, 10);
+}
+
+export interface SalaryStats {
+  sampleCount: number;
+  avg: number;
+  median: number;
+  min: number;
+  max: number;
+}
+
+export async function getKeywordSalaryStats(tagId: number): Promise<SalaryStats | null> {
+  const row = await db.oneOrNone<{
+    sample_count: string;
+    avg_sal: string;
+    median_sal: string;
+    min_sal: string;
+    max_sal: string;
+  }>(
+    `SELECT
+       COUNT(*) as sample_count,
+       ROUND(AVG((salary_min + salary_max) / 2.0)) as avg_sal,
+       ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY (salary_min + salary_max) / 2.0)) as median_sal,
+       MIN(salary_min) as min_sal,
+       MAX(salary_max) as max_sal
+     FROM jobs j
+     JOIN job_tags jt ON j.id = jt.job_id
+     WHERE jt.tag_id = $1 AND j.active = TRUE
+       AND j.salary_min IS NOT NULL AND j.salary_max IS NOT NULL
+       AND j.salary_min > 0 AND j.salary_max > 0
+     HAVING COUNT(*) > 0`,
+    [tagId],
+  );
+  if (!row) return null;
+  return {
+    sampleCount: parseInt(row.sample_count, 10),
+    avg: parseInt(row.avg_sal, 10),
+    median: parseInt(row.median_sal, 10),
+    min: parseInt(row.min_sal, 10),
+    max: parseInt(row.max_sal, 10),
+  };
+}
+
+export interface CoOccurrence {
+  category: string;
+  name: string;
+  count: number;
+}
+
+export async function getCoOccurringKeywords(tagId: number, limit: number = 15): Promise<CoOccurrence[]> {
+  const rows = await db.any<{ category: string; name: string; cnt: string }>(
+    `SELECT t2.category, t2.name, COUNT(DISTINCT jt1.job_id) as cnt
+     FROM job_tags jt1
+     JOIN job_tags jt2 ON jt1.job_id = jt2.job_id AND jt1.tag_id != jt2.tag_id
+     JOIN tags t2 ON jt2.tag_id = t2.id
+     JOIN jobs j ON jt1.job_id = j.id
+     WHERE jt1.tag_id = $1 AND j.active = TRUE
+     GROUP BY t2.category, t2.name
+     ORDER BY cnt DESC
+     LIMIT $2`,
+    [tagId, limit],
+  );
+  return rows.map((r) => ({ category: r.category, name: r.name, count: parseInt(r.cnt, 10) }));
+}
+
+export interface CompanyStat {
+  company: string;
+  count: number;
+}
+
+export async function getTopCompaniesForKeyword(tagId: number, limit: number = 10): Promise<CompanyStat[]> {
+  const rows = await db.any<{ company_name: string; cnt: string }>(
+    `SELECT j.company_name, COUNT(*) as cnt
+     FROM job_tags jt JOIN jobs j ON jt.job_id = j.id
+     WHERE jt.tag_id = $1 AND j.active = TRUE AND j.company_name IS NOT NULL
+     GROUP BY j.company_name
+     ORDER BY cnt DESC
+     LIMIT $2`,
+    [tagId, limit],
+  );
+  return rows.map((r) => ({ company: r.company_name, count: parseInt(r.cnt, 10) }));
+}
+
+export interface LocationStat {
+  city: string;
+  count: number;
+}
+
+export async function getTopLocationsForKeyword(tagId: number, limit: number = 10): Promise<LocationStat[]> {
+  const rows = await db.any<{ municipality_name: string; cnt: string }>(
+    `SELECT j.municipality_name, COUNT(*) as cnt
+     FROM job_tags jt JOIN jobs j ON jt.job_id = j.id
+     WHERE jt.tag_id = $1 AND j.active = TRUE AND j.municipality_name IS NOT NULL
+     GROUP BY j.municipality_name
+     ORDER BY cnt DESC
+     LIMIT $2`,
+    [tagId, limit],
+  );
+  return rows.map((r) => ({ city: r.municipality_name, count: parseInt(r.cnt, 10) }));
+}
+
+export interface WorkModeStat {
+  mode: string;
+  count: number;
+}
+
+export async function getWorkModeDistribution(tagId: number): Promise<WorkModeStat[]> {
+  const rows = await db.any<{ work_mode: string; cnt: string }>(
+    `SELECT COALESCE(j.work_mode, 'unknown') as work_mode, COUNT(*) as cnt
+     FROM job_tags jt JOIN jobs j ON jt.job_id = j.id
+     WHERE jt.tag_id = $1 AND j.active = TRUE
+     GROUP BY j.work_mode
+     ORDER BY cnt DESC`,
+    [tagId],
+  );
+  return rows.map((r) => ({ mode: r.work_mode, count: parseInt(r.cnt, 10) }));
+}
+
+export interface SeniorityStat {
+  level: string;
+  count: number;
+}
+
+export async function getSeniorityDistribution(tagId: number): Promise<SeniorityStat[]> {
+  const rows = await db.any<{ seniority: string; cnt: string }>(
+    `SELECT COALESCE(j.seniority, 'unspecified') as seniority, COUNT(*) as cnt
+     FROM job_tags jt JOIN jobs j ON jt.job_id = j.id
+     WHERE jt.tag_id = $1 AND j.active = TRUE
+     GROUP BY j.seniority
+     ORDER BY cnt DESC`,
+    [tagId],
+  );
+  return rows.map((r) => ({ level: r.seniority, count: parseInt(r.cnt, 10) }));
+}
+
+export interface RecentJob {
+  id: number;
+  slug: string;
+  heading: string;
+  company_name: string;
+  municipality_name: string | null;
+  date_posted: string;
+  salary_min: number | null;
+  salary_max: number | null;
+  work_mode: string | null;
+}
+
+export async function getRecentJobsForKeyword(tagId: number, limit: number = 10): Promise<RecentJob[]> {
+  return db.any<RecentJob>(
+    `SELECT j.id, j.slug, j.heading, j.company_name, j.municipality_name,
+            j.date_posted::text, j.salary_min, j.salary_max, j.work_mode
+     FROM job_tags jt JOIN jobs j ON jt.job_id = j.id
+     WHERE jt.tag_id = $1 AND j.active = TRUE
+     ORDER BY j.date_posted DESC
+     LIMIT $2`,
+    [tagId, limit],
+  );
+}
+
+export interface KeywordSlug {
+  category: string;
+  name: string;
+}
+
+export async function getAllKeywordSlugs(): Promise<KeywordSlug[]> {
+  return db.any<KeywordSlug>(
+    `SELECT DISTINCT t.category, t.name
+     FROM tags t
+     JOIN job_tags jt ON t.id = jt.tag_id
+     JOIN jobs j ON jt.job_id = j.id
+     WHERE j.active = TRUE
+     ORDER BY t.category, t.name`,
+  );
+}

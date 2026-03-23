@@ -6,7 +6,7 @@ import CategoryCard from "@/components/CategoryCard";
 import QuickSearch from "@/components/QuickSearch";
 import TrendBadge from "@/components/TrendBadge";
 import ComingSoonBanner from "@/components/ComingSoonBanner";
-import { getAllCategories, getCategoryByKey } from "@/lib/categories";
+import { getAllCategories, getCategoryByKey, slugifyKeyword } from "@/lib/categories";
 import { getActiveJobStats, getTrendingKeywords, getTopKeywords, getCategoryStats } from "@/lib/queries";
 
 export const metadata: Metadata = {
@@ -111,7 +111,12 @@ export default async function HomePage() {
                     return (
                       <li key={`${kw.category}-${kw.name}`} className="flex items-center justify-between px-5 py-3 hover:bg-gray-700/10 transition-colors">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-100">{kw.name}</span>
+                          <Link
+                            href={cat ? `/trends/${cat.slug}/${slugifyKeyword(kw.name)}` : "#"}
+                            className="text-sm font-medium text-gray-100 hover:text-green-300 transition-colors"
+                          >
+                            {kw.name}
+                          </Link>
                           {cat && (
                             <Link
                               href={`/trends/${cat.slug}`}
@@ -141,7 +146,12 @@ export default async function HomePage() {
                     return (
                       <li key={`${kw.category}-${kw.name}`} className="flex items-center justify-between px-5 py-3 hover:bg-gray-700/10 transition-colors">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-100">{kw.name}</span>
+                          <Link
+                            href={cat ? `/trends/${cat.slug}/${slugifyKeyword(kw.name)}` : "#"}
+                            className="text-sm font-medium text-gray-100 hover:text-green-300 transition-colors"
+                          >
+                            {kw.name}
+                          </Link>
                           {cat && (
                             <Link
                               href={`/trends/${cat.slug}`}

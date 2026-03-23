@@ -9,23 +9,23 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   metadataBase: new URL("https://koodaripula.fi"),
   title: {
-    default: "Tech Trends | Koodaripula",
-    template: "%s | Koodaripula Tech Trends",
+    default: "Koodaripula – Suomen IT-alan työmarkkinatrendit",
+    template: "%s | Koodaripula",
   },
   description:
-    "Live Finnish tech job market trends: languages, frameworks, cloud, DevOps, cyber security, work modes (remote / hybrid / on-site) and more.",
-  applicationName: "Koodaripula Tech Trends",
+    "Seuraamme reaaliajassa yli 600 teknologian kysyntää suomalaisissa IT-työpaikkailmoituksissa. Ohjelmointikielet, sovelluskehykset, pilvipalvelut, tietoturva ja paljon muuta.",
+  applicationName: "Koodaripula",
   keywords: [
-    "Finland jobs",
-    "tech trends",
-    "developer jobs",
+    "IT-työpaikat",
     "ohjelmistokehittäjä",
-    "tietoturva",
-    "remote work Finland",
-    "hybrid work",
-    "cloud jobs",
-    "cyber security jobs",
-    "data science jobs",
+    "tech trends Finland",
+    "developer jobs Finland",
+    "työmarkkinatrendit",
+    "ohjelmointikielet kysyntä",
+    "etätyö Suomi",
+    "pilvipalvelut työpaikat",
+    "tietoturva työpaikat",
+    "data science Suomi",
   ],
   authors: [{ name: "Koodaripula" }],
   creator: "Koodaripula",
@@ -36,7 +36,6 @@ export const metadata: Metadata = {
     googleBot: {
       index: true,
       follow: true,
-      // Use dashed keys per Next.js Metadata spec
       "max-snippet": -1,
       "max-image-preview": "large",
       "max-video-preview": -1,
@@ -45,23 +44,23 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "https://koodaripula.fi",
-    siteName: "Koodaripula Tech Trends",
-    title: "Finnish Tech Job Market Trends",
-    description: "Track in‑demand software skills: languages, frameworks, security, data & work mode classification.",
-    locale: "en_US",
+    siteName: "Koodaripula",
+    title: "Koodaripula – Suomen IT-alan työmarkkinatrendit",
+    description: "Reaaliaikainen IT-työmarkkinadata: ohjelmointikielet, sovelluskehykset, pilvipalvelut, kyberturvallisuus ja paljon muuta.",
+    locale: "fi_FI",
     images: [
       {
         url: "https://koodaripula.fi/og-default.png",
         width: 1200,
         height: 630,
-        alt: "Koodaripula Tech Trends Overview",
+        alt: "Koodaripula – IT-alan työmarkkinatrendit",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Finnish Tech Job Market Trends",
-    description: "Live tracking of in‑demand software & security skills in Finland.",
+    title: "Koodaripula – Suomen IT-alan työmarkkinatrendit",
+    description: "Seuraa reaaliajassa IT-alan kysytyimpiä taitoja Suomessa.",
     images: ["https://koodaripula.fi/og-default.png"],
   },
   alternates: {
@@ -78,12 +77,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: "Koodaripula Tech Trends",
+    name: "Koodaripula",
     url: "https://koodaripula.fi/",
-    description: "Finnish tech job market trends & classification (remote / hybrid / on-site)",
+    description: "Suomen IT-alan työmarkkinatrendit — ohjelmointikielet, sovelluskehykset, pilvipalvelut, tietoturva ja etätyö.",
+    inLanguage: "fi",
     potentialAction: {
       "@type": "SearchAction",
-      target: "https://koodaripula.fi/trends?search={search_term_string}",
+      target: "https://koodaripula.fi/advanced-search?rawQuery={search_term_string}",
       "query-input": "required name=search_term_string",
     },
     publisher: {
@@ -93,7 +93,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     },
   };
   return (
-    <html lang="en" suppressHydrationWarning className="dark">
+    <html lang="fi" suppressHydrationWarning className="dark">
       <head>
         <script defer data-domain="koodaripula.fi" src="https://analytics.bittive.com/js/script.js"></script>
         <script
