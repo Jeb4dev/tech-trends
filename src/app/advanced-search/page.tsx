@@ -387,6 +387,8 @@ export default function AdvancedSearchPage() {
   const [hideDeleted, setHideDeleted] = useState(true);
   const [hideOld, setHideOld] = useState(true);
   const [sort, setSort] = useState("date_desc");
+  const [page, setPage] = useState(1);
+  const [sortOpen, setSortOpen] = useState(false);
 
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
@@ -470,6 +472,7 @@ export default function AdvancedSearchPage() {
 
   const handleQueryChange = (value: string) => {
     setQueryText(value);
+    setPage(1);
   };
 
   const toggleItem = (categoryKey: string, value: string) => {
@@ -493,10 +496,12 @@ export default function AdvancedSearchPage() {
       cat.exclude.has(value),
     );
     setQueryText(newQuery);
+    setPage(1);
   };
 
   const clearAll = () => {
     setQueryText("");
+    setPage(1);
     setQueryError(null);
   };
 
@@ -529,7 +534,7 @@ export default function AdvancedSearchPage() {
         params.set("hideDeleted", hideDeleted.toString());
         params.set("hideOld", hideOld.toString());
         params.set("sort", sort);
-        params.set("page", "1");
+        params.set("page", page.toString());
 
         const res = await fetch(`/api/v2/jobs?${params.toString()}`);
         if (!res.ok) throw new Error("Search failed");
@@ -547,7 +552,7 @@ export default function AdvancedSearchPage() {
 
     const timeout = setTimeout(fetchJobs, 400);
     return () => clearTimeout(timeout);
-  }, [queryText, queryError, hideDeleted, hideOld, sort]);
+  }, [queryText, queryError, hideDeleted, hideOld, sort, page]);
 
   const toggleOperator = (categoryKey: string) => {
     const currentFilters = parseQueryToFilters(queryText) || INITIAL_FILTER_STATE();
@@ -581,8 +586,8 @@ export default function AdvancedSearchPage() {
           <h1 className="!text-base !py-0 font-bold text-white tracking-tight">Advanced Search</h1>
           <div className="flex items-center gap-2">
             <div className="hidden md:flex items-center gap-2">
-              <Toggle label="Hide Deleted" checked={hideDeleted} onChange={setHideDeleted} />
-              <Toggle label="Hide Old Jobs" checked={hideOld} onChange={setHideOld} />
+              <Toggle label="Hide Deleted" checked={hideDeleted} onChange={(v) => { setHideDeleted(v); setPage(1); }} />
+              <Toggle label="Hide Old Jobs" checked={hideOld} onChange={(v) => { setHideOld(v); setPage(1); }} />
             </div>
             <button
               onClick={() => setShowMobileFilters(!showMobileFilters)}
@@ -626,8 +631,8 @@ export default function AdvancedSearchPage() {
           <div className="p-4 xl:p-0 xl:pt-2">
             {/* Mobile toggles */}
             <div className="xl:hidden mb-4 flex flex-col gap-2">
-              <Toggle label="Hide Deleted" checked={hideDeleted} onChange={setHideDeleted} />
-              <Toggle label="Hide Old Jobs" checked={hideOld} onChange={setHideOld} />
+              <Toggle label="Hide Deleted" checked={hideDeleted} onChange={(v) => { setHideDeleted(v); setPage(1); }} />
+              <Toggle label="Hide Old Jobs" checked={hideOld} onChange={(v) => { setHideOld(v); setPage(1); }} />
             </div>
 
             <div className="space-y-0.5">
@@ -676,20 +681,40 @@ export default function AdvancedSearchPage() {
                   </button>
                 )}
                 <div className="relative">
-                  <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">
-                    <Icons.Sort />
-                  </div>
-                  <select
-                    value={sort}
-                    onChange={(e) => setSort(e.target.value)}
-                    className="appearance-none bg-white/5 border border-white/10 text-gray-300 text-xs rounded-lg pl-8 pr-8 py-2 focus:outline-none focus:border-blue-500/50 cursor-pointer"
+                  <button
+                    onClick={() => setSortOpen(!sortOpen)}
+                    className="flex items-center gap-2 bg-white/5 border border-white/10 text-gray-300 text-xs rounded-lg pl-8 pr-3 py-2 hover:bg-white/10 hover:border-white/15 focus:outline-none focus:border-blue-500/50 cursor-pointer transition-colors"
                   >
-                    {SORT_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
+                    <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">
+                      <Icons.Sort />
+                    </div>
+                    {SORT_OPTIONS.find((o) => o.value === sort)?.label}
+                    <Icons.ChevronDown />
+                  </button>
+                  {sortOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setSortOpen(false)} />
+                      <div className="absolute right-0 top-full mt-1 z-20 bg-[#161b22] border border-white/10 rounded-lg shadow-xl py-1 min-w-[180px]">
+                        {SORT_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.value}
+                            onClick={() => {
+                              setSort(opt.value);
+                              setPage(1);
+                              setSortOpen(false);
+                            }}
+                            className={`w-full text-left px-3 py-2 text-xs transition-colors ${
+                              sort === opt.value
+                                ? "bg-blue-500/15 text-blue-300"
+                                : "text-gray-300 hover:bg-white/5 hover:text-white"
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
                 <button
                   onClick={() => setShowSubscribeModal(true)}
@@ -728,6 +753,18 @@ export default function AdvancedSearchPage() {
               <EmptyState clearAll={clearAll} />
             )}
           </div>
+
+          {/* Pagination */}
+          {count > 50 && (
+            <Pagination
+              page={page}
+              totalPages={Math.ceil(count / 50)}
+              onPageChange={(p) => {
+                setPage(p);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            />
+          )}
         </main>
       </div>
 
@@ -1321,6 +1358,69 @@ function AiComparisonModal({
           ) : null}
         </div>
       </div>
+    </div>
+  );
+}
+
+function Pagination({
+  page,
+  totalPages,
+  onPageChange,
+}: {
+  page: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}) {
+  const getVisiblePages = (): (number | "...")[] => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    const pages: (number | "...")[] = [];
+    if (page <= 4) {
+      for (let i = 1; i <= 5; i++) pages.push(i);
+      pages.push("...", totalPages);
+    } else if (page >= totalPages - 3) {
+      pages.push(1, "...");
+      for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1, "...", page - 1, page, page + 1, "...", totalPages);
+    }
+    return pages;
+  };
+
+  return (
+    <div className="flex items-center justify-center gap-1.5 mt-6 mb-2">
+      <button
+        onClick={() => onPageChange(page - 1)}
+        disabled={page <= 1}
+        className="px-3 py-2 text-xs font-medium rounded-lg border border-white/10 text-gray-400 hover:bg-white/5 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-400"
+      >
+        Prev
+      </button>
+      {getVisiblePages().map((p, i) =>
+        p === "..." ? (
+          <span key={`ellipsis-${i}`} className="px-2 py-2 text-xs text-gray-600">
+            ...
+          </span>
+        ) : (
+          <button
+            key={p}
+            onClick={() => onPageChange(p)}
+            className={`min-w-[36px] px-2 py-2 text-xs font-medium rounded-lg border transition-colors ${
+              p === page
+                ? "bg-blue-500/15 border-blue-500/30 text-blue-300"
+                : "border-white/10 text-gray-400 hover:bg-white/5 hover:text-white"
+            }`}
+          >
+            {p}
+          </button>
+        ),
+      )}
+      <button
+        onClick={() => onPageChange(page + 1)}
+        disabled={page >= totalPages}
+        className="px-3 py-2 text-xs font-medium rounded-lg border border-white/10 text-gray-400 hover:bg-white/5 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-400"
+      >
+        Next
+      </button>
     </div>
   );
 }
