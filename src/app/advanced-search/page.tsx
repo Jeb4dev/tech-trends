@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import { SubscribeModal } from "@/components/SubscribeModal";
 import {
   languages,
   frameworks,
@@ -385,8 +386,29 @@ export default function AdvancedSearchPage() {
   // Mobile Menu
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
+  // Subscribe modal
+  const [showSubscribeModal, setShowSubscribeModal] = useState(false);
+
   // Parse query to extract filter state for sidebar display
   const filters = useMemo(() => parseQueryToFilters(queryText) || INITIAL_FILTER_STATE(), [queryText]);
+
+  const subscribeCriteria = useMemo(() => {
+    const toArray = (s: Set<string>) => (s.size > 0 ? Array.from(s) : undefined);
+    return {
+      languages_in: toArray(filters["languages"]?.include),
+      frameworks_in: toArray(filters["frameworks"]?.include),
+      databases_in: toArray(filters["databases"]?.include),
+      cloud_in: toArray(filters["cloud"]?.include),
+      devops_in: toArray(filters["devops"]?.include),
+      dataScience_in: toArray(filters["dataScience"]?.include),
+      cyberSecurity_in: toArray(filters["cyberSecurity"]?.include),
+      softSkills_in: toArray(filters["softSkills"]?.include),
+      positions_in: toArray(filters["positions"]?.include),
+      locations_in: toArray(filters["locations"]?.include),
+      workMode_in: toArray(filters["workMode"]?.include),
+      seniority_in: toArray(filters["seniority"]?.include),
+    };
+  }, [filters]);
 
   // Validate query syntax on change
   useEffect(() => {
@@ -590,6 +612,16 @@ export default function AdvancedSearchPage() {
                     ))}
                   </select>
                 </div>
+                <button
+                  onClick={() => setShowSubscribeModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors"
+                  title="Subscribe to email alerts for these filters"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                  Alert
+                </button>
               </div>
             </div>
 
@@ -619,6 +651,11 @@ export default function AdvancedSearchPage() {
           onClick={() => setShowMobileFilters(false)}
         />
       )}
+      <SubscribeModal
+        open={showSubscribeModal}
+        onClose={() => setShowSubscribeModal(false)}
+        criteria={subscribeCriteria}
+      />
     </div>
   );
 }

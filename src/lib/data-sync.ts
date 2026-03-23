@@ -3,6 +3,7 @@ import pgPromise from "pg-promise";
 import { ResponseData } from "@/types";
 import { classifyJob } from "@/lib/classifier";
 import { getWorkingMode } from "@/lib/openai"; // Added import
+import { notifySubscribers } from "@/lib/subscriptions";
 
 // Ensure a single pg-promise instance and DB connection across the process
 const g = globalThis as unknown as {
@@ -79,6 +80,19 @@ export async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS app_meta (
                                             key TEXT PRIMARY KEY,
                                             value TEXT
+      )
+    `);
+
+    await t.none(`
+      CREATE TABLE IF NOT EXISTS subscriptions (
+        id SERIAL PRIMARY KEY,
+        email TEXT NOT NULL,
+        token TEXT UNIQUE NOT NULL,
+        confirm_token TEXT UNIQUE,
+        confirmed BOOLEAN DEFAULT FALSE,
+        criteria JSONB NOT NULL DEFAULT '{}',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        last_notified_at TIMESTAMPTZ
       )
     `);
   });
@@ -228,6 +242,14 @@ export async function syncJobs() {
 
   console.log(`[Sync] Done. Processed: ${processedCount}, New: ${newCount}`);
   await refreshStats();
+
+  if (newCount > 0) {
+    try {
+      await notifySubscribers(db);
+    } catch (e) {
+      console.error("[Sync] Failed to notify subscribers:", (e as Error).message);
+    }
+  }
 }
 
 async function refreshStats() {
