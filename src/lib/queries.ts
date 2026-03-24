@@ -54,9 +54,13 @@ export async function getTrendingKeywords(
      JOIN tags t ON ds.tag_id = t.id
      WHERE ds.date > CURRENT_DATE - ($1 * 2)
      GROUP BY t.category, t.name
-     HAVING SUM(CASE WHEN ds.date > CURRENT_DATE - $1 THEN ds.count ELSE 0 END) > 0
-     ORDER BY (COALESCE(SUM(CASE WHEN ds.date > CURRENT_DATE - $1 THEN ds.count ELSE 0 END), 0) -
-               COALESCE(SUM(CASE WHEN ds.date BETWEEN CURRENT_DATE - ($1 * 2) AND CURRENT_DATE - $1 THEN ds.count ELSE 0 END), 0)) DESC
+     HAVING SUM(CASE WHEN ds.date > CURRENT_DATE - $1 THEN ds.count ELSE 0 END) >= 5
+     ORDER BY (
+       COALESCE(SUM(CASE WHEN ds.date > CURRENT_DATE - $1 THEN ds.count ELSE 0 END), 0) -
+       COALESCE(SUM(CASE WHEN ds.date BETWEEN CURRENT_DATE - ($1 * 2) AND CURRENT_DATE - $1 THEN ds.count ELSE 0 END), 0)
+     ) / SQRT(
+       COALESCE(SUM(CASE WHEN ds.date BETWEEN CURRENT_DATE - ($1 * 2) AND CURRENT_DATE - $1 THEN ds.count ELSE 0 END), 0) + 5.0
+     ) DESC
      LIMIT $2`,
     [days, limit],
   );
@@ -230,22 +234,51 @@ export interface CoOccurrence {
   category: string;
   name: string;
   count: number;
+  lift: number;
 }
 
-export async function getCoOccurringKeywords(tagId: number, limit: number = 15): Promise<CoOccurrence[]> {
-  const rows = await db.any<{ category: string; name: string; cnt: string }>(
-    `SELECT t2.category, t2.name, COUNT(DISTINCT jt1.job_id) as cnt
+export async function getCoOccurringKeywords(tagId: number, limit: number = 20): Promise<CoOccurrence[]> {
+  const rows = await db.any<{ category: string; name: string; co_count: string; lift: string }>(
+    `WITH tag2_totals AS (
+       SELECT jt.tag_id, COUNT(DISTINCT jt.job_id) AS total
+       FROM job_tags jt JOIN jobs j ON jt.job_id = j.id
+       WHERE j.active = TRUE
+       GROUP BY jt.tag_id
+     ),
+     tag1_total AS (
+       SELECT COUNT(DISTINCT jt.job_id) AS total
+       FROM job_tags jt JOIN jobs j ON jt.job_id = j.id
+       WHERE jt.tag_id = $1 AND j.active = TRUE
+     ),
+     grand_total AS (
+       SELECT COUNT(*) AS total FROM jobs WHERE active = TRUE
+     )
+     SELECT t2.category, t2.name,
+       COUNT(DISTINCT jt1.job_id) AS co_count,
+       ROUND(
+         (COUNT(DISTINCT jt1.job_id)::numeric * gt.total) / (tt1.total * t2t.total),
+         2
+       ) AS lift
      FROM job_tags jt1
      JOIN job_tags jt2 ON jt1.job_id = jt2.job_id AND jt1.tag_id != jt2.tag_id
      JOIN tags t2 ON jt2.tag_id = t2.id
+     JOIN tag2_totals t2t ON t2t.tag_id = t2.id
      JOIN jobs j ON jt1.job_id = j.id
+     CROSS JOIN tag1_total tt1
+     CROSS JOIN grand_total gt
      WHERE jt1.tag_id = $1 AND j.active = TRUE
-     GROUP BY t2.category, t2.name
-     ORDER BY cnt DESC
+     GROUP BY t2.category, t2.name, tt1.total, t2t.total, gt.total
+     HAVING COUNT(DISTINCT jt1.job_id) >= 3
+     ORDER BY lift DESC
      LIMIT $2`,
     [tagId, limit],
   );
-  return rows.map((r) => ({ category: r.category, name: r.name, count: parseInt(r.cnt, 10) }));
+  return rows.map((r) => ({
+    category: r.category,
+    name: r.name,
+    count: parseInt(r.co_count, 10),
+    lift: parseFloat(r.lift),
+  }));
 }
 
 export interface CompanyStat {

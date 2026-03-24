@@ -10,7 +10,8 @@ import StackedShareChart from "@/components/charts/StackedShareChart";
 import ToplineBars from "@/components/charts/ToplineBars";
 import SalaryBars from "@/components/charts/SalaryBars";
 import TrendingBars from "@/components/charts/TrendingBars";
-import { getAllCategories, getCategoryBySlug } from "@/lib/categories";
+import { ExternalLink } from "lucide-react";
+import { getAllCategories, getCategoryBySlug, slugifyKeyword } from "@/lib/categories";
 import type { Category, ResponseData, Results } from "@/types";
 import { computeBase } from "@/compute";
 import type { SlimBase } from "@/compute";
@@ -153,12 +154,13 @@ export default function CategoryPage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
           {baseCategories.map((item) => {
             const active = selected.includes(item.label);
+            const kwHref = `/trends/${params.category}/${slugifyKeyword(item.label)}`;
             return (
               <button
                 key={item.label}
                 type="button"
                 className={
-                  "px-2.5 py-1 text-xs sm:text-sm rounded-md border transition-colors text-left truncate " +
+                  "px-2.5 py-1 text-xs sm:text-sm rounded-md border transition-colors text-left " +
                   (active
                     ? "border-green-500 bg-green-500/15 text-green-300 hover:bg-green-500/25"
                     : "border-gray-600 bg-transparent text-gray-200 hover:bg-gray-800/60")
@@ -167,7 +169,17 @@ export default function CategoryPage() {
                 aria-pressed={active}
                 title={item.label}
               >
-                {item.label}
+                <span className="flex items-center gap-1.5 min-w-0">
+                  <span className="truncate flex-1">{item.label}</span>
+                  <Link
+                    href={kwHref}
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex-shrink-0 text-gray-500 hover:text-green-400 transition-colors"
+                    title={`Siirry ${item.label} -sivulle`}
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                  </Link>
+                </span>
               </button>
             );
           })}

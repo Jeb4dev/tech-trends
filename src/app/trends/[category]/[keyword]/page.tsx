@@ -105,21 +105,13 @@ export default async function KeywordPage({ params }: PageProps) {
       getKeywordTrendData(tag.id, 90).catch(() => []),
       getKeywordActiveJobCount(tag.id).catch(() => 0),
       getKeywordSalaryStats(tag.id).catch(() => null),
-      getCoOccurringKeywords(tag.id, 15).catch(() => []),
+      getCoOccurringKeywords(tag.id, 20).catch(() => []),
       getTopCompaniesForKeyword(tag.id, 10).catch(() => []),
       getTopLocationsForKeyword(tag.id, 10).catch(() => []),
       getWorkModeDistribution(tag.id).catch(() => []),
       getSeniorityDistribution(tag.id).catch(() => []),
       getRecentJobsForKeyword(tag.id, 10).catch(() => []),
     ]);
-
-  // Group co-occurring by category
-  const coByCategory = new Map<string, { name: string; count: number }[]>();
-  for (const co of coOccurring) {
-    const list = coByCategory.get(co.category) || [];
-    list.push({ name: co.name, count: co.count });
-    coByCategory.set(co.category, list);
-  }
 
   // Structured data: FAQPage
   const faqEntries: { q: string; a: string }[] = [
@@ -304,46 +296,56 @@ export default async function KeywordPage({ params }: PageProps) {
         )}
       </div>
 
-      {/* Co-occurring Technologies */}
+      {/* Co-occurring Skills */}
       {coOccurring.length > 0 && (
         <section className="mb-10">
           <div className="rounded-xl border border-gray-700/50 bg-gradient-to-br from-gray-800/60 to-gray-900/60 overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-700/30">
               <h2 className="text-base font-semibold text-white">
-                Usein mainitaan yhdessä: {tag.name}
+                Tarvitset todennäköisesti myös
               </h2>
               <p className="text-xs text-gray-500 mt-0.5">
-                Teknologiat jotka esiintyvät samoissa ilmoituksissa
+                Osaaminen jotka esiintyvät samoissa ilmoituksissa — järjestetty yhteyden vahvuuden mukaan, ei pelkän lukumäärän
               </p>
             </div>
-            <div className="p-5">
-              {Array.from(coByCategory.entries()).map(([catKey, keywords]) => {
-                const coCat = getCategoryByKey(catKey);
+            <ul className="divide-y divide-gray-700/20">
+              {coOccurring.map((co) => {
+                const coCat = getCategoryByKey(co.category);
+                const coSlug = coCat?.slug || co.category;
+                const maxLift = coOccurring[0].lift;
+                const barPct = maxLift > 0 ? Math.round((co.lift / maxLift) * 100) : 0;
                 return (
-                  <div key={catKey} className="mb-4 last:mb-0">
-                    <h3 className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
-                      {coCat?.nameFi || catKey}
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {keywords.map((kw) => {
-                        const coSlug = coCat?.slug || catKey;
-                        const kwSlugLink = slugifyKeyword(kw.name);
-                        return (
-                          <Link
-                            key={kw.name}
-                            href={`/trends/${coSlug}/${kwSlugLink}`}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg bg-gray-700/40 text-gray-200 hover:bg-green-500/15 hover:text-green-300 transition-colors border border-gray-600/30 hover:border-green-500/30"
-                          >
-                            {kw.name}
-                            <span className="text-xs text-gray-500">{kw.count}</span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </div>
+                  <li key={`${co.category}-${co.name}`}>
+                    <Link
+                      href={`/trends/${coSlug}/${slugifyKeyword(co.name)}`}
+                      className="flex items-center gap-4 px-5 py-2.5 hover:bg-gray-700/10 transition-colors group"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="text-sm font-medium text-gray-100 group-hover:text-green-300 transition-colors truncate">
+                            {co.name}
+                          </span>
+                          {coCat && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-400 flex-shrink-0">
+                              {coCat.nameFi}
+                            </span>
+                          )}
+                        </div>
+                        <div className="h-1 bg-gray-700/40 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-green-500/50 rounded-full transition-all"
+                            style={{ width: `${barPct}%` }}
+                          />
+                        </div>
+                      </div>
+                      <span className="text-xs text-gray-500 flex-shrink-0 w-10 text-right tabular-nums">
+                        {co.count}
+                      </span>
+                    </Link>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           </div>
         </section>
       )}
