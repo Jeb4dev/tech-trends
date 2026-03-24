@@ -132,5 +132,5 @@ export function slugifyKeyword(name: string): string {
 
 export function deslugifyKeyword(slug: string): string {
   if (KEYWORD_DESLUG_MAP[slug]) return KEYWORD_DESLUG_MAP[slug];
-  return slug;
+  return slug.replace(/-/g, " ");
 }

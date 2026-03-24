@@ -268,7 +268,7 @@ export async function getCoOccurringKeywords(tagId: number, limit: number = 20):
      CROSS JOIN grand_total gt
      WHERE jt1.tag_id = $1 AND j.active = TRUE
      GROUP BY t2.category, t2.name, tt1.total, t2t.total, gt.total
-     HAVING COUNT(DISTINCT jt1.job_id) >= 3
+     HAVING COUNT(DISTINCT jt1.job_id) >= GREATEST(5, ROUND(tt1.total * 0.03))
      ORDER BY lift DESC
      LIMIT $2`,
     [tagId, limit],

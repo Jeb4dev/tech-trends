@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { SubscribeModal } from "@/components/SubscribeModal";
 import {
   languages,
@@ -381,8 +382,38 @@ export default function AdvancedSearchPage() {
   const [loading, setLoading] = useState(false);
   const [facetCounts, setFacetCounts] = useState<Record<string, Record<string, number>>>({});
 
+  const searchParams = useSearchParams();
+  const urlParamsInitialized = useRef(false);
+
   const [queryText, setQueryText] = useState("");
   const [queryError, setQueryError] = useState<string | null>(null);
+
+  // Initialize filters from URL search params on first mount
+  useEffect(() => {
+    if (urlParamsInitialized.current || !searchParams.size) return;
+    urlParamsInitialized.current = true;
+
+    // Build a reverse map: DB category name → advanced-search key (e.g. "positions" → "roles")
+    const dbCatToKey: Record<string, string> = {};
+    CATEGORY_CONFIG.forEach((cfg) => {
+      dbCatToKey[cfg.dbCategory ?? cfg.key] = cfg.key;
+    });
+
+    const tokens: string[] = [];
+    searchParams.forEach((value, paramKey) => {
+      if (paramKey.endsWith("_in")) {
+        const rawKey = paramKey.slice(0, -3);
+        const searchKey = dbCatToKey[rawKey] ?? rawKey;
+        value
+          .split(",")
+          .map((v) => v.trim())
+          .filter(Boolean)
+          .forEach((v) => tokens.push(`${searchKey}:"${v}"`));
+      }
+    });
+
+    if (tokens.length > 0) setQueryText(tokens.join(" AND "));
+  }, [searchParams]);
 
   const [hideDeleted, setHideDeleted] = useState(true);
   const [hideOld, setHideOld] = useState(true);
