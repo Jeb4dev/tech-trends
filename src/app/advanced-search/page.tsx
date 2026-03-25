@@ -379,7 +379,7 @@ function updateQueryWithToggle(
 export default function AdvancedSearchPage() {
   const [results, setResults] = useState<JobResult[]>([]);
   const [count, setCount] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [facetCounts, setFacetCounts] = useState<Record<string, Record<string, number>>>({});
 
   const searchParams = useSearchParams();
@@ -519,13 +519,7 @@ export default function AdvancedSearchPage() {
       cat.include.add(value);
     }
 
-    const newQuery = updateQueryWithToggle(
-      queryText,
-      categoryKey,
-      value,
-      cat.include.has(value),
-      cat.exclude.has(value),
-    );
+    const newQuery = generateQueryString(currentFilters);
     setQueryText(newQuery);
     setPage(1);
   };
@@ -821,8 +815,19 @@ export default function AdvancedSearchPage() {
 
 function FilterSection({ title, type, options, counts, state, onToggleItem, onToggleOperator, limit }: any) {
   const [expanded, setExpanded] = useState(false);
-  const visibleOptions = expanded || !limit ? options : options.slice(0, limit);
   if (!options || options.length === 0) return null;
+
+  // Separate into three stable groups: active items always shown at top
+  const included = options.filter((o: string) => state.include.has(o));
+  const excluded = options.filter((o: string) => state.exclude.has(o));
+  const neutral = options.filter((o: string) => !state.include.has(o) && !state.exclude.has(o));
+
+  // Apply limit only to neutral items so active items are always visible
+  const visibleNeutral = expanded || !limit ? neutral : neutral.slice(0, limit);
+  const hiddenNeutralCount = limit ? Math.max(0, neutral.length - visibleNeutral.length) : 0;
+
+  const visibleOptions = [...included, ...excluded, ...visibleNeutral];
+  const hasActiveItems = included.length > 0 || excluded.length > 0;
 
   const canUseAnd = type === "tag" && state.include.size > 1;
 
@@ -841,57 +846,61 @@ function FilterSection({ title, type, options, counts, state, onToggleItem, onTo
         )}
       </div>
       <div className="space-y-0.5">
-        {visibleOptions.map((opt: string) => {
+        {visibleOptions.map((opt: string, idx: number) => {
           const isInc = state.include.has(opt);
           const isExc = state.exclude.has(opt);
           const count = counts[opt] || 0;
+          // Render a separator between the active group and neutral items
+          const isFirstNeutral = hasActiveItems && idx === included.length + excluded.length;
 
           return (
-            <div
-              key={opt}
-              onClick={() => onToggleItem(opt)}
-              className={`
-                flex items-center justify-between group cursor-pointer px-2 py-1.5 rounded-md transition-colors select-none
-                ${
-                  isInc
-                    ? "bg-blue-500/10 text-blue-100"
-                    : isExc
-                      ? "bg-red-500/10 text-red-100"
-                      : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
-                }
-              `}
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <div
-                  className={`
-                  w-3.5 h-3.5 rounded border flex items-center justify-center transition-all shrink-0
+            <React.Fragment key={opt}>
+              {isFirstNeutral && <div className="my-1 border-t border-white/5" />}
+              <div
+                onClick={() => onToggleItem(opt)}
+                className={`
+                  flex items-center justify-between group cursor-pointer px-2 py-1.5 rounded-md transition-colors select-none
                   ${
                     isInc
-                      ? "bg-blue-500 border-blue-500"
+                      ? "bg-blue-500/10 text-blue-100"
                       : isExc
-                        ? "bg-red-500 border-red-500"
-                        : "border-gray-600 group-hover:border-gray-400"
+                        ? "bg-red-500/10 text-red-100"
+                        : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
                   }
                 `}
-                >
-                  {isInc && <Icons.Check />}
-                  {isExc && <Icons.X />}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <div
+                    className={`
+                    w-3.5 h-3.5 rounded border flex items-center justify-center transition-all shrink-0
+                    ${
+                      isInc
+                        ? "bg-blue-500 border-blue-500"
+                        : isExc
+                          ? "bg-red-500 border-red-500"
+                          : "border-gray-600 group-hover:border-gray-400"
+                    }
+                  `}
+                  >
+                    {isInc && <Icons.Check />}
+                    {isExc && <Icons.X />}
+                  </div>
+                  <span className="text-sm truncate">{opt}</span>
                 </div>
-                <span className="text-sm truncate">{opt}</span>
+                <span className={`text-xs tabular-nums ${isInc ? "text-blue-300" : isExc ? "text-red-300" : "text-gray-600"}`}>
+                  {count}
+                </span>
               </div>
-              <span className={`text-xs tabular-nums ${isInc ? "text-blue-300" : isExc ? "text-red-300" : "text-gray-600"}`}>
-                {count}
-              </span>
-            </div>
+            </React.Fragment>
           );
         })}
       </div>
-      {limit && options.length > limit && (
+      {hiddenNeutralCount > 0 && (
         <button
           onClick={() => setExpanded(!expanded)}
           className="text-xs text-gray-500 hover:text-blue-400 mt-2 px-2 font-medium flex items-center gap-1 transition-colors"
         >
-          {expanded ? "Show Less" : `+ ${options.length - limit} more`}
+          {expanded ? "Show Less" : `+ ${hiddenNeutralCount} more`}
         </button>
       )}
     </div>
