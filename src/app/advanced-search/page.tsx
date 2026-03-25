@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { Suspense, useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { SubscribeModal } from "@/components/SubscribeModal";
 import {
@@ -376,7 +376,7 @@ function updateQueryWithToggle(
   return updated;
 }
 
-export default function AdvancedSearchPage() {
+function AdvancedSearchPageContent() {
   const [results, setResults] = useState<JobResult[]>([]);
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -808,6 +808,14 @@ export default function AdvancedSearchPage() {
         criteria={subscribeCriteria}
       />
     </div>
+  );
+}
+
+export default function AdvancedSearchPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen" />}>
+      <AdvancedSearchPageContent />
+    </Suspense>
   );
 }
 
