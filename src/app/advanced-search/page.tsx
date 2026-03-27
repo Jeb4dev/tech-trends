@@ -416,7 +416,7 @@ function AdvancedSearchPageContent() {
   }, [searchParams]);
 
   const [hideDeleted, setHideDeleted] = useState(true);
-  const [hideOld, setHideOld] = useState(true);
+  const [hideOld, setHideOld] = useState(false);
   const [sort, setSort] = useState("date_desc");
   const [page, setPage] = useState(1);
   const [sortOpen, setSortOpen] = useState(false);
@@ -554,6 +554,8 @@ function AdvancedSearchPageContent() {
       if (queryError) return;
 
       setLoading(true);
+      setCount(0);
+      setResults([]);
       try {
         const params = queryToApiParams(queryText);
         params.set("hideDeleted", hideDeleted.toString());
