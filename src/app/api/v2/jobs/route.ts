@@ -205,7 +205,7 @@ export async function GET(request: Request) {
   const args: any[] = [];
 
   if (hideDeleted) conditions.push("active = TRUE");
-  if (hideOld) conditions.push("date_posted >= NOW() - INTERVAL '90 days'");
+  if (hideOld) conditions.push("date_posted::date >= (NOW() - INTERVAL '90 days')::date");
 
   // Check for rawQuery (complex AND/OR expressions)
   const rawQuery = searchParams.get("rawQuery");
