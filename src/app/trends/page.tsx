@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Skills } from "./skill";
 import { Category, Data, ResponseData, Results } from "@/types";
-import { useEffect, useState, Suspense, useMemo, useCallback } from "react";
+import { useEffect, useState, Suspense, useMemo, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { frameworks } from "@/keywords"; // minimal imports kept if needed elsewhere
 import { Openings } from "./openings";
@@ -27,6 +27,7 @@ function TrendsPageInner() {
   const [precomputedSlim, setPrecomputedSlim] = useState<SlimBase | null>(null);
   const [isLoading, setLoading] = useState(false);
   const [isLoadingJobs, setLoadingJobs] = useState(true);
+  const hasScrolledToFilteredJobs = useRef(false);
   const [showMoreGraphs, setShowMoreGraphs] = useState(false);
   const [isLoadingCharts, setIsLoadingCharts] = useState(false);
   const params = useSearchParams();
@@ -80,6 +81,39 @@ function TrendsPageInner() {
         setLoadingJobs(false);
       });
   }, []);
+
+  const scrollToFilteredJobs = useCallback((): boolean => {
+    if (window.location.hash !== "#filtered_jobs") return false;
+    const anchor = document.getElementById("filtered_jobs");
+    if (!anchor) return false;
+    anchor.scrollIntoView({ behavior: "smooth", block: "start" });
+    return true;
+  }, []);
+
+  useEffect(() => {
+    if (isLoadingJobs || hasScrolledToFilteredJobs.current) return;
+    const rafId = window.requestAnimationFrame(() => {
+      if (scrollToFilteredJobs()) {
+        hasScrolledToFilteredJobs.current = true;
+      }
+    });
+    return () => window.cancelAnimationFrame(rafId);
+  }, [isLoadingJobs, scrollToFilteredJobs]);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      hasScrolledToFilteredJobs.current = false;
+      if (isLoadingJobs) return;
+      window.requestAnimationFrame(() => {
+        if (scrollToFilteredJobs()) {
+          hasScrolledToFilteredJobs.current = true;
+        }
+      });
+    };
+
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, [isLoadingJobs, scrollToFilteredJobs]);
 
   const baseCategories = useMemo(() => {
     if (precomputedSlim) {
