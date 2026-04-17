@@ -60,7 +60,9 @@ export default function CategoryPage() {
       if (data.results.length) {
         data.results.forEach((o) => byId.set(o.id, o));
       }
-      const slimCats = (precomputedSlim.categories as Record<string, { label: string; ids: number[] }[] | undefined>)[categoryInfo.key];
+      const slimCats =
+        (precomputedSlim.categories as Record<string, { label: string; ids: number[] }[] | undefined>)[categoryInfo.key] ??
+        (precomputedSlim as any)[categoryInfo.key];
       if (!slimCats) return [];
       return slimCats.map((c) => ({
         label: c.label,
@@ -73,7 +75,9 @@ export default function CategoryPage() {
 
     if (!data.results.length) return [] as Category[];
     const computed = computeBase(data.results);
-    const cats = (computed.categories as Record<string, Category[] | undefined>)[categoryInfo.key];
+    const cats =
+      (computed.categories as Record<string, Category[] | undefined>)[categoryInfo.key] ??
+      (computed as any)[categoryInfo.key];
     return cats || [];
   }, [precomputedSlim, data.results, categoryInfo]);
 
