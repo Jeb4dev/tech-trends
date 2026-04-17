@@ -12,9 +12,55 @@ import SalaryBars from "@/components/charts/SalaryBars";
 import TrendingBars from "@/components/charts/TrendingBars";
 import { ExternalLink } from "lucide-react";
 import { getAllCategories, getCategoryBySlug, slugifyKeyword } from "@/lib/categories";
-import type { Category, ResponseData, Results } from "@/types";
+import type { Category, Data, ResponseData, Results } from "@/types";
 import { computeBase } from "@/compute";
-import type { SlimBase } from "@/compute";
+import type { SlimBase, SlimCategory } from "@/compute";
+
+const CATEGORY_KEYS: readonly (keyof SlimBase["categories"])[] = [
+  "languages",
+  "frameworks",
+  "databases",
+  "cloud",
+  "devops",
+  "dataScience",
+  "softSkills",
+  "cyberSecurity",
+  "positions",
+  "seniority",
+  "workMode",
+  "cities",
+  "salary",
+];
+
+type TopLevelCategoryKey = "companies" | "locations";
+
+function isCategoryKey(key: string): key is keyof Data {
+  return CATEGORY_KEYS.includes(key as keyof SlimBase["categories"]);
+}
+
+function isTopLevelCategoryKey(key: string): key is TopLevelCategoryKey {
+  return key === "companies" || key === "locations";
+}
+
+function resolveSlimCategories(base: SlimBase, key: string): SlimCategory[] {
+  if (isCategoryKey(key)) {
+    return base.categories[key] ?? [];
+  }
+  if (isTopLevelCategoryKey(key)) {
+    return base[key];
+  }
+  return [];
+}
+
+function resolveComputedCategories(base: ReturnType<typeof computeBase>, key: string): Category[] {
+  if (isCategoryKey(key)) {
+    return base.categories[key] ?? [];
+  }
+  if (isTopLevelCategoryKey(key)) {
+    return base[key];
+  }
+  return [];
+}
 
 export default function CategoryPage() {
   const params = useParams<{ category: string }>();
@@ -60,9 +106,7 @@ export default function CategoryPage() {
       if (data.results.length) {
         data.results.forEach((o) => byId.set(o.id, o));
       }
-      const slimCats =
-        (precomputedSlim.categories as Record<string, { label: string; ids: number[] }[] | undefined>)[categoryInfo.key] ??
-        (precomputedSlim as any)[categoryInfo.key];
+      const slimCats = resolveSlimCategories(precomputedSlim, categoryInfo.key);
       if (!slimCats) return [];
       return slimCats.map((c) => ({
         label: c.label,
@@ -75,17 +119,15 @@ export default function CategoryPage() {
 
     if (!data.results.length) return [] as Category[];
     const computed = computeBase(data.results);
-    const cats =
-      (computed.categories as Record<string, Category[] | undefined>)[categoryInfo.key] ??
-      (computed as any)[categoryInfo.key];
+    const cats = resolveComputedCategories(computed, categoryInfo.key);
     return cats || [];
   }, [precomputedSlim, data.results, categoryInfo]);
 
   // Default top 10 selection
   const defaultSelection = useMemo(() => {
     const sorted = [...baseCategories].sort((a, b) => {
-      const ca = a.openings?.length || (a as any)._baseCount || 0;
-      const cb = b.openings?.length || (b as any)._baseCount || 0;
+      const ca = a.openings?.length || a._baseCount || 0;
+      const cb = b.openings?.length || b._baseCount || 0;
       return cb - ca;
     });
     return sorted.slice(0, 10).map((c) => c.label);
