@@ -355,6 +355,7 @@ export interface RecentJob {
   id: number;
   slug: string;
   heading: string;
+  descr: string | null;
   company_name: string;
   municipality_name: string | null;
   date_posted: string;
@@ -365,7 +366,7 @@ export interface RecentJob {
 
 export async function getRecentJobsForKeyword(tagId: number, limit: number = 10): Promise<RecentJob[]> {
   return db.any<RecentJob>(
-    `SELECT j.id, j.slug, j.heading, j.company_name, j.municipality_name,
+    `SELECT j.id, j.slug, j.heading, j.descr, j.company_name, j.municipality_name,
             j.date_posted::text, j.salary_min, j.salary_max, j.work_mode
      FROM job_tags jt JOIN jobs j ON jt.job_id = j.id
      WHERE jt.tag_id = $1 AND j.active = TRUE

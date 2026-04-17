@@ -10,7 +10,10 @@ const WORK_MODES = ["remote", "hybrid", "onsite"];
 const SENIORITY_LEVELS = ["junior", "mid", "senior", "lead"];
 
 function searchUrl(params: Record<string, string>): string {
-  const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v)).toString();
+  // URLSearchParams produces & between params; XML sitemaps require &amp;
+  const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v))
+    .toString()
+    .replace(/&/g, "&amp;");
   return `${BASE_URL}/advanced-search?${qs}`;
 }
 

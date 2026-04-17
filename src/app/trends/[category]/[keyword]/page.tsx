@@ -156,20 +156,67 @@ export default async function KeywordPage({ params }: PageProps) {
     })),
   };
 
+  const WORK_MODE_TO_SCHEMA: Record<string, string> = {
+    remote: "TELECOMMUTE",
+    hybrid: "HYBRID",
+    onsite: "ONSITE",
+  };
+
   // JobPosting structured data for recent jobs
-  const jobPostingSchemas = recentJobs.slice(0, 5).map((job) => ({
-    "@context": "https://schema.org",
-    "@type": "JobPosting",
-    title: job.heading,
-    datePosted: job.date_posted,
-    hiringOrganization: { "@type": "Organization", name: job.company_name },
-    jobLocation: job.municipality_name
-      ? { "@type": "Place", address: { "@type": "PostalAddress", addressLocality: job.municipality_name, addressCountry: "FI" } }
-      : undefined,
-    baseSalary: job.salary_min && job.salary_max
-      ? { "@type": "MonetaryAmount", currency: "EUR", value: { "@type": "QuantitativeValue", minValue: job.salary_min, maxValue: job.salary_max, unitText: "MONTH" } }
-      : undefined,
-  }));
+  const jobPostingSchemas = recentJobs.slice(0, 5).map((job) => {
+    // Estimate expiry ~60 days after posting (we don't have actual expiry)
+    const validThrough = new Date(job.date_posted);
+    validThrough.setDate(validThrough.getDate() + 60);
+
+    // Strip HTML tags and truncate description for the schema
+    const rawDescr = (job.descr ?? "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+    const description = rawDescr.slice(0, 5000) || job.heading;
+
+    const schema: Record<string, unknown> = {
+      "@context": "https://schema.org",
+      "@type": "JobPosting",
+      title: job.heading,
+      description,
+      datePosted: job.date_posted,
+      validThrough: validThrough.toISOString().slice(0, 10),
+      employmentType: "FULL_TIME",
+      url: `https://duunitori.fi/tyopaikat/tyo/${job.slug}`,
+      directApply: false,
+      hiringOrganization: {
+        "@type": "Organization",
+        name: job.company_name,
+        sameAs: `https://duunitori.fi`,
+      },
+      jobLocationType: job.work_mode && WORK_MODE_TO_SCHEMA[job.work_mode] === "TELECOMMUTE"
+        ? "TELECOMMUTE"
+        : undefined,
+      applicantLocationRequirements: { "@type": "Country", name: "Finland" },
+      jobLocation: {
+        "@type": "Place",
+        address: {
+          "@type": "PostalAddress",
+          addressLocality: job.municipality_name ?? "Finland",
+          addressRegion: "FI",
+          addressCountry: "FI",
+        },
+      },
+    };
+
+    if (job.salary_min && job.salary_max) {
+      schema.baseSalary = {
+        "@type": "MonetaryAmount",
+        currency: "EUR",
+        value: {
+          "@type": "QuantitativeValue",
+          minValue: job.salary_min,
+          maxValue: job.salary_max,
+          unitText: "MONTH",
+        },
+      };
+    }
+
+    return schema;
+  });
 
   return (
     <div className="max-w-5xl mx-auto">
