@@ -1116,6 +1116,17 @@ function EmptyState({ clearAll }: { clearAll: () => void }) {
       <button onClick={clearAll} className="text-blue-400 hover:text-blue-300 text-sm font-medium hover:underline mt-2">
         Clear all filters
       </button>
+      <p className="text-xs text-gray-600 mt-4">
+        Missing a keyword or technology?{" "}
+        <a
+          href="https://tally.so/r/GxBzGO"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-gray-500 hover:text-gray-300 underline transition-colors"
+        >
+          Let us know
+        </a>
+      </p>
     </div>
   );
 }

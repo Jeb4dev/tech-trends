@@ -72,6 +72,30 @@ export default function SiteFooter() {
               </li>
             </ul>
 
+            <h3 className="text-sm font-semibold text-gray-200 mb-3 mt-6">Palaute</h3>
+            <ul className="space-y-1.5">
+              <li>
+                <a
+                  href="https://tally.so/r/GxBzGO"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-gray-400 hover:text-white transition-colors"
+                >
+                  Puuttuuko avainsana?
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://tally.so/r/GxBzGO"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-gray-400 hover:text-white transition-colors"
+                >
+                  Ehdota ominaisuutta
+                </a>
+              </li>
+            </ul>
+
             <h3 className="text-sm font-semibold text-gray-200 mb-3 mt-6">Tulossa</h3>
             <ul className="space-y-1.5">
               <li>

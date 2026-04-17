@@ -675,6 +675,17 @@ function TrendsPageInner() {
           </div>
         </div>
       </div>
+      <p className="text-xs text-gray-500 mt-3">
+        Puuttuuko jokin avainsana tai teknologia?{" "}
+        <a
+          href="https://tally.so/r/GxBzGO"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-gray-400 hover:text-white underline transition-colors"
+        >
+          Kerro meille
+        </a>
+      </p>
       {isLoadingJobs ? (
         <div className="mt-10 space-y-4">
           {/* Openings placeholder skeleton */}
