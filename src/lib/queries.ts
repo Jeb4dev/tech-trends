@@ -390,3 +390,48 @@ export async function getAllKeywordSlugs(): Promise<KeywordSlug[]> {
      ORDER BY t.category, t.name`,
   );
 }
+
+export interface PopularKeyword {
+  category: string;
+  name: string;
+  count: number;
+}
+
+export async function getTopKeywordsByCategory(
+  categories: string[],
+  limitPerCategory: number = 15,
+): Promise<PopularKeyword[]> {
+  const rows = await db.any<{ category: string; name: string; count: string }>(
+    `SELECT category, name, count FROM (
+       SELECT t.category, t.name, count(*) AS count,
+              ROW_NUMBER() OVER (PARTITION BY t.category ORDER BY count(*) DESC) AS rn
+       FROM job_tags jt
+       JOIN tags t ON jt.tag_id = t.id
+       JOIN jobs j ON jt.job_id = j.id
+       WHERE j.active = TRUE AND t.category = ANY($1)
+       GROUP BY t.category, t.name
+     ) ranked
+     WHERE rn <= $2
+     ORDER BY category, count DESC`,
+    [categories, limitPerCategory],
+  );
+  return rows.map((r) => ({ category: r.category, name: r.name, count: parseInt(r.count, 10) }));
+}
+
+export interface PopularLocation {
+  name: string;
+  count: number;
+}
+
+export async function getTopLocations(limit: number = 10): Promise<PopularLocation[]> {
+  const rows = await db.any<{ name: string; count: string }>(
+    `SELECT municipality_name AS name, count(*) AS count
+     FROM jobs
+     WHERE active = TRUE AND municipality_name IS NOT NULL AND municipality_name != ''
+     GROUP BY municipality_name
+     ORDER BY count DESC
+     LIMIT $1`,
+    [limit],
+  );
+  return rows.map((r) => ({ name: r.name, count: parseInt(r.count, 10) }));
+}

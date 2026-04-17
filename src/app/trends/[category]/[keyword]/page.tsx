@@ -65,22 +65,32 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     getKeywordSalaryStats(tag.id).catch(() => null),
   ]);
 
-  const salaryText = salary ? ` Keskipalkka ${salary.avg.toLocaleString("fi-FI")}€/kk.` : "";
-  const title = `${tag.name} työpaikat Suomessa — trendit ja palkat`;
-  const description = `${jobCount} avointa ${tag.name}-työpaikkaa.${salaryText} Katso trendit, yritykset ja kaupungit. ${tag.name} jobs in Finland.`;
+  // Lead with "palkka" — that's what ~80% of queries are searching for
+  const title = salary
+    ? `${tag.name} palkka ${salary.avg.toLocaleString("fi-FI")}€/kk — ${jobCount} työpaikkaa | Koodaripula`
+    : `${tag.name} palkka & työpaikat Suomessa — ${jobCount} avointa | Koodaripula`;
+
+  const salaryDesc = salary
+    ? `Keskipalkka ${salary.avg.toLocaleString("fi-FI")}€/kk (vaihteluväli ${salary.min.toLocaleString("fi-FI")}–${salary.max.toLocaleString("fi-FI")}€/kk). `
+    : "";
+  const description = `${salaryDesc}${jobCount} avointa ${tag.name}-työpaikkaa Suomessa. Trendit, top-yritykset, kaupungit ja palkkadata reaaliajassa — Koodaripula.fi`;
 
   return {
     title,
     description,
     keywords: [
-      tag.name,
-      `${tag.name} jobs`,
-      `${tag.name} työpaikat`,
       `${tag.name} palkka`,
+      `${tag.name} palkka suomi`,
+      `${tag.name} työpaikat`,
+      `${tag.name} työpaikat suomessa`,
+      `${tag.name} jobs finland`,
+      `${tag.name} salary finland`,
+      `paljonko ${tag.name} tienaa`,
+      `${tag.name} keskipalkka`,
+      tag.name,
       cat.nameFi,
-      "Finland",
-      "Suomi",
-      "IT-työpaikat",
+      "IT-palkat Suomi",
+      "ohjelmistokehittäjä palkka",
     ],
     alternates: { canonical: `/trends/${catSlug}/${kwSlug}` },
     openGraph: {
