@@ -274,7 +274,11 @@ export async function syncJobs() {
   }
 
   console.log(`[Sync] Done. Processed: ${processedCount}, New: ${newCount}`);
-  await refreshStats();
+
+  // Only rebuild stats if data changed (new jobs added or full scan may have deactivated jobs)
+  if (newCount > 0 || fetchMode === "FULL") {
+    await refreshStats();
+  }
 
   if (newCount > 0) {
     try {
@@ -398,8 +402,7 @@ export async function runWorkModeBackfill() {
 // Keeps API V1 working by returning the raw job rows
 export async function fetchDatabaseData() {
   await initializeDatabase();
-  // Return all data V1 needs.
   return await db.any(
-    "SELECT id, slug, heading, descr, company_name, municipality_name, date_posted, last_seen_at, work_mode FROM jobs",
+    "SELECT id, slug, heading, descr, company_name, municipality_name, date_posted, last_seen_at, work_mode FROM jobs WHERE active = TRUE",
   );
 }

@@ -234,7 +234,7 @@ function parseQueryToFilters(query: string): FilterState | null {
     const normalized = query.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
     if (!normalized) return newFilters;
 
-    const tokenRegex = /(NOT\s+)?(\w+):"([^"]+)"/g;
+    const tokenRegex = /(NOT\s+)?(\w+)\s*:"([^"]+)"/g;
     let match;
     while ((match = tokenRegex.exec(normalized)) !== null) {
       const isNot = !!match[1];

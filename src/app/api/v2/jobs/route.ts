@@ -74,7 +74,8 @@ function parseRawQueryToSQL(rawQuery: string, args: any[]): { sql: string; newAr
   const normalized = rawQuery.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
 
   // Tokenize: extract all category:"value" tokens with their positions and NOT prefix
-  const tokenRegex = /(NOT\s+)?(\w+):"([^"]+)"/g;
+  // Allow optional whitespace before ":" to be lenient about user input
+  const tokenRegex = /(NOT\s+)?(\w+)\s*:"([^"]+)"/g;
   const tokens: Array<{
     fullMatch: string;
     isNot: boolean;
@@ -115,6 +116,9 @@ function parseRawQueryToSQL(rawQuery: string, args: any[]): { sql: string; newAr
       sql = sql.slice(0, token.start) + "TRUE" + sql.slice(token.end);
     }
   }
+
+  // Replace any leftover unmatched token fragments (e.g., "category :"value"") with TRUE
+  sql = sql.replace(/\b\w+\s*:"[^"]*"/g, "TRUE");
 
   // Clean up any remaining issues
   sql = sql
