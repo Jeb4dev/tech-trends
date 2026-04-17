@@ -25,20 +25,24 @@ export async function getOpenAIResponse(
   opts?: {
     model?: string;
     system?: string;
+    timeoutMs?: number;
   },
 ): Promise<string> {
   const client = getClient();
 
-  const { model = "gpt-4o-nano", system = "You are a concise assistant." } = opts ?? {};
+  const { model = "gpt-4o-nano", system = "You are a concise assistant.", timeoutMs = 8000 } = opts ?? {};
 
   try {
-    const chat = await client.chat.completions.create({
-      model,
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: prompt },
-      ],
-    });
+    const chat = await client.chat.completions.create(
+      {
+        model,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: prompt },
+        ],
+      },
+      { signal: AbortSignal.timeout(timeoutMs) },
+    );
 
     const text = chat.choices?.[0]?.message?.content?.trim() ?? "";
     return text;

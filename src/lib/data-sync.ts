@@ -221,15 +221,17 @@ export async function syncJobs() {
       } else {
         newCount++;
         const analysis = await classifyJob(item.heading, item.descr, item.municipality_name);
-        // Use OpenAI for work mode classification (fallback to heuristic if failure)
+        // Only call OpenAI when the heuristic couldn't determine the work mode
         let workMode = analysis.workMode;
-        try {
-          workMode = (await getWorkingMode(item.descr || "", item.heading || "")) || workMode;
-        } catch (e) {
-          console.warn(
-            `[Sync] OpenAI work mode failed for slug=${item.slug}, fallback to heuristic:`,
-            (e as Error).message,
-          );
+        if (workMode === "unknown") {
+          try {
+            workMode = (await getWorkingMode(item.descr || "", item.heading || "")) || workMode;
+          } catch (e) {
+            console.warn(
+              `[Sync] OpenAI work mode failed for slug=${item.slug}, fallback to heuristic:`,
+              (e as Error).message,
+            );
+          }
         }
         const jobRow = await db.one(
           `INSERT INTO jobs (
@@ -257,6 +259,8 @@ export async function syncJobs() {
         }
       }
       processedCount++;
+      // Yield to the event loop between jobs so health checks and HTTP requests aren't starved
+      await new Promise((r) => setImmediate(r));
     }
 
     if (!json.next) break;

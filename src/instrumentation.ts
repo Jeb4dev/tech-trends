@@ -27,19 +27,19 @@ export async function register() {
     return;
   }
 
-  // Kick off one sync on boot (non-blocking)
-  void safeSync("startup");
-
-  // Then schedule periodic checks (hourly). The sync function itself
-  // will decide whether a refresh is needed based on last fetch timestamp.
+  // Delay the first sync so the server is fully ready before the CPU spike
   const hourMs = 60 * 60 * 1000;
+  const startupDelay = 15_000; // 15 seconds
   const jitter = Math.floor(Math.random() * 10 * 60 * 1000); // up to 10 min jitter to avoid thundering herd
 
   timer = setTimeout(() => {
-    // First delayed run
-    void safeSync("first-interval");
-    timer = setInterval(() => void safeSync("interval"), hourMs);
-  }, jitter);
+    void safeSync("startup");
+    timer = setTimeout(() => {
+      // First interval run after jitter, then hourly
+      void safeSync("first-interval");
+      timer = setInterval(() => void safeSync("interval"), hourMs);
+    }, jitter);
+  }, startupDelay);
 
   // Clean up on shutdown
   const cleanup = () => {
