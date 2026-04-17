@@ -125,7 +125,7 @@ export async function notifySubscribers(db: IDatabase<any>): Promise<void> {
 
     const allConditions = [
       "active = TRUE",
-      `last_seen_at > $${argIndexForDate}`,
+      `first_seen_at > $${argIndexForDate}`,
       ...criteriaConditions,
     ];
 
@@ -144,11 +144,18 @@ export async function notifySubscribers(db: IDatabase<any>): Promise<void> {
     const unsubscribeUrl = `${appBaseUrl}/api/subscriptions/unsubscribe/${sub.token}`;
 
     try {
-      await sendJobDigestEmail(sub.email, jobs, unsubscribeUrl, appBaseUrl);
-      await db.none(
-        `UPDATE subscriptions SET last_notified_at = NOW() WHERE id = $1`,
-        [sub.id],
+      // Atomic guard: only update (and send) if last_notified_at hasn't changed since we read it.
+      // This prevents duplicate sends if two concurrent sync runs reach this point simultaneously.
+      const claimResult = await db.result(
+        `UPDATE subscriptions SET last_notified_at = NOW()
+         WHERE id = $1 AND (last_notified_at IS NOT DISTINCT FROM $2)`,
+        [sub.id, sub.last_notified_at ?? null],
       );
+      if (claimResult.rowCount === 0) {
+        console.log(`[Subscriptions] Skipping ${sub.email}: already notified by a concurrent run`);
+        continue;
+      }
+      await sendJobDigestEmail(sub.email, jobs, unsubscribeUrl, appBaseUrl);
       console.log(`[Subscriptions] Notified ${sub.email} about ${jobs.length} new job(s)`);
     } catch (e) {
       console.error(`[Subscriptions] Failed to notify ${sub.email}:`, (e as Error).message);

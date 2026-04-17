@@ -111,6 +111,11 @@ export async function initializeDatabase() {
 
     // Track which jobs have been AI-classified
     await t.none(`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS ai_classified_at TIMESTAMPTZ`);
+
+    // first_seen_at: immutable timestamp set when a job is first discovered (never updated)
+    // Used by notification queries so that re-seeing an existing job doesn't re-trigger emails
+    await t.none(`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS first_seen_at TIMESTAMPTZ`);
+    await t.none(`UPDATE jobs SET first_seen_at = last_seen_at WHERE first_seen_at IS NULL`);
   });
 }
 
@@ -130,14 +135,22 @@ async function setMeta(key: string, value: string) {
   );
 }
 
+let syncInProgress = false;
+
 /**
  * Core Sync Logic (New Version)
  * - Full Scan (Daily): checks all pages, marks missing jobs as inactive.
  * - Incremental Scan (Hourly): stops when it sees a job posted before the last scan.
  */
 export async function syncJobs() {
-  await initializeDatabase();
-  console.log("[Sync] Starting...");
+  if (syncInProgress) {
+    console.log("[Sync] Skipping: sync already in progress");
+    return;
+  }
+  syncInProgress = true;
+  try {
+    await initializeDatabase();
+    console.log("[Sync] Starting...");
 
   const now = new Date();
   const lastFullScanStr = await getMeta("last_full_scan");
@@ -220,9 +233,9 @@ export async function syncJobs() {
         }
         const jobRow = await db.one(
           `INSERT INTO jobs (
-            slug, heading, descr, company_name, municipality_name, date_posted, last_seen_at,
+            slug, heading, descr, company_name, municipality_name, date_posted, last_seen_at, first_seen_at,
             work_mode, seniority, salary_min, salary_max, salary_currency, active
-          ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), $7, $8, $9, $10, $11, TRUE)
+          ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), $7, $8, $9, $10, $11, TRUE)
            RETURNING id`,
           [
             item.slug,
@@ -265,6 +278,9 @@ export async function syncJobs() {
     } catch (e) {
       console.error("[Sync] Failed to notify subscribers:", (e as Error).message);
     }
+  }
+  } finally {
+    syncInProgress = false;
   }
 }
 
