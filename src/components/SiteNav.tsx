@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: "/", label: "Etusivu" },
   { href: "/trends", label: "Trendit" },
   { href: "/advanced-search", label: "Haku" },
+  { href: "/cv-analyysi", label: "CV-analyysi" },
   { href: "/chat", label: "Chat" },
 ];
 
