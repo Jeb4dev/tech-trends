@@ -1,5 +1,6 @@
 import "server-only";
 import { GoogleGenAI, Type, ThinkingLevel } from "@google/genai";
+import { selectGeminiModel } from "@/lib/gemini-models";
 
 let _client: GoogleGenAI | null = null;
 
@@ -230,7 +231,7 @@ ${truncate(cv)}
 Muista: ole rehellinen, konkreettinen ja hakukohtainen. Mainitse vain asiat jotka todella lukevat CV:ssä.`;
 
   const response = await client.models.generateContent({
-    model: "gemini-3-pro-preview",
+    model: selectGeminiModel("analysis"),
     contents: prompt,
     config: {
       systemInstruction: [{ text: ANALYSIS_SYSTEM }],
@@ -340,7 +341,7 @@ ${truncate(cv)}
 ========= LOPPU =========`;
 
   const response = await client.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: selectGeminiModel("gap"),
     contents: prompt,
     config: {
       systemInstruction: [{ text: GAP_SYSTEM }],
@@ -454,7 +455,7 @@ ${truncate(cv)}
 ========= LOPPU =========`;
 
   const response = await client.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: selectGeminiModel("profile"),
     contents: prompt,
     config: {
       systemInstruction: [{ text: PROFILE_SYSTEM }],
@@ -609,7 +610,7 @@ ${market.topDatabases.map((r) => `- ${r.name}: ${r.count}`).join("\n")}`;
   const prompt = `${marketSummary}\n\n${profileSummary}\n\nYhdistä tiedot ja palauta JSON suositukset.`;
 
   const response = await client.models.generateContent({
-    model: "gemini-3-pro-preview",
+    model: selectGeminiModel("career"),
     contents: prompt,
     config: {
       systemInstruction: [{ text: FIT_SYSTEM }],

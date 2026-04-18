@@ -45,9 +45,8 @@ import { Loader } from "@/components/ai-elements/loader";
 import { Source, Sources, SourcesContent, SourcesTrigger } from "@/components/ai-elements/sources";
 
 const models = [
-  { name: "GPT-5", value: "gpt-5" },
-  { name: "GPT-5 Mini", value: "gpt-5-mini" },
-  { name: "GPT-5 Nano", value: "gpt-5-nano" },
+  { name: "GPT-5.4 Mini", value: "gpt-5.4-mini" },
+  { name: "GPT-5.4 Nano", value: "gpt-5.4-nano" },
 ];
 
 export default function ChatBot() {

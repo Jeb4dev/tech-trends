@@ -1,5 +1,6 @@
 import "server-only";
 import { GoogleGenAI, Type, ThinkingLevel } from "@google/genai";
+import { selectGeminiModel } from "@/lib/gemini-models";
 
 let _client: GoogleGenAI | null = null;
 
@@ -271,7 +272,7 @@ Description:
 ${truncate(jobDescription || "")}`;
 
   const response = await client.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: selectGeminiModel("classification"),
     contents: prompt,
     config: {
       systemInstruction: [{ text: SYSTEM_INSTRUCTION }],

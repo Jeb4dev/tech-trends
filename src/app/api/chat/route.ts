@@ -3,6 +3,17 @@ import { openai } from "@ai-sdk/openai";
 import { z } from "zod";
 import pgPromise from "pg-promise";
 
+const ALLOWED_FRONTEND_MODELS = ["gpt-5.4-mini", "gpt-5.4-nano"] as const;
+type FrontendModel = (typeof ALLOWED_FRONTEND_MODELS)[number];
+type ChatRequestBody = {
+  messages: UIMessage[];
+  model?: unknown;
+};
+
+function isAllowedFrontendModel(value: unknown): value is FrontendModel {
+  return typeof value === "string" && ALLOWED_FRONTEND_MODELS.includes(value as FrontendModel);
+}
+
 const pgp = pgPromise();
 const g = globalThis as any;
 const db = g.__db || pgp(process.env.POSTGRES_URL || "");
@@ -12,18 +23,23 @@ if (!g.__db) g.__db = db;
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
-  const {
-    messages,
-  }: {
-    messages: UIMessage[];
-  } = await req.json();
+  const body: unknown = await req.json();
+  if (typeof body !== "object" || body === null || !("messages" in body) || !Array.isArray(body.messages)) {
+    return new Response("Invalid request body", { status: 400 });
+  }
+
+  const requestBody = body as ChatRequestBody;
+  const messages = requestBody.messages;
+  const model = isAllowedFrontendModel(requestBody.model)
+    ? requestBody.model
+    : "gpt-5.4-mini";
 
   // Define the schema for the tool parameters once so we can reuse the inferred type
   const QuerySchema = z.object({
     query: z.string().describe("A safe SELECT SQL query to run against the database"),
   });
 
-  const queryTool = tool<{ query: string }, { data?: any; totalCount?: number; truncated?: boolean; error?: string }>({
+  const queryTool = tool<{ query: string }, { data?: unknown[]; totalCount?: number; truncated?: boolean; error?: string }>({
     description:
       "Query the PostgreSQL database to get job listings, statistics, or trends. Only SELECT queries are allowed.",
     inputSchema: QuerySchema,
@@ -50,14 +66,15 @@ export async function POST(req: Request) {
           totalCount: results.length,
           truncated: results.length > 100,
         };
-      } catch (error: any) {
-        return { error: error?.message || "Database query failed" };
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : "Database query failed";
+        return { error: errorMessage };
       }
     },
   });
 
   const result = streamText({
-    model: openai("gpt-5-mini"),
+    model: openai(model),
     messages: await convertToModelMessages(messages),
     system: `You are an expert Data Analyst and Job Market Specialist for the Finnish tech sector.
 You have access to a PostgreSQL database with job listings.

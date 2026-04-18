@@ -30,7 +30,7 @@ export async function getOpenAIResponse(
 ): Promise<string> {
   const client = getClient();
 
-  const { model = "gpt-4o-nano", system = "You are a concise assistant.", timeoutMs = 8000 } = opts ?? {};
+  const { model = "gpt-5.4-nano", system = "You are a concise assistant.", timeoutMs = 8000 } = opts ?? {};
 
   try {
     const chat = await client.chat.completions.create(
@@ -46,9 +46,10 @@ export async function getOpenAIResponse(
 
     const text = chat.choices?.[0]?.message?.content?.trim() ?? "";
     return text;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown OpenAI API error";
     console.error("OpenAI API error:", error);
-    throw new Error(`OpenAI API error: ${error.message}`);
+    throw new Error(`OpenAI API error: ${message}`);
   }
 }
 
@@ -89,7 +90,7 @@ export async function getWorkingMode(jobDescription: string, jobTitle: string): 
   ].join("\n");
 
   const response = await getOpenAIResponse(prompt, {
-    model: "gpt-5-mini",
+    model: "gpt-5.4-mini",
     system: SYSTEM_PROMPT,
   });
 
